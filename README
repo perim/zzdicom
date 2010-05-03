@@ -1,0 +1,32 @@
+				zzdicom -- quick and dirty DICOM tools
+				======================================
+
+The zzdicom package consists of a few fast and lightweight tools for reading, writing, verifying 
+and anonymizing DICOM data. They were written for practical use when and where I had need of them,
+not for correctness or completeness.
+
+Limitations
+-----------
+zzdicom currently only works on little-endian architectures, and only with little-endian DICOM
+data. I have never encountered big-endian DICOM data in the real world (ie hospital settings), so
+I never saw a need for adding support for this. It compiles out of the box on Linux, but it should
+work on other architectures, but you may need to remove the -DPOSIX define from the Makefile first.
+
+Features
+--------
+The software was written with performance as a high priority, and the little it does, it does far
+faster than any other DICOM software that I have tested.
+
+The tools
+---------
+zzanon - an in-place DICOM anonymizer. It *changes* the files you list, overwriting the tags it
+recognizes as containing patient identifying information. It will not change *anything else*, 
+including the relative positioning of any tags in the file. This is to retain the file exactly
+as it was, including any esoteric errors the file might contain. Too many other anonymizer tools
+will parse the file before copying it out again, accidentially fixing several classes of errors
+on the way.
+
+zzverify - will run through the files listed to check for various errors. If any are found, they
+are listed on standard out.
+
+zzdump - will dump a list of tags for each DICOM file given.
