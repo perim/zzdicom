@@ -46,13 +46,45 @@ FILE *zzopen(const char *filename, const char *mode)
 	return fp;
 }
 
+uint32_t zzgetuint32(FILE *fp)
+{
+	uint32_t val;
+
+	fread(&val, 4, 1, fp);
+	return val;
+}
+
+uint16_t zzgetuint16(FILE *fp)
+{
+	uint16_t val;
+
+	fread(&val, 2, 1, fp);
+	return val;
+}
+
+int32_t zzgetint32(FILE *fp)
+{
+	int32_t val;
+
+	fread(&val, 4, 1, fp);
+	return val;
+}
+
+int16_t zzgetint16(FILE *fp)
+{
+	int16_t val;
+
+	fread(&val, 2, 1, fp);
+	return val;
+}
+
 bool zzread(FILE *fp, uint16_t *group, uint16_t *element, uint32_t *len)
 {
 	char *vr;
 	uint16_t buffer[2], buffer2[2];
 
-	fread(group, 1, 2, fp);
-	fread(element, 1, 2, fp);
+	*group = zzgetuint16(fp);
+	*element = zzgetuint16(fp);
 	fread(buffer, 2, 2, fp);		// either VR + 0, VR+VL, or just VL
 
 	// Try explicit VR

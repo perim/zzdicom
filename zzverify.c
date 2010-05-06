@@ -46,13 +46,14 @@ void dump(char *filename)
 
 			if (element == 0x0000)
 			{
-				fread(&groupsize, 4, 1, fp);
+				groupsize = zzgetuint32(fp);
+				fseek(fp, -4, SEEK_CUR);
 			}
 			groupsize = 0;
 			grouppos = ftell(fp);
-			if (lastgroup != 0xffff && group < lastgroup)
+			if (lastgroup != 0xffff && lastgroup != 0xfffe && group < lastgroup)
 			{
-				fprintf(stderr, "Group %x - order not ascending!\n", group);
+				fprintf(stderr, "Group 0x%04x - order not ascending (last is 0x%04x)!\n", group, lastgroup);
 			}
 			lastgroup = group;
 		}
