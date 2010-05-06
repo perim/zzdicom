@@ -7,13 +7,16 @@
 #include <string.h>
 #include <ctype.h>
 
+#define MAX_LEN_VALUE 40
+
 void dump(char *filename)
 {
 	FILE *fp;
 	uint16_t group, element;
-	uint32_t len, size;
+	uint32_t len, size, pos;
 	const struct part6 *tag;
 	struct stat st;
+	char value[MAX_LEN_VALUE];
 
 	fp = zzopen(filename, "r");
 	if (!fp)
@@ -28,10 +31,39 @@ void dump(char *filename)
 	{
 		zzread(fp, &group, &element, &len);
 
+		pos = ftell(fp);
 		tag = zztag(group, element);
 
+		memset(value, 0, sizeof(value));
+		if (tag->VR[0] == 'U' && tag->VR[1] == 'L')
+		{
+			snprintf(value, sizeof(value) - 1, "%u", zzgetuint32(fp));
+		}
+		else if (tag->VR[0] == 'U' && tag->VR[1] == 'S')
+		{
+			snprintf(value, sizeof(value) - 1, "%u", zzgetuint16(fp));
+		}
+		else if (tag->VR[0] == 'S' && tag->VR[1] == 'S')
+		{
+			snprintf(value, sizeof(value) - 1, "%u", zzgetint16(fp));
+		}
+		else if (tag->VR[0] == 'S' && tag->VR[1] == 'L')
+		{
+			snprintf(value, sizeof(value) - 1, "%u", zzgetint32(fp));
+		}
+		else if ((tag->VR[0] == 'L' && tag->VR[1] == 'O') || (tag->VR[0] == 'S' && tag->VR[1] == 'H')
+		         || (tag->VR[0] == 'C' && tag->VR[1] == 'S') || (tag->VR[0] == 'D' && tag->VR[1] == 'S')
+		         || (tag->VR[0] == 'A' && tag->VR[1] == 'E') || (tag->VR[0] == 'P' && tag->VR[1] == 'N')
+		         || (tag->VR[0] == 'U' && tag->VR[1] == 'I') || (tag->VR[0] == 'L' && tag->VR[1] == 'T')
+		         || (tag->VR[0] == 'A' && tag->VR[1] == 'S') || (tag->VR[0] == 'D' && tag->VR[1] == 'T')
+		         || (tag->VR[0] == 'I' && tag->VR[1] == 'S') || (tag->VR[0] == 'U' && tag->VR[1] == 'T')
+		         || (tag->VR[0] == 'T' && tag->VR[1] == 'M') || (tag->VR[0] == 'D' && tag->VR[1] == 'A'))
+		{
+			fread(value, MIN(len, sizeof(value) - 1), 1, fp);
+		}
+
 		// Presenting in DCMTK's syntax
-		printf("(%04x,%04x) %-42s # %4d, %s %s\n", tag->group, tag->element, tag->VR, len, tag->VM, tag->description);
+		printf("(%04x,%04x) %-5s %-42s # %4d, %s %s\n", tag->group, tag->element, tag->VR, value, len, tag->VM, tag->description);
 
 		// Abort early, skip loading pixel data into memory if possible
 		if (ftell(fp) + len == size)
@@ -42,7 +74,7 @@ void dump(char *filename)
 		// Skip ahead
 		if (!feof(fp) && len != 0xFFFFFFFF && len > 0)
 		{
-			fseek(fp, len, SEEK_CUR);
+			fseek(fp, pos + len, SEEK_SET);
 		}
 	}
 }
