@@ -34,6 +34,15 @@ void dump(char *filename)
 		pos = ftell(fp);
 		tag = zztag(group, element);
 
+		if (!tag)
+		{
+			printf("(%04x,%04x) -- unknown tag\n", group, element);
+			if (!feof(fp) && len != 0xFFFFFFFF && len > 0)
+			{
+				fseek(fp, len, SEEK_CUR);
+			}
+			continue;
+		}
 		memset(value, 0, sizeof(value));
 		if (tag->VR[0] == 'U' && tag->VR[1] == 'L')
 		{
