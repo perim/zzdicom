@@ -30,3 +30,6 @@ zzverify - will run through the files listed to check for various errors. If any
 are listed on standard out.
 
 zzdump - will dump a list of tags for each DICOM file given.
+
+zzgroupfix - will run fix erroneous group size tags, useful as some software relies on these being
+correct if they are present

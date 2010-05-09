@@ -1,10 +1,16 @@
-CFLAGS = -Wall -Wextra -Os -DPOSIX -Werror
+CFLAGS = -Wall -Wextra -DPOSIX -Werror -Wshadow -Wformat-security
 
-all:
+all: CFLAGS += -Os
+all: apps
+
+debug: CFLAGS += -O0 -g -DDEBUG
+debug: apps
+
+apps:
 	gcc -o zzanon zzanon.c zz.c $(CFLAGS)
 	gcc -o zzdump zzdump.c zz.c $(CFLAGS)
 	gcc -o zzverify zzverify.c zz.c $(CFLAGS)
 	gcc -o zzgroupfix zzgroupfix.c zz.c $(CFLAGS)
 
 clean:
-	rm -f *.o zzanon zzdump zzverify
+	rm -f *.o zzanon zzdump zzverify zzgroupfix
