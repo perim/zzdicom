@@ -18,20 +18,20 @@ static char fill[MAX_FILL];
 
 void anonymize(char *filename)
 {
-	FILE *fp;
+	struct zzfile *zz;
 	uint16_t group, element, nexttag = 0;
 	uint32_t len, i;
 
-	fp = zzopen(filename, "r+");
-	if (!fp)
+	zz = zzopen(filename, "r+");
+	if (!zz)
 	{
 		fprintf(stderr, "Failed to open %s\n", filename);
 		exit(-1);
 	}
 
-	while (!feof(fp) && nexttag < ARRAY_SIZE(taglist))
+	while (!feof(zz->fp) && nexttag < ARRAY_SIZE(taglist))
 	{
-		zzread(fp, &group, &element, &len);
+		zzread(zz, &group, &element, &len);
 
 		if (group > 0x0040 && group != 0xfffe)
 		{
@@ -50,11 +50,11 @@ void anonymize(char *filename)
 					{
 						const char *dstr = "19000101";
 
-						fwrite(dstr, MIN(len, strlen(dstr)), 1, fp);
+						fwrite(dstr, MIN(len, strlen(dstr)), 1, zz->fp);
 					}
 					else
 					{
-						fwrite(fill, len, 1, fp);
+						fwrite(fill, len, 1, zz->fp);
 					}
 					len = 0;			// do not seek further
 					nexttag++;			// abort early when all items found
@@ -65,7 +65,7 @@ void anonymize(char *filename)
 		// Skip ahead
 		if (len != 0xFFFFFFFF && len > 0)
 		{
-			fseek(fp, len, SEEK_CUR);
+			fseek(zz->fp, len, SEEK_CUR);
 		}
 	}
 }

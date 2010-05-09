@@ -1,8 +1,11 @@
+#include "byteorder.h"
+
 #ifdef POSIX
 #define _XOPEN_SOURCE 600
 #include <fcntl.h>
 #endif
 
+#include "zz.h"
 #include "zz_priv.h"
 
 #include <stdlib.h>
@@ -11,101 +14,132 @@
 #include <string.h>
 #include <ctype.h>
 
-FILE *zzopen(const char *filename, const char *mode)
+struct zzfile *zzopen(const char *filename, const char *mode)
 {
-	FILE *fp;
+	struct zzfile *zz;
 	char dicm[4], endianbuf[2];
+	uint16_t group, element;
+	uint32_t len, pos;
+	bool done = false;
 
-	fp = fopen(filename, mode);
-	if (!fp)
+	zz = malloc(sizeof(*zz));
+	zz->fp = fopen(filename, mode);
+	if (!zz->fp)
 	{
 		fprintf(stderr, "%s not found\n", filename);
 		exit(-1);
 	}
 #ifdef POSIX
-	posix_fadvise(fileno(fp), 0, 4096 * 4, POSIX_FADV_SEQUENTIAL);	// request 4 pages right away
+	posix_fadvise(fileno(zz->fp), 0, 4096 * 4, POSIX_FADV_SEQUENTIAL);	// request 4 pages right away
 #endif
 
 	// Check for valid Part 10 header
-	fseek(fp, 128, SEEK_SET);
-	fread(dicm, 4, 1, fp);
+	fseek(zz->fp, 128, SEEK_SET);
+	fread(dicm, 4, 1, zz->fp);
 	if (strncmp(dicm, "DICM", 4) != 0)
 	{
 		fprintf(stderr, "%s does not have a valid part 10 DICOM header\n", filename);
-		rewind(fp);
+		rewind(zz->fp);
 	}
 
 	// Check for big-endian syntax - not supported
-	fread(&endianbuf, 1, 2, fp);
-	fseek(fp, -2, SEEK_CUR);
+	fread(&endianbuf, 1, 2, zz->fp);
+	fseek(zz->fp, -2, SEEK_CUR);
 	if (endianbuf[0] < endianbuf[1])
 	{
 		fprintf(stderr, "%s appears to be big-endian - this is not supported\n", filename);
 		exit(-1);
 	}
-	return fp;
+
+	// Grab some useful data before handing back control
+	pos = ftell(zz->fp);
+	while (zzread(zz, &group, &element, &len) && !done)
+	{
+		switch (ZZ_KEY(group, element))
+		{
+		case DCM_FileMetaInformationGroupLength:
+			break;
+		case DCM_MediaStorageSOPClassUID:
+			break;
+		case DCM_MediaStorageSOPInstanceUID:
+			break;
+		case DCM_TransferSyntaxUID:
+			done = true;	// not ACR-NEMA, so stop scanning
+			break;
+		case DCM_ACR_NEMA_RecognitionCode:
+			done = true;
+			break;
+		default:
+			break;
+		}
+		fseek(zz->fp, len, SEEK_CUR);	// skip data
+	}
+	fseek(zz->fp, pos, SEEK_SET);
+
+	return zz;
 }
 
-uint32_t zzgetuint32(FILE *fp)
+uint32_t zzgetuint32(struct zzfile *zz)
 {
 	uint32_t val;
 
-	fread(&val, 4, 1, fp);
-	return val;
+	fread(&val, 4, 1, zz->fp);
+	return LE_32(val);
 }
 
-uint16_t zzgetuint16(FILE *fp)
+uint16_t zzgetuint16(struct zzfile *zz)
 {
 	uint16_t val;
 
-	fread(&val, 2, 1, fp);
-	return val;
+	fread(&val, 2, 1, zz->fp);
+	return LE_16(val);
 }
 
-int32_t zzgetint32(FILE *fp)
+int32_t zzgetint32(struct zzfile *zz)
 {
 	int32_t val;
 
-	fread(&val, 4, 1, fp);
-	return val;
+	fread(&val, 4, 1, zz->fp);
+	return LE_32(val);
 }
 
-int16_t zzgetint16(FILE *fp)
+int16_t zzgetint16(struct zzfile *zz)
 {
 	int16_t val;
 
-	fread(&val, 2, 1, fp);
-	return val;
+	fread(&val, 2, 1, zz->fp);
+	return LE_16(val);
 }
 
-bool zzread(FILE *fp, uint16_t *group, uint16_t *element, uint32_t *len)
+bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len)
 {
-	char *vr;
-	uint16_t buffer[2], buffer2[2];
+	// Represent the three different variants of tag headers in one union
+	union { uint32_t len; struct { char vr[2]; uint16_t len; } evr; } buffer;
 
-	*group = zzgetuint16(fp);
-	*element = zzgetuint16(fp);
-	fread(buffer, 2, 2, fp);		// either VR + 0, VR+VL, or just VL
+	*group = zzgetuint16(zz);
+	*element = zzgetuint16(zz);
+	fread(&buffer, 4, 1, zz->fp);		// either VR + 0, VR+VL, or just VL
 
 	// Try explicit VR
-	vr = (char *)buffer;
-	if (isupper(vr[0]) && isupper(vr[1]))
+	if (isupper(buffer.evr.vr[0]) && isupper(buffer.evr.vr[1]))
 	{
+		const char *vr = buffer.evr.vr;
+
 		// Try explicit VR of type OB, OW, OF, SQ, UT or UN
 		if ((vr[0] == 'O' && (vr[1] == 'B' || vr[1] == 'W' || vr[1] == 'F'))
 		    || (vr[0] == 'S' && vr[1] == 'Q') || (vr[0] == 'U' && (vr[1] == 'T' || vr[1] == 'N')))
 		{
-			fread(buffer2, 2, 2, fp);
-			*len = ((uint32_t)buffer2[0]) + ((uint32_t)buffer2[1] << 16);
+			fread(len, 4, 1, zz->fp);
+			*len = LE_32(*len);
 		}
 		else	// TODO check VR types
 		{
-			*len = buffer[1];
+			*len = LE_16(buffer.evr.len);	// the insane 16 bit size variant
 		}
 	}
 	else
 	{
-		*len = ((uint32_t)buffer[0]) + ((uint32_t)buffer[1] << 16);
+		*len = LE_32(buffer.len);
 	}
 
 	return true;
