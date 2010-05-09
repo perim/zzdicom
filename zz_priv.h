@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#define MAX_LEN_UID	64
+
 struct part6
 {
 	uint16_t group;		// private
@@ -16,10 +18,17 @@ struct part6
 	const char *description;
 };
 
-struct zzfile
+struct zzfile // TODO rename to zzframe
 {
 	FILE		*fp;
 	uint32_t	headerSize;
+	uint32_t	startPos;
+	char		sopClassUid[MAX_LEN_UID];
+	char		studyInstanceUid[MAX_LEN_UID];
+	char		seriesInstanceUid[MAX_LEN_UID];
+	char		sopInstanceUid[MAX_LEN_UID];
+	char		transferSyntaxUid[MAX_LEN_UID];
+	bool		acrNema;
 };
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))

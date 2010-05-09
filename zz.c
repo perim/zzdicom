@@ -19,15 +19,17 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 	struct zzfile *zz;
 	char dicm[4], endianbuf[2];
 	uint16_t group, element;
-	uint32_t len, pos;
+	uint32_t len, pos, cur;
 	bool done = false;
 
 	zz = malloc(sizeof(*zz));
+	memset(zz, 0, sizeof(*zz));
 	zz->fp = fopen(filename, mode);
 	if (!zz->fp)
 	{
 		fprintf(stderr, "%s not found\n", filename);
-		exit(-1);
+		free(zz);
+		return NULL;
 	}
 #ifdef POSIX
 	posix_fadvise(fileno(zz->fp), 0, 4096 * 4, POSIX_FADV_SEQUENTIAL);	// request 4 pages right away
@@ -48,31 +50,40 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 	if (endianbuf[0] < endianbuf[1])
 	{
 		fprintf(stderr, "%s appears to be big-endian - this is not supported\n", filename);
-		exit(-1);
+		fclose(zz->fp);
+		free(zz);
+		return NULL;
 	}
 
 	// Grab some useful data before handing back control
 	pos = ftell(zz->fp);
 	while (zzread(zz, &group, &element, &len) && !done)
 	{
+		cur = ftell(zz->fp);
 		switch (ZZ_KEY(group, element))
 		{
 		case DCM_FileMetaInformationGroupLength:
+			zz->headerSize = zzgetuint32(zz);
 			break;
 		case DCM_MediaStorageSOPClassUID:
+			fread(zz->sopInstanceUid, MIN(sizeof(zz->sopClassUid) - 1, len), 1, zz->fp);
 			break;
 		case DCM_MediaStorageSOPInstanceUID:
+			fread(zz->sopInstanceUid, MIN(sizeof(zz->sopInstanceUid) - 1, len), 1, zz->fp);
 			break;
 		case DCM_TransferSyntaxUID:
-			done = true;	// not ACR-NEMA, so stop scanning
+			fread(zz->sopInstanceUid, MIN(sizeof(zz->transferSyntaxUid) - 1, len), 1, zz->fp);
+			done = true;	// not ACR-NEMA, last interesting tag, so stop scanning
+			zz->acrNema = false;
 			break;
 		case DCM_ACR_NEMA_RecognitionCode:
 			done = true;
+			zz->acrNema = true;
 			break;
 		default:
 			break;
 		}
-		fseek(zz->fp, len, SEEK_CUR);	// skip data
+		fseek(zz->fp, cur + len, SEEK_SET);	// skip data
 	}
 	fseek(zz->fp, pos, SEEK_SET);
 
