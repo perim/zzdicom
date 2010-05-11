@@ -31,6 +31,7 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 		free(zz);
 		return NULL;
 	}
+	zz->fullPath = realpath(filename, NULL);
 #ifdef POSIX
 	posix_fadvise(fileno(zz->fp), 0, 4096 * 4, POSIX_FADV_SEQUENTIAL);	// request 4 pages right away
 #endif
@@ -66,7 +67,7 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 			zz->headerSize = zzgetuint32(zz);
 			break;
 		case DCM_MediaStorageSOPClassUID:
-			fread(zz->sopInstanceUid, MIN(sizeof(zz->sopClassUid) - 1, len), 1, zz->fp);
+			fread(zz->sopClassUid, MIN(sizeof(zz->sopClassUid) - 1, len), 1, zz->fp);
 			break;
 		case DCM_MediaStorageSOPInstanceUID:
 			fread(zz->sopInstanceUid, MIN(sizeof(zz->sopInstanceUid) - 1, len), 1, zz->fp);
