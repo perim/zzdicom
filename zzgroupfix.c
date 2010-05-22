@@ -66,7 +66,7 @@ void fix(char *filename)
 			fseek(zz->fp, len, SEEK_CUR);
 		}
 	}
-	zz = zzfree(zz);
+	zz = zzclose(zz);
 }
 
 int main(int argc, char **argv)

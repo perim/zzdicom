@@ -6,9 +6,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define MAX_LEN_UID	64
-#define MAX_LEN_PN	(64 * 5)
-#define MAX_DATETIME	26
+#define MAX_LEN_UID		64
+#define MAX_LEN_PN		(64 * 5)
+#define MAX_LEN_DATETIME	26
+#define MAX_LEN_CS		16
 
 struct part6
 {
@@ -45,6 +46,6 @@ int16_t zzgetint16(struct zzfile *zz);
 struct zzfile *zzopen(const char *filename, const char *mode);
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len);
 const struct part6 *zztag(uint16_t group, uint16_t element);
-static inline struct zzfile *zzfree(struct zzfile *zz) { fclose(zz->fp); free(zz->fullPath); free(zz); return NULL; }
+static inline struct zzfile *zzclose(struct zzfile *zz) { fclose(zz->fp); free(zz->fullPath); free(zz); return NULL; }
 
 #endif

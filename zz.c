@@ -19,7 +19,7 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 	struct zzfile *zz;
 	char dicm[4], endianbuf[2];
 	uint16_t group, element;
-	uint32_t len, pos, cur;
+	uint32_t len, cur;
 	bool done = false;
 
 	zz = malloc(sizeof(*zz));
@@ -57,7 +57,7 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 	}
 
 	// Grab some useful data before handing back control
-	pos = ftell(zz->fp);
+	zz->startPos = ftell(zz->fp);
 	while (zzread(zz, &group, &element, &len) && !done)
 	{
 		cur = ftell(zz->fp);
@@ -86,7 +86,7 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 		}
 		fseek(zz->fp, cur + len, SEEK_SET);	// skip data
 	}
-	fseek(zz->fp, pos, SEEK_SET);
+	fseek(zz->fp, zz->startPos, SEEK_SET);
 
 	return zz;
 }

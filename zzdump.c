@@ -86,7 +86,7 @@ void dump(char *filename)
 			fseek(zz->fp, pos + len, SEEK_SET);
 		}
 	}
-	zz = zzfree(zz);
+	zz = zzclose(zz);
 }
 
 int main(int argc, char **argv)
