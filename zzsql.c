@@ -1,5 +1,5 @@
-#include <sqlite3.h>
 #include "zz_priv.h"
+#include "zzsql.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -12,11 +12,6 @@
 #include "sqlinit.h"	// creates sqlinit global
 
 static char rbuf[4096];
-
-struct zzdb
-{
-	sqlite3 *sqlite;
-};
 
 // return whether we did update local db
 bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)

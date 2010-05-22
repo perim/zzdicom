@@ -1,9 +1,14 @@
 #ifndef ZZSQL_H
 #define ZZSQL_H
 
-struct zzdb;
+#include <sqlite3.h>
 
-struct zzfile *zzdbupdate(struct zzdb *zdb, struct zzfile *zz);
+struct zzdb
+{
+	sqlite3 *sqlite;
+};
+
+bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz);
 struct zzdb *zzdbopen(void);
 struct zzdb *zzdbclose(struct zzdb *zdb);
 

@@ -16,6 +16,7 @@ apps:
 	gcc -o zzverify zzverify.c zz.c $(CFLAGS)
 	gcc -o zzgroupfix zzgroupfix.c zz.c $(CFLAGS)
 	gcc -o zzread zzread.c zz.c zzsql.c $(CFLAGS) -lsqlite3
+	gcc -o zzstudies zzstudies.c zz.c zzsql.c $(CFLAGS) -lsqlite3
 
 clean:
 	rm -f *.o zzanon zzdump zzverify zzgroupfix sqlinit.h
