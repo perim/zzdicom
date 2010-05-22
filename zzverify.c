@@ -64,16 +64,26 @@ void dump(char *filename)
 
 		tag = zztag(group, element);
 
-		// Abort early, skip loading pixel data into memory if possible
-		if (ftell(zz->fp) + len == size)
+		if (len > 0 && len != 0xFFFFFFFF)
 		{
-			break;
-		}
+			int pos = ftell(zz->fp);
 
-		// Skip ahead
-		if (!feof(zz->fp) && len != 0xFFFFFFFF && len > 0)
-		{
-			fseek(zz->fp, len, SEEK_CUR);
+			if (pos + len > size)
+			{
+				fprintf(stderr, "(0x%04x,0x%04x) -- size exceeds file end\n", group, element);
+			}
+
+			// Abort early, skip loading pixel data into memory if possible
+			if (pos + len >= size)
+			{
+				break;
+			}
+
+			// Skip ahead
+			if (!feof(zz->fp))
+			{
+				fseek(zz->fp, len, SEEK_CUR);
+			}
 		}
 	}
 	zz = zzclose(zz);
