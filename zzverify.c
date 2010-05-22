@@ -17,7 +17,6 @@ void dump(char *filename)
 	struct zzfile *zz;
 	uint16_t group, element, lastgroup = 0xffff, lastelement = 0;
 	uint32_t len, size, groupsize = 0;
-	const struct part6 *tag;
 	struct stat st;
 	int grouppos = 0;
 
@@ -61,8 +60,6 @@ void dump(char *filename)
 		{
 			fprintf(stderr, "Element %x - order not ascending!\n", element);
 		}
-
-		tag = zztag(group, element);
 
 		if (len > 0 && len != 0xFFFFFFFF)
 		{

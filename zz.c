@@ -58,7 +58,7 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 
 	// Grab some useful data before handing back control
 	zz->startPos = ftell(zz->fp);
-	while (zzread(zz, &group, &element, &len) && !done)
+	while (zzread(zz, &group, &element, &len) && !done && !feof(zz->fp) && !ferror(zz->fp))
 	{
 		cur = ftell(zz->fp);
 		switch (ZZ_KEY(group, element))
@@ -84,7 +84,10 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 		default:
 			break;
 		}
-		fseek(zz->fp, cur + len, SEEK_SET);	// skip data
+		if (!feof(zz->fp) && !ferror(zz->fp))
+		{
+			fseek(zz->fp, cur + len, SEEK_SET);	// skip data
+		}
 	}
 	fseek(zz->fp, zz->startPos, SEEK_SET);
 
