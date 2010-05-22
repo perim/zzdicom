@@ -18,7 +18,6 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 {
 	uint16_t group, element;
 	uint32_t len, size;
-	const struct part6 *tag;
 	struct stat st;
 	int rc;
 	char studyInstanceUid[MAX_LEN_UID];
@@ -28,6 +27,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	char modality[MAX_LEN_CS];
 	char *zErrMsg = NULL;
 	sqlite3 *db = zdb->sqlite;
+	size_t pos;
 
 	// TODO - check if date on file is newer, if so, skip the below and return false
 
@@ -42,14 +42,13 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 
 	while (zzread(zz, &group, &element, &len))
 	{
-		tag = zztag(group, element);
-
 		// Abort early, skip loading pixel data into memory if possible
 		if (ftell(zz->fp) + len == size)
 		{
 			break;
 		}
 
+		pos = ftell(zz->fp);
 		switch (ZZ_KEY(group, element))
 		{
 		case DCM_StudyInstanceUID:
@@ -65,12 +64,12 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 			fread(modality, MIN(sizeof(modality) - 1, len), 1, zz->fp);
 			break;
 		default:
-			// Skip ahead
-			if (!feof(zz->fp) && len != 0xFFFFFFFF && len > 0)
-			{
-				fseek(zz->fp, len, SEEK_CUR);
-			}
 			break;
+		}
+		// Skip ahead - also if read something, because read might be truncated
+		if (!feof(zz->fp) && len != 0xFFFFFFFF && len > 0)
+		{
+			fseek(zz->fp, pos + len, SEEK_SET);
 		}
 	}
 	sprintf(rbuf, "INSERT OR REPLACE INTO instances(filename, sopclassuid, instanceuid, size, lastmodified, seriesuid) values (\"%s\", \"%s\", \"%s\", \"%d\", \"%s\", \"%s\")",

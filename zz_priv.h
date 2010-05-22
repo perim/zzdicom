@@ -6,10 +6,10 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define MAX_LEN_UID		64
-#define MAX_LEN_PN		(64 * 5)
-#define MAX_LEN_DATETIME	26
-#define MAX_LEN_CS		16
+#define MAX_LEN_UID		(64 + 1)
+#define MAX_LEN_PN		(64 * 5 + 1)
+#define MAX_LEN_DATETIME	(26 + 1)
+#define MAX_LEN_CS		(16 + 1)
 
 struct part6
 {
