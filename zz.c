@@ -73,7 +73,7 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 			fread(zz->sopInstanceUid, MIN(sizeof(zz->sopInstanceUid) - 1, len), 1, zz->fp);
 			break;
 		case DCM_TransferSyntaxUID:
-			fread(zz->sopInstanceUid, MIN(sizeof(zz->transferSyntaxUid) - 1, len), 1, zz->fp);
+			fread(zz->transferSyntaxUid, MIN(sizeof(zz->transferSyntaxUid) - 1, len), 1, zz->fp);
 			done = true;	// not ACR-NEMA, last interesting tag, so stop scanning
 			zz->acrNema = false;
 			break;

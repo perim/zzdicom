@@ -33,3 +33,5 @@ zzdump - will dump a list of tags for each DICOM file given.
 
 zzgroupfix - will run fix erroneous group size tags, useful as some software relies on these being
 correct if they are present
+
+zzread - will update the local DICOM database with the given files
