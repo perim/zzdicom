@@ -72,17 +72,13 @@ void anonymize(char *filename)
 
 int main(int argc, char **argv)
 {
-	int i;
+	int i, ignparams;
 
-	if (argc < 3)
-	{
-		fprintf(stderr, "Usage: %s <replacement text> <filename>\n", argv[0]);
-		exit(-1);
-	}
+	ignparams = zzutil(argc, argv, 3, "<replacement text> <filename>");
 	fill[0] = '\0';
 	strcpy(fill, argv[1]);
-	memset(fill + strlen(argv[1]), '#', sizeof(fill));
-	for (i = 2; i < argc; i++)
+	memset(fill + strlen(argv[ignparams]), '#', sizeof(fill));
+	for (i = ignparams + 1; i < argc; i++)
 	{
 		anonymize(argv[i]);
 	}

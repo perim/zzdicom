@@ -14,6 +14,12 @@
 #include <string.h>
 #include <ctype.h>
 
+const char *versionString =
+#include "VERSION"
+;
+
+static bool verbose = false;
+
 struct zzfile *zzopen(const char *filename, const char *mode)
 {
 	struct zzfile *zz;
@@ -190,4 +196,41 @@ const struct part6 *zztag(uint16_t group, uint16_t element)
 		}
 	}
 	return NULL;
+}
+
+int zzutil(int argc, char **argv, int minArgs, const char *usage)
+{
+	int i, ignparams = 1;	// always tell caller to ignore argv[0]
+	bool usageReq = false;
+
+	for (i = 1; i < argc; i++)
+	{
+		if (strcmp(argv[i], "--") == 0)
+		{
+			ignparams++;
+			break;	// stop parsing command line parameters
+		}
+		else if (strcmp(argv[i], "--usage") == 0
+		    || strcmp(argv[i], "--help") == 0
+		    || strcmp(argv[i], "-h") == 0)
+		{
+			usageReq = true;
+		}
+		else if (strcmp(argv[i], "--version") == 0)
+		{
+			fprintf(stderr, "%s is part of zzdicom version %s\n", argv[0], versionString);
+			exit(0);
+		}
+		else if (strcmp(argv[i], "-v") == 0)	// verbose
+		{
+			ignparams++;
+			verbose = true;
+		}
+	}
+	if (usageReq || argc < minArgs + ignparams - 1)
+	{
+		fprintf(stderr, "Usage: %s [-v|--version|-h] %s\n", argv[0], usage);
+		exit(!usageReq);
+	}
+	return ignparams;
 }

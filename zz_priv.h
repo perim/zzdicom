@@ -48,4 +48,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 const struct part6 *zztag(uint16_t group, uint16_t element);
 static inline struct zzfile *zzclose(struct zzfile *zz) { fclose(zz->fp); free(zz->fullPath); free(zz); return NULL; }
 
+/// Utility function to process some common command-line arguments. Returns the number of initial arguments to ignore.
+int zzutil(int argc, char **argv, int minArgs, const char *usage);
+
 #endif

@@ -39,11 +39,7 @@ int main(int argc, char **argv)
 	char *zErrMsg = NULL;
 	char lines[100];
 
-	if (argc > 1)
-	{
-		fprintf(stderr, "Usage: %s\n", argv[0]);
-		exit(-1);
-	}
+	zzutil(argc, argv, 1, "");
 	zdb = zzdbopen();
 	if (!zdb)
 	{
