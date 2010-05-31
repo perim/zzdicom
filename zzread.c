@@ -1,14 +1,6 @@
 #include "zz_priv.h"
 #include "zzsql.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <ctype.h>
-#include <time.h>
-
 int main(int argc, char **argv)
 {
 	struct zzdb *zdb;
