@@ -1,6 +1,6 @@
 CFLAGS = -Wall -Wextra -DPOSIX -Werror -Wshadow -Wformat-security
 PROGRAMS = zzanon zzdump zzverify zzgroupfix zzread zzstudies
-HEADERS = zz.h zz_priv.h
+HEADERS = zz.h zz_priv.h zzsql.h
 
 all: CFLAGS += -Os
 all: generate $(PROGRAMS)
@@ -13,26 +13,26 @@ generate:
 	cat SQL | sed s/^/\"/ | sed s/$$/\"/ >> sqlinit.h
 	echo ";" >> sqlinit.h
 
-zzanon:
-	gcc -o zzanon zzanon.c zz.c $(CFLAGS) $(HEADERS)
+zzanon: $(HEADERS)
+	gcc -o zzanon zzanon.c zz.c $(CFLAGS)
 
-zzdump:
-	gcc -o zzdump zzdump.c zz.c $(CFLAGS) $(HEADERS)
+zzdump: $(HEADERS)
+	gcc -o zzdump zzdump.c zz.c $(CFLAGS)
 
-zzverify:
-	gcc -o zzverify zzverify.c zz.c $(CFLAGS) $(HEADERS)
+zzverify: $(HEADERS)
+	gcc -o zzverify zzverify.c zz.c $(CFLAGS)
 
-zzgroupfix:
-	gcc -o zzgroupfix zzgroupfix.c zz.c $(CFLAGS) $(HEADERS)
+zzgroupfix: $(HEADERS)
+	gcc -o zzgroupfix zzgroupfix.c zz.c $(CFLAGS)
 
-zzread:
-	gcc -o zzread zzread.c zz.c zzsql.c $(CFLAGS) $(HEADERS) -lsqlite3
+zzread: $(HEADERS)
+	gcc -o zzread zzread.c zz.c zzsql.c $(CFLAGS) -lsqlite3
 
-zzstudies:
-	gcc -o zzstudies zzstudies.c zz.c zzsql.c $(CFLAGS) $(HEADERS) -lsqlite3
+zzstudies: $(HEADERS)
+	gcc -o zzstudies zzstudies.c zz.c zzsql.c $(CFLAGS) -lsqlite3
 
-#zzprune:
-#	gcc -o zzprune zzprune.c zz.c zzsql.c $(CFLAGS) $(HEADERS) -lsqlite3
+#zzprune: $(HEADERS)
+#	gcc -o zzprune zzprune.c zz.c zzsql.c $(CFLAGS) -lsqlite3
 
 clean:
 	rm -f *.o sqlinit.h $(PROGRAMS)

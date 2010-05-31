@@ -1,4 +1,3 @@
-#include "zz_priv.h"
 #include "zzsql.h"
 
 #include <sys/types.h>
@@ -7,11 +6,29 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
-#include <time.h>
 
 #include "sqlinit.h"	// creates sqlinit global
 
 static char rbuf[4096];
+
+#define DATETIME_FORMAT "%Y-%m-%d %H:%M:%S"
+
+const char *zzdatetime(time_t value)
+{
+	static char lastmod[MAX_LEN_DATETIME];
+	struct tm lasttm;
+
+	strftime(lastmod, sizeof(lastmod), DATETIME_FORMAT, localtime_r(&value, &lasttm));
+	return lastmod;
+}
+
+time_t zzundatetime(const char *datetime)
+{
+	struct tm tmval;
+
+	strptime(datetime, DATETIME_FORMAT, &tmval);
+	return mktime(&tmval);
+}
 
 // return whether we did update local db
 bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
@@ -22,19 +39,14 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	int rc;
 	char studyInstanceUid[MAX_LEN_UID];
 	char patientsName[MAX_LEN_PN];
-	char lastmod[MAX_LEN_DATETIME];
-	struct tm lasttm;
 	char modality[MAX_LEN_CS];
 	char *zErrMsg = NULL;
 	sqlite3 *db = zdb->sqlite;
 	size_t pos;
 
-	// TODO - check if date on file is newer, if so, skip the below and return false
-
 	fseek(zz->fp, zz->startPos, SEEK_SET);
 	fstat(fileno(zz->fp), &st);
 	size = st.st_size;
-	strftime(lastmod, sizeof(lastmod), "%Y-%m-%d %H:%M:%S", localtime_r(&st.st_mtime, &lasttm));
 
 	memset(studyInstanceUid, 0, sizeof(studyInstanceUid));
 	memset(patientsName, 0, sizeof(patientsName));
@@ -72,8 +84,11 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 			fseek(zz->fp, pos + len, SEEK_SET);
 		}
 	}
+
+	// TODO - check if date on file is newer, if so, skip the below and return false
+
 	sprintf(rbuf, "INSERT OR REPLACE INTO instances(filename, sopclassuid, instanceuid, size, lastmodified, seriesuid) values (\"%s\", \"%s\", \"%s\", \"%d\", \"%s\", \"%s\")",
-		zz->fullPath, zz->sopClassUid, zz->sopInstanceUid, size, lastmod, zz->seriesInstanceUid);
+		zz->fullPath, zz->sopClassUid, zz->sopInstanceUid, size, zzdatetime(st.st_mtime), zz->seriesInstanceUid);
 	rc = sqlite3_exec(db, rbuf, NULL, NULL, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
