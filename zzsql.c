@@ -11,7 +11,21 @@
 
 static char rbuf[4096];
 
-#define DATETIME_FORMAT "%Y-%m-%d %H:%M:%S"
+bool zzquery(struct zzdb *zdb, const char *statement, int (*callback)(void*,int,char**,char**), void *cbdata)
+{
+	int rc;
+	char *zErrMsg = NULL;
+
+	rc = sqlite3_exec(zdb->sqlite, statement, callback, cbdata, &zErrMsg);
+	if (rc != SQLITE_OK)
+	{
+		fprintf(stderr, "SQL error from %s: %s\n", statement, zErrMsg);
+		sqlite3_free(zErrMsg);
+		exit(-1);	// for now...
+		return false;
+	}
+	return true;
+}
 
 const char *zzdatetime(time_t value)
 {
@@ -30,24 +44,34 @@ time_t zzundatetime(const char *datetime)
 	return mktime(&tmval);
 }
 
+static int callback(void *nada, int cols, char **data, char **colnames)
+{
+	char *modified = (char *)nada;
+
+	(void)nada;	// ignore
+	(void)cols;
+	(void)colnames;
+	strcpy(modified, data[0]);
+	return 0;
+}
+
 // return whether we did update local db
 bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 {
+	char modified[MAX_LEN_DATETIME];
 	uint16_t group, element;
 	uint32_t len, size;
 	struct stat st;
-	int rc;
 	char studyInstanceUid[MAX_LEN_UID];
 	char patientsName[MAX_LEN_PN];
 	char modality[MAX_LEN_CS];
-	char *zErrMsg = NULL;
-	sqlite3 *db = zdb->sqlite;
 	size_t pos;
 
 	fseek(zz->fp, zz->startPos, SEEK_SET);
 	fstat(fileno(zz->fp), &st);
 	size = st.st_size;
 
+	modified[0] = '\0';
 	memset(studyInstanceUid, 0, sizeof(studyInstanceUid));
 	memset(patientsName, 0, sizeof(patientsName));
 	memset(modality, 0, sizeof(modality));
@@ -85,30 +109,22 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 		}
 	}
 
-	// TODO - check if date on file is newer, if so, skip the below and return false
+	// Check if date on file is newer, if so, skip the update and return false
+	sprintf(rbuf, "SELECT lastmodified FROM instances WHERE filename=\"%s\"", zz->fullPath);
+	zzquery(zdb, rbuf, callback, modified);
+	if (modified[0] != '\0' && st.st_mtime <= zzundatetime(modified))
+	{
+		printf("%s is unchanged (%d <= %d)\n", zz->fullPath, (int)st.st_mtime, (int)zzundatetime(modified));
+		return false;
+	}
 
 	sprintf(rbuf, "INSERT OR REPLACE INTO instances(filename, sopclassuid, instanceuid, size, lastmodified, seriesuid) values (\"%s\", \"%s\", \"%s\", \"%d\", \"%s\", \"%s\")",
 		zz->fullPath, zz->sopClassUid, zz->sopInstanceUid, size, zzdatetime(st.st_mtime), zz->seriesInstanceUid);
-	rc = sqlite3_exec(db, rbuf, NULL, NULL, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		fprintf(stderr, "SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-	}
+	zzquery(zdb, rbuf, NULL, NULL);
 	sprintf(rbuf, "INSERT OR REPLACE INTO series(seriesuid, modality, studyuid) values (\"%s\", \"%s\", \"%s\")", zz->seriesInstanceUid, modality, studyInstanceUid);
-	rc = sqlite3_exec(db, rbuf, NULL, NULL, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		fprintf(stderr, "SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-	}
+	zzquery(zdb, rbuf, NULL, NULL);
 	sprintf(rbuf, "INSERT OR REPLACE INTO studies(studyuid, patientsname) values (\"%s\", \"%s\")", studyInstanceUid, patientsName);
-	rc = sqlite3_exec(db, rbuf, NULL, NULL, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		fprintf(stderr, "SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-	}
+	zzquery(zdb, rbuf, NULL, NULL);
 	return true;
 }
 

@@ -35,8 +35,6 @@ static int callback(void *nada, int cols, char **data, char **colnames)
 int main(int argc, char **argv)
 {
 	struct zzdb *zdb;
-	int rc;
-	char *zErrMsg = NULL;
 	char lines[100];
 
 	zzutil(argc, argv, 1, "");
@@ -52,13 +50,7 @@ int main(int argc, char **argv)
 	lines[sizeof(lines)-1] = '\0';
 	printf("idx | %-42s | %s\n", "PATIENT NAME", "STUDY UID");
 	printf("%s\n", lines);
-	rc = sqlite3_exec(zdb->sqlite, "SELECT studyuid,patientsname FROM studies", callback, NULL, &zErrMsg);
-	if (rc != SQLITE_OK)
-	{
-		fprintf(stderr, "SQL error: %s\n", zErrMsg);
-		sqlite3_free(zErrMsg);
-	}
-
+	zzquery(zdb, "SELECT studyuid,patientsname FROM studies", callback, NULL);
 	zdb = zzdbclose(zdb);
 
 	return 0;
