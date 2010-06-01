@@ -22,11 +22,10 @@ struct node
 static struct node *first = NULL;
 static char rbuf[4096];
 
-static int callback(void *nada, int cols, char **data, char **colnames)
+static int callback(void *cbdata, int cols, char **data, char **colnames)
 {
-	char *modified = (char *)nada;
+	char *modified = (char *)cbdata;
 
-	(void)nada;	// ignore
 	(void)cols;
 	(void)colnames;
 	strcpy(modified, data[0]);
@@ -34,23 +33,29 @@ static int callback(void *nada, int cols, char **data, char **colnames)
 }
 
 
-static int callback_studies(void *nada, int cols, char **data, char **colnames)
+static int callback_studies(void *cbdata, int cols, char **data, char **colnames)
 {
-	(void)nada;	// ignore
+	struct zzdb *zdb = (struct zzdb *)cbdata;
+
 	(void)cols;
 	(void)colnames;
 
-	printf("EMPTY STUDY: %s\n", data[0]);
+	printf("DELETING STUDY: %s\n", data[0]);
+	sprintf(rbuf, "DELETE FROM studies WHERE studyuid=\"%s\"", data[0]);
+	zzquery(zdb, rbuf, NULL, NULL);
 	return 0;
 }
 
-static int callback_series(void *nada, int cols, char **data, char **colnames)
+static int callback_series(void *cbdata, int cols, char **data, char **colnames)
 {
-	(void)nada;	// ignore
+	struct zzdb *zdb = (struct zzdb *)cbdata;
+
 	(void)cols;
 	(void)colnames;
 
-	printf("EMPTY SERIES: %s\n", data[0]);
+	printf("DELETING SERIES: %s\n", data[0]);
+	sprintf(rbuf, "DELETE FROM series WHERE seriesuid=\"%s\"", data[0]);
+	zzquery(zdb, rbuf, NULL, NULL);
 	return 0;
 }
 
@@ -105,6 +110,7 @@ int main(int argc, char **argv)
 				printf("%s no longer exists - pruning\n", iter->filename);
 				sprintf(rbuf, "DELETE FROM instances WHERE filename=\"%s\"", iter->filename);
 				zzquery(zdb, rbuf, NULL, NULL);
+				continue;
 			}
 		}
 		sprintf(rbuf, "SELECT lastmodified FROM instances WHERE filename=\"%s\"", iter->filename);
@@ -119,10 +125,10 @@ int main(int argc, char **argv)
 	}
 
 	// Find series without instances - TODO delete them
-	zzquery(zdb, "SELECT seriesuid FROM series WHERE seriesuid NOT IN (SELECT DISTINCT seriesuid FROM instances)", callback_series, NULL);
+	zzquery(zdb, "SELECT seriesuid FROM series WHERE seriesuid NOT IN (SELECT DISTINCT seriesuid FROM instances)", callback_series, zdb);
 
 	// Find studies without series - TODO delete them
-	zzquery(zdb, "SELECT studyuid FROM studies WHERE studyuid NOT IN (SELECT DISTINCT studyuid FROM series)", callback_studies, NULL);
+	zzquery(zdb, "SELECT studyuid FROM studies WHERE studyuid NOT IN (SELECT DISTINCT studyuid FROM series)", callback_studies, zdb);
 
 	zdb = zzdbclose(zdb);
 
