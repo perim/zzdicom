@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <errno.h>
 
 // Verifies:
 //  - group lengths
@@ -18,7 +19,7 @@ void dump(char *filename)
 	uint16_t group, element, lastgroup = 0xffff, lastelement = 0;
 	uint32_t len, size, groupsize = 0;
 	struct stat st;
-	int grouppos = 0;
+	long grouppos = 0, pos;
 
 	zz = zzopen(filename, "r");
 	if (!zz)
@@ -61,13 +62,12 @@ void dump(char *filename)
 			fprintf(stderr, "Element %x - order not ascending!\n", element);
 		}
 
-		if (len > 0 && len != 0xFFFFFFFF)
+		pos = ftell(zz->fp);
+		if ((len > 0 && len != 0xFFFFFFFF) || pos == (long)size)
 		{
-			int pos = ftell(zz->fp);
-
 			if (pos + len > size)
 			{
-				fprintf(stderr, "(0x%04x,0x%04x) -- size exceeds file end\n", group, element);
+				fprintf(stderr, "(%04x,%04x) -- size %u exceeds file end\n", group, element, (unsigned int)len);
 			}
 
 			// Abort early, skip loading pixel data into memory if possible
@@ -82,6 +82,10 @@ void dump(char *filename)
 				fseek(zz->fp, len, SEEK_CUR);
 			}
 		}
+	}
+	if (ferror(zz->fp))
+	{
+		fprintf(stderr, "%s read error: %s\n", filename, strerror(errno));
 	}
 	zz = zzclose(zz);
 }
