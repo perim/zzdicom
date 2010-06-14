@@ -43,3 +43,6 @@ clean:
 	rm -f *.o sqlinit.h $(PROGRAMS)
 
 check:
+
+install:
+	install -t /usr/local/bin $(PROGRAMS)
