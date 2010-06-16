@@ -94,7 +94,7 @@ int main(int argc, char **argv)
 {
 	int i;
 
-	for (i = zzutil(argc, argv, 2, "<filenames>"); i < argc; i++)
+	for (i = zzutil(argc, argv, 2, "<filenames>", "Verify validity of a DICOM file"); i < argc; i++)
 	{
 		dump(argv[i]);
 	}

@@ -19,6 +19,7 @@ const char *versionString =
 ;
 
 static bool verbose = false;
+static bool testOnly = false;
 
 struct zzfile *zzopen(const char *filename, const char *mode)
 {
@@ -198,8 +199,9 @@ const struct part6 *zztag(uint16_t group, uint16_t element)
 	return NULL;
 }
 
-int zzutil(int argc, char **argv, int minArgs, const char *usage)
+int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help)
 {
+	FILE *out = stderr;
 	int i, ignparams = 1;	// always tell caller to ignore argv[0]
 	bool usageReq = false;
 
@@ -210,15 +212,25 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage)
 			ignparams++;
 			break;	// stop parsing command line parameters
 		}
-		else if (strcmp(argv[i], "--usage") == 0
-		    || strcmp(argv[i], "--help") == 0
-		    || strcmp(argv[i], "-h") == 0)
+		else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
+		{
+			fprintf(stdout, "%s\n", help);
+			fprintf(stdout, "  %-10s Verbose output\n", "-v");
+			//fprintf(stdout, "  %-10s Test only - apply no changes\n", "-t");
+			fprintf(stdout, "  %-10s This help\n", "-h|--help");
+			fprintf(stdout, "  %-10s Version of zzdicom package\n", "--version");
+			fprintf(stdout, "  %-10s Short help\n", "--usage");
+			usageReq = true;
+			out = stdout;
+		}
+		else if (strcmp(argv[i], "--usage") == 0)
 		{
 			usageReq = true;
+			out = stdout;
 		}
 		else if (strcmp(argv[i], "--version") == 0)
 		{
-			fprintf(stderr, "%s is part of zzdicom version %s\n", argv[0], versionString);
+			fprintf(stdout, "%s is part of zzdicom version %s\n", argv[0], versionString);
 			exit(0);
 		}
 		else if (strcmp(argv[i], "-v") == 0)	// verbose
@@ -226,10 +238,15 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage)
 			ignparams++;
 			verbose = true;
 		}
+		else if (strcmp(argv[i], "-t") == 0)	// test only
+		{
+			ignparams++;
+			testOnly = true;
+		}
 	}
 	if (usageReq || argc < minArgs + ignparams - 1)
 	{
-		fprintf(stderr, "Usage: %s [-v|--version|-h] %s\n", argv[0], usage);
+		fprintf(out, "Usage: %s [-v|--version|-h|--usage] %s\n", argv[0], usage); // add -t later
 		exit(!usageReq);
 	}
 	return ignparams;

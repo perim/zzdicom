@@ -75,7 +75,7 @@ int main(int argc, char **argv)
 {
 	struct zzdb *zdb;
 
-	zzutil(argc, argv, 1, "");
+	zzutil(argc, argv, 1, "", "Program to update the local DICOM database for changed and deleted files");
 	zdb = zzdbopen();
 	if (zdb)
 	{

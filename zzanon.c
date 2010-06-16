@@ -74,7 +74,7 @@ int main(int argc, char **argv)
 {
 	int i, ignparams;
 
-	ignparams = zzutil(argc, argv, 3, "<replacement text> <filename>");
+	ignparams = zzutil(argc, argv, 3, "<replacement text> <filename>", "DICOM anonymization program");
 	fill[0] = '\0';
 	strcpy(fill, argv[1]);
 	memset(fill + strlen(argv[ignparams]), '#', sizeof(fill));

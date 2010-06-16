@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 {
 	int i;
 
-	for (i = zzutil(argc, argv, 2, "<filenames>"); i < argc; i++)
+	for (i = zzutil(argc, argv, 2, "<filenames>", "DICOM group size fixer"); i < argc; i++)
 	{
 		fix(argv[i]);
 	}
