@@ -114,6 +114,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 		return false;
 	}
 
+	zzquery(zdb, "BEGIN TRANSACTION", NULL, NULL);
 	sprintf(rbuf, "INSERT OR REPLACE INTO instances(filename, sopclassuid, instanceuid, size, lastmodified, seriesuid) values (\"%s\", \"%s\", \"%s\", \"%lu\", \"%s\", \"%s\")",
 		zz->fullPath, zz->sopClassUid, zz->sopInstanceUid, zz->fileSize, zzdatetime(zz->modifiedTime), zz->seriesInstanceUid);
 	zzquery(zdb, rbuf, NULL, NULL);
@@ -121,6 +122,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	zzquery(zdb, rbuf, NULL, NULL);
 	sprintf(rbuf, "INSERT OR REPLACE INTO studies(studyuid, patientsname) values (\"%s\", \"%s\")", studyInstanceUid, patientsName);
 	zzquery(zdb, rbuf, NULL, NULL);
+	zzquery(zdb, "COMMIT", NULL, NULL);
 	return true;
 }
 

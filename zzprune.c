@@ -15,6 +15,13 @@
 
 static char rbuf[4096];
 
+struct updatenode
+{
+	char path[PATH_MAX];
+	struct updatenode *next;
+};
+static struct updatenode *first = NULL;
+
 static int callback_studies(void *cbdata, int cols, char **data, char **colnames)
 {
 	struct zzdb *zdb = (struct zzdb *)cbdata;
@@ -45,7 +52,6 @@ static int callback_instances(void *cbdata, int cols, char **data, char **colnam
 {
 	struct zzdb *zdb = (struct zzdb *)cbdata;
 	struct stat st;
-	struct zzfile *zz;
 
 	(void)cols;
 	(void)colnames;
@@ -62,13 +68,10 @@ static int callback_instances(void *cbdata, int cols, char **data, char **colnam
 	}
 	if (st.st_mtime > zzundatetime(data[1]))
 	{
-		zz = zzopen(data[0], "r");
-		if (zz)
-		{
-			zzdbupdate(zdb, zz);
-			zz = zzclose(zz);
-			printf("%s was updated\n", data[0]);
-		}
+		struct updatenode *node = malloc(sizeof(*node));
+		node->next = first;
+		first = node;
+		strcpy(node->path, data[0]);
 	}
 
 	return 0;
@@ -77,6 +80,8 @@ static int callback_instances(void *cbdata, int cols, char **data, char **colnam
 int main(int argc, char **argv)
 {
 	struct zzdb *zdb;
+	struct updatenode *iter, *next;
+	struct zzfile *zz;
 
 	zzutil(argc, argv, 1, "", "Program to update the local DICOM database for changed and deleted files");
 	zdb = zzdbopen();
@@ -84,6 +89,19 @@ int main(int argc, char **argv)
 	{
 		// Find and delete instances without matching physical files, updated changed files
 		zzquery(zdb, "SELECT filename,lastmodified FROM instances", callback_instances, zdb);
+
+		for (iter = first; iter; iter = next)	// need it outside select loop for transactions to work
+		{
+			next = iter->next;
+			zz = zzopen(iter->path, "r");
+			if (zz)
+			{
+				zzdbupdate(zdb, zz);
+				zz = zzclose(zz);
+				printf("%s was updated\n", iter->path);
+				free(iter);
+			}
+		}
 
 		// Find and delete series without instances
 		zzquery(zdb, "SELECT seriesuid FROM series WHERE seriesuid NOT IN (SELECT DISTINCT seriesuid FROM instances)", callback_series, zdb);
