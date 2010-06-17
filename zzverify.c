@@ -1,7 +1,5 @@
 #include "zz_priv.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -17,20 +15,12 @@ void dump(char *filename)
 {
 	struct zzfile *zz;
 	uint16_t group, element, lastgroup = 0xffff, lastelement = 0;
-	uint32_t len, size, groupsize = 0;
-	struct stat st;
-	long grouppos = 0, pos;
+	uint32_t len, groupsize = 0;
+	uint64_t grouppos = 0, pos;
 
 	zz = zzopen(filename, "r");
-	if (!zz)
-	{
-		fprintf(stderr, "Failed to open %s\n", filename);
-		exit(-1);
-	}
-	fstat(fileno(zz->fp), &st);
-	size = st.st_size;
 
-	while (!feof(zz->fp) && !ferror(zz->fp))
+	while (zz && !feof(zz->fp) && !ferror(zz->fp))
 	{
 		zzread(zz, &group, &element, &len);
 
@@ -63,15 +53,15 @@ void dump(char *filename)
 		}
 
 		pos = ftell(zz->fp);
-		if ((len > 0 && len != 0xFFFFFFFF) || pos == (long)size)
+		if ((len > 0 && len != 0xFFFFFFFF) || pos == zz->fileSize)
 		{
-			if (pos + len > size)
+			if (pos + len > zz->fileSize)
 			{
 				fprintf(stderr, "(%04x,%04x) -- size %u exceeds file end\n", group, element, (unsigned int)len);
 			}
 
 			// Abort early, skip loading pixel data into memory if possible
-			if (pos + len >= size)
+			if (pos + len >= zz->fileSize)
 			{
 				break;
 			}
@@ -83,7 +73,7 @@ void dump(char *filename)
 			}
 		}
 	}
-	if (ferror(zz->fp))
+	if (zz && ferror(zz->fp))
 	{
 		fprintf(stderr, "%s read error: %s\n", filename, strerror(errno));
 	}

@@ -13,6 +13,9 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 const char *versionString =
 #include "VERSION"
@@ -28,45 +31,51 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 	uint16_t group, element;
 	uint32_t len, cur;
 	bool done = false;
+	struct stat st;
+
+	if (stat(filename, &st) != 0)
+	{
+		fprintf(stderr, "%s could not be found: %s\n", filename, strerror(errno));
+		return NULL;
+	}
 
 	zz = malloc(sizeof(*zz));
+	if (!zz) return NULL;
 	memset(zz, 0, sizeof(*zz));
 	zz->fp = fopen(filename, mode);
 	if (!zz->fp)
 	{
-		fprintf(stderr, "%s not found\n", filename);
+		fprintf(stderr, "%s could not be opened: %s\n", filename, strerror(errno));
 		free(zz);
 		return NULL;
 	}
+	zz->fileSize = st.st_size;
+	zz->modifiedTime = st.st_mtime;
 	zz->fullPath = realpath(filename, NULL);
 #ifdef POSIX
 	posix_fadvise(fileno(zz->fp), 0, 4096 * 4, POSIX_FADV_SEQUENTIAL);	// request 4 pages right away
 #endif
 
 	// Check for valid Part 10 header
-	fseek(zz->fp, 128, SEEK_SET);
-	fread(dicm, 4, 1, zz->fp);
-	if (strncmp(dicm, "DICM", 4) != 0)
+	if (fseek(zz->fp, 128, SEEK_SET) != 0 || fread(dicm, 4, 1, zz->fp) != 1 || strncmp(dicm, "DICM", 4) != 0)
 	{
 		fprintf(stderr, "%s does not have a valid part 10 DICOM header\n", filename);
-		rewind(zz->fp);
+		rewind(zz->fp);	// try anyway
 	}
 
 	// Check for big-endian syntax - not supported
-	fread(&endianbuf, 1, 2, zz->fp);
-	fseek(zz->fp, -2, SEEK_CUR);
-	if (endianbuf[0] < endianbuf[1])
+	if (fread(&endianbuf, 1, 2, zz->fp) != 2 || fseek(zz->fp, -2, SEEK_CUR) != 0 || endianbuf[0] < endianbuf[1])
 	{
 		fprintf(stderr, "%s appears to be big-endian - this is not supported\n", filename);
-		fclose(zz->fp);
-		free(zz);
-		return NULL;
+		return zzclose(zz);
 	}
 
 	// Grab some useful data before handing back control
 	zz->startPos = ftell(zz->fp);
 	while (zzread(zz, &group, &element, &len) && !done && !feof(zz->fp) && !ferror(zz->fp))
 	{
+		int result = len;
+
 		cur = ftell(zz->fp);
 		switch (ZZ_KEY(group, element))
 		{
@@ -74,13 +83,13 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 			zz->headerSize = zzgetuint32(zz);
 			break;
 		case DCM_MediaStorageSOPClassUID:
-			fread(zz->sopClassUid, MIN(sizeof(zz->sopClassUid) - 1, len), 1, zz->fp);
+			result = fread(zz->sopClassUid, 1, MIN(sizeof(zz->sopClassUid) - 1, len), zz->fp);
 			break;
 		case DCM_MediaStorageSOPInstanceUID:
-			fread(zz->sopInstanceUid, MIN(sizeof(zz->sopInstanceUid) - 1, len), 1, zz->fp);
+			result = fread(zz->sopInstanceUid, 1, MIN(sizeof(zz->sopInstanceUid) - 1, len), zz->fp);
 			break;
 		case DCM_TransferSyntaxUID:
-			fread(zz->transferSyntaxUid, MIN(sizeof(zz->transferSyntaxUid) - 1, len), 1, zz->fp);
+			result = fread(zz->transferSyntaxUid, 1, MIN(sizeof(zz->transferSyntaxUid) - 1, len), zz->fp);
 			done = true;	// not ACR-NEMA, last interesting tag, so stop scanning
 			zz->acrNema = false;
 			break;
@@ -90,6 +99,11 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 			break;
 		default:
 			break;
+		}
+		if (result != (int)len)
+		{
+			fprintf(stderr, "%s failed to read data value (read %d, wanted %d)\n", filename, result, (int)len);
+			return zzclose(zz);
 		}
 		if (!feof(zz->fp) && !ferror(zz->fp))
 		{

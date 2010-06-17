@@ -1,6 +1,5 @@
 #include "zzsql.h"
 
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -60,16 +59,13 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 {
 	char modified[MAX_LEN_DATETIME];
 	uint16_t group, element;
-	uint32_t len, size;
-	struct stat st;
+	uint32_t len;
 	char studyInstanceUid[MAX_LEN_UID];
 	char patientsName[MAX_LEN_PN];
 	char modality[MAX_LEN_CS];
-	size_t pos;
+	uint64_t pos;
 
 	fseek(zz->fp, zz->startPos, SEEK_SET);
-	fstat(fileno(zz->fp), &st);
-	size = st.st_size;
 
 	modified[0] = '\0';
 	memset(studyInstanceUid, 0, sizeof(studyInstanceUid));
@@ -79,7 +75,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	while (zzread(zz, &group, &element, &len))
 	{
 		// Abort early, skip loading pixel data into memory if possible
-		if (ftell(zz->fp) + len == size)
+		if ((uint32_t)ftell(zz->fp) + len == zz->fileSize)
 		{
 			break;
 		}
@@ -88,16 +84,16 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 		switch (ZZ_KEY(group, element))
 		{
 		case DCM_StudyInstanceUID:
-			fread(studyInstanceUid, MIN(sizeof(studyInstanceUid) - 1, len), 1, zz->fp);
+			fread(studyInstanceUid, 1, MIN(sizeof(studyInstanceUid) - 1, len), zz->fp);
 			break;
 		case DCM_SeriesInstanceUID:
-			fread(zz->seriesInstanceUid, MIN(sizeof(zz->seriesInstanceUid) - 1, len), 1, zz->fp);
+			fread(zz->seriesInstanceUid, 1, MIN(sizeof(zz->seriesInstanceUid) - 1, len), zz->fp);
 			break;
 		case DCM_PatientsName:
-			fread(patientsName, MIN(sizeof(patientsName) - 1, len), 1, zz->fp);
+			fread(patientsName, 1, MIN(sizeof(patientsName) - 1, len), zz->fp);
 			break;
 		case DCM_Modality:
-			fread(modality, MIN(sizeof(modality) - 1, len), 1, zz->fp);
+			fread(modality, 1, MIN(sizeof(modality) - 1, len), zz->fp);
 			break;
 		default:
 			break;
@@ -112,14 +108,14 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	// Check if date on file is newer, if so, skip the update and return false
 	sprintf(rbuf, "SELECT lastmodified FROM instances WHERE filename=\"%s\"", zz->fullPath);
 	zzquery(zdb, rbuf, callback, modified);
-	if (modified[0] != '\0' && st.st_mtime <= zzundatetime(modified))
+	if (modified[0] != '\0' && zz->modifiedTime <= zzundatetime(modified))
 	{
-		printf("%s is unchanged (%d <= %d)\n", zz->fullPath, (int)st.st_mtime, (int)zzundatetime(modified));
+		printf("%s is unchanged (%d <= %d)\n", zz->fullPath, (int)zz->modifiedTime, (int)zzundatetime(modified));
 		return false;
 	}
 
-	sprintf(rbuf, "INSERT OR REPLACE INTO instances(filename, sopclassuid, instanceuid, size, lastmodified, seriesuid) values (\"%s\", \"%s\", \"%s\", \"%d\", \"%s\", \"%s\")",
-		zz->fullPath, zz->sopClassUid, zz->sopInstanceUid, size, zzdatetime(st.st_mtime), zz->seriesInstanceUid);
+	sprintf(rbuf, "INSERT OR REPLACE INTO instances(filename, sopclassuid, instanceuid, size, lastmodified, seriesuid) values (\"%s\", \"%s\", \"%s\", \"%lu\", \"%s\", \"%s\")",
+		zz->fullPath, zz->sopClassUid, zz->sopInstanceUid, zz->fileSize, zzdatetime(zz->modifiedTime), zz->seriesInstanceUid);
 	zzquery(zdb, rbuf, NULL, NULL);
 	sprintf(rbuf, "INSERT OR REPLACE INTO series(seriesuid, modality, studyuid) values (\"%s\", \"%s\", \"%s\")", zz->seriesInstanceUid, modality, studyInstanceUid);
 	zzquery(zdb, rbuf, NULL, NULL);
@@ -142,8 +138,8 @@ struct zzdb *zzdbopen()
 	const char *dbname = "/home/per/.zzdb";
 	int rc;
 	bool exists;
-	struct stat buf;
 	char *zErrMsg = NULL;
+	struct stat buf;
 
 	// Check if exists
 	exists = (stat(dbname, &buf) == 0);

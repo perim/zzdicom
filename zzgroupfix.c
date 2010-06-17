@@ -11,20 +11,12 @@ void fix(char *filename)
 {
 	struct zzfile *zz;
 	uint16_t group, element, lastgroup = 0xffff;
-	uint32_t len, size, groupsize = 0, grouppos = 0;
+	uint32_t len, groupsize = 0, grouppos = 0;
 	const struct part6 *tag;
-	struct stat st;
 
 	zz = zzopen(filename, "r");
-	if (!zz)
-	{
-		fprintf(stderr, "Failed to open %s\n", filename);
-		exit(-1);
-	}
-	fstat(fileno(zz->fp), &st);
-	size = st.st_size;
 
-	while (!feof(zz->fp) && !ferror(zz->fp))
+	while (zz && !feof(zz->fp) && !ferror(zz->fp))
 	{
 		zzread(zz, &group, &element, &len);
 
@@ -55,7 +47,7 @@ void fix(char *filename)
 		tag = zztag(group, element);
 
 		// Abort early, skip loading pixel data into memory if possible
-		if (ftell(zz->fp) + len == size)
+		if ((uint32_t)ftell(zz->fp) + len == zz->fileSize)
 		{
 			break;
 		}

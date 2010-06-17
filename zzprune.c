@@ -63,9 +63,12 @@ static int callback_instances(void *cbdata, int cols, char **data, char **colnam
 	if (st.st_mtime > zzundatetime(data[1]))
 	{
 		zz = zzopen(data[0], "r");
-		zzdbupdate(zdb, zz);
-		zz = zzclose(zz);
-		printf("%s was updated\n", data[0]);
+		if (zz)
+		{
+			zzdbupdate(zdb, zz);
+			zz = zzclose(zz);
+			printf("%s was updated\n", data[0]);
+		}
 	}
 
 	return 0;

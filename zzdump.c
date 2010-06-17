@@ -1,7 +1,5 @@
 #include "zz_priv.h"
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -13,21 +11,13 @@ void dump(char *filename)
 {
 	struct zzfile *zz;
 	uint16_t group, element;
-	uint32_t len, size, pos;
+	uint32_t len, pos;
 	const struct part6 *tag;
-	struct stat st;
 	char value[MAX_LEN_VALUE];
 
 	zz = zzopen(filename, "r");
-	if (!zz)
-	{
-		fprintf(stderr, "Failed to open %s\n", filename);
-		exit(-1);
-	}
-	fstat(fileno(zz->fp), &st);
-	size = st.st_size;
 
-	while (!feof(zz->fp) && !ferror(zz->fp))
+	while (zz && !feof(zz->fp) && !ferror(zz->fp))
 	{
 		zzread(zz, &group, &element, &len);
 
@@ -75,7 +65,7 @@ void dump(char *filename)
 		printf("(%04x,%04x) %-5s %-42s # %4d, %s %s\n", tag->group, tag->element, tag->VR, value, len, tag->VM, tag->description);
 
 		// Abort early, skip loading pixel data into memory if possible
-		if (ftell(zz->fp) + len == size)
+		if ((uint32_t)ftell(zz->fp) + len == zz->fileSize)
 		{
 			break;
 		}

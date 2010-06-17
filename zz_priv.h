@@ -24,6 +24,7 @@ struct part6
 struct zzfile // TODO rename to zzframe
 {
 	FILE		*fp;
+	uint64_t	fileSize;
 	uint32_t	headerSize;
 	uint32_t	startPos;
 	char		*fullPath;
@@ -32,6 +33,7 @@ struct zzfile // TODO rename to zzframe
 	char		sopInstanceUid[MAX_LEN_UID];
 	char		transferSyntaxUid[MAX_LEN_UID];
 	bool		acrNema;
+	time_t		modifiedTime;
 };
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
@@ -46,7 +48,7 @@ int16_t zzgetint16(struct zzfile *zz);
 struct zzfile *zzopen(const char *filename, const char *mode);
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len);
 const struct part6 *zztag(uint16_t group, uint16_t element);
-static inline struct zzfile *zzclose(struct zzfile *zz) { fclose(zz->fp); free(zz->fullPath); free(zz); return NULL; }
+static inline struct zzfile *zzclose(struct zzfile *zz) { if (zz) { fclose(zz->fp); free(zz->fullPath); free(zz); } return NULL; }
 
 /// Utility function to process some common command-line arguments. Returns the number of initial arguments to ignore.
 int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help);

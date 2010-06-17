@@ -15,8 +15,11 @@ int main(int argc, char **argv)
 	for (i = zzutil(argc, argv, 2, "<filenames>", "Add files to local DICOM database"); i < argc; i++)
 	{
 		struct zzfile *zz = zzopen(argv[i], "r");
-		zzdbupdate(zdb, zz);
-		zz = zzclose(zz);
+		if (zz)
+		{
+			zzdbupdate(zdb, zz);
+			zz = zzclose(zz);
+		}
 	}
 	zdb = zzdbclose(zdb);
 

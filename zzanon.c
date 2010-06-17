@@ -23,13 +23,8 @@ void anonymize(char *filename)
 	uint32_t len, i;
 
 	zz = zzopen(filename, "r+");
-	if (!zz)
-	{
-		fprintf(stderr, "Failed to open %s\n", filename);
-		exit(-1);
-	}
 
-	while (!feof(zz->fp) && nexttag < ARRAY_SIZE(taglist))
+	while (zz && !feof(zz->fp) && nexttag < ARRAY_SIZE(taglist))
 	{
 		zzread(zz, &group, &element, &len);
 
@@ -68,6 +63,7 @@ void anonymize(char *filename)
 			fseek(zz->fp, len, SEEK_CUR);
 		}
 	}
+	zz = zzclose(zz);
 }
 
 int main(int argc, char **argv)
