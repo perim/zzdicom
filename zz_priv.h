@@ -11,6 +11,39 @@
 #define MAX_LEN_DATETIME	(26 + 1)
 #define MAX_LEN_CS		(16 + 1)
 
+/// Enumerant for Value Representations. Approach taken from XMedCon.
+enum VR
+{
+	AE = ('A'<<8)|'E',
+	AS = ('A'<<8)|'S',
+	AT = ('A'<<8)|'T',
+	CS = ('C'<<8)|'S',
+	DA = ('D'<<8)|'A',
+	DS = ('D'<<8)|'S',
+	DT = ('D'<<8)|'T',
+	FL = ('F'<<8)|'L',
+	FD = ('F'<<8)|'D',
+	IS = ('I'<<8)|'S',
+	LO = ('L'<<8)|'O',
+	LT = ('L'<<8)|'T',
+	OB = ('O'<<8)|'B',
+	OW = ('O'<<8)|'W',
+	PN = ('P'<<8)|'N',
+	SH = ('S'<<8)|'H',
+	SL = ('S'<<8)|'L',
+	SQ = ('S'<<8)|'Q',
+	SS = ('S'<<8)|'S',
+	ST = ('S'<<8)|'T',
+	TM = ('T'<<8)|'M',
+	UI = ('U'<<8)|'I',
+	UL = ('U'<<8)|'L',
+	US = ('U'<<8)|'S',
+	UN = ('U'<<8)|'N',
+	UT = ('U'<<8)|'T',
+	/* special tag (multiple choices) */
+	OX = ('O'<<8)|'X'
+};
+
 struct part6
 {
 	uint16_t group;		// private
