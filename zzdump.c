@@ -34,7 +34,11 @@ void dump(char *filename)
 			continue;
 		}
 		memset(value, 0, sizeof(value));
-		if (tag->VR[0] == 'U' && tag->VR[1] == 'L')
+		if (zz->current.length == 0)
+		{
+			strcpy(value, "(null)");
+		}
+		else if (tag->VR[0] == 'U' && tag->VR[1] == 'L')
 		{
 			snprintf(value, sizeof(value) - 1, "%u", zzgetuint32(zz));
 		}
