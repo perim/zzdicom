@@ -28,6 +28,7 @@ enum VR
 	LT = ('L'<<8)|'T',
 	OB = ('O'<<8)|'B',
 	OW = ('O'<<8)|'W',
+	OF = ('O'<<8)|'F',
 	PN = ('P'<<8)|'N',
 	SH = ('S'<<8)|'H',
 	SL = ('S'<<8)|'L',
@@ -44,6 +45,8 @@ enum VR
 	OX = ('O'<<8)|'X'
 };
 
+#define ZZ_VR(_m1, _m2) ((_m1 << 8) | _m2)
+
 struct part6
 {
 	uint16_t group;		// private
@@ -54,7 +57,7 @@ struct part6
 	const char *description;
 };
 
-struct zzfile // TODO rename to zzframe
+struct zzfile
 {
 	FILE		*fp;
 	uint64_t	fileSize;

@@ -34,7 +34,7 @@ void dump(char *filename)
 			continue;
 		}
 		memset(value, 0, sizeof(value));
-		if (zz->current.length == 0)
+		if (len == 0)
 		{
 			strcpy(value, "(null)");
 		}
