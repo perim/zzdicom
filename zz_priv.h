@@ -6,6 +6,15 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+// From dcmtk:
+
+/// Implicit VR Little Endian: Default Transfer Syntax for DICOM
+#define UID_LittleEndianImplicitTransferSyntax  "1.2.840.10008.1.2"
+/// Explicit VR Little Endian
+#define UID_LittleEndianExplicitTransferSyntax  "1.2.840.10008.1.2.1"
+/// Explicit VR Big Endian
+#define UID_BigEndianExplicitTransferSyntax     "1.2.840.10008.1.2.2"
+
 #define MAX_LEN_UID		(64 + 1)
 #define MAX_LEN_PN		(64 * 5 + 1)
 #define MAX_LEN_DATETIME	(26 + 1)
@@ -57,6 +66,14 @@ struct part6
 	const char *description;
 };
 
+enum zzbasetype
+{
+	ZZ_IMPLICIT,
+	ZZ_TEMPORARY_EXPLICIT,
+	ZZ_EXPLICIT,
+	ZZ_TEMPORARY_IMPLICIT
+};
+
 struct zzfile
 {
 	FILE		*fp;
@@ -70,6 +87,7 @@ struct zzfile
 	char		transferSyntaxUid[MAX_LEN_UID];
 	bool		acrNema;
 	time_t		modifiedTime;
+	enum zzbasetype	baseType;
 };
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))

@@ -27,7 +27,7 @@ static bool testOnly = false;
 struct zzfile *zzopen(const char *filename, const char *mode)
 {
 	struct zzfile *zz;
-	char dicm[4], endianbuf[2];
+	char dicm[4], endianbuf[6];
 	uint16_t group, element;
 	uint32_t len, cur;
 	bool done = false;
@@ -64,10 +64,22 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 	}
 
 	// Check for big-endian syntax - not supported
-	if (fread(&endianbuf, 1, 2, zz->fp) != 2 || fseek(zz->fp, -2, SEEK_CUR) != 0 || endianbuf[0] < endianbuf[1])
+	if (fread(&endianbuf, 1, 6, zz->fp) != 6 || fseek(zz->fp, -6, SEEK_CUR) != 0 || endianbuf[0] < endianbuf[1])
 	{
 		fprintf(stderr, "%s appears to be big-endian - this is not supported\n", filename);
 		return zzclose(zz);
+	}
+
+	// Naive check for explicit, but unlikely to fail since size of the first tag would have to be very
+	// large to have two uppercase letters in it, and it is always very small. Reusing excess data in endianbuf.
+	// The reason for this check is that some broken early DICOM implementations wrote the header in implicit.
+	if (isupper(endianbuf[4]) && isupper(endianbuf[5]))
+	{
+		zz->baseType = ZZ_EXPLICIT;
+	}
+	else
+	{
+		zz->baseType = ZZ_IMPLICIT;
 	}
 
 	// Grab some useful data before handing back control
@@ -92,6 +104,18 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 			result = fread(zz->transferSyntaxUid, 1, MIN(sizeof(zz->transferSyntaxUid) - 1, len), zz->fp);
 			done = true;	// not ACR-NEMA, last interesting tag, so stop scanning
 			zz->acrNema = false;
+			if (zz->baseType == ZZ_EXPLICIT && strcmp(zz->transferSyntaxUid, UID_LittleEndianImplicitTransferSyntax) == 0)
+			{
+				zz->baseType = ZZ_TEMPORARY_EXPLICIT;	// once over the header, drop explicit and start parsing implicit
+			}
+			else if (strcmp(zz->transferSyntaxUid, UID_BigEndianExplicitTransferSyntax) == 0)
+			{
+				fprintf(stderr, "%s - big endian transfer syntax found - not supported", filename);
+				fclose(zz->fp);
+				free(zz);
+				return NULL;
+			}
+			// else continue to believe it is explicit little-endian, which really is the only sane thing to use
 			break;
 		case DCM_ACR_NEMA_RecognitionCode:
 			done = true;
@@ -149,33 +173,50 @@ int16_t zzgetint16(struct zzfile *zz)
 
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len)
 {
+	enum VR vr;
 	// Represent the three different variants of tag headers in one union
-	union { uint32_t len; struct { char vr[2]; uint16_t len; } evr; } buffer;
+	struct
+	{
+		uint16_t group;
+		uint16_t element;
+		union { uint32_t len; struct { char vr[2]; uint16_t len; } evr; } buffer;
+	} header;
 
-	*group = zzgetuint16(zz);
-	*element = zzgetuint16(zz);
-	fread(&buffer, 4, 1, zz->fp);		// either VR + 0, VR+VL, or just VL
+	fread(&header, 8, 1, zz->fp);		// group+element then either VR + 0, VR+VL, or just VL
+	*group = header.group;
+	*element = header.element;
+
+	// Drop temporary explicit state?
+	if (zz->baseType == ZZ_TEMPORARY_EXPLICIT && ftell(zz->fp) > zz->headerSize)
+	{
+		zz->baseType = ZZ_IMPLICIT;
+	}
 
 	// Try explicit VR
-	if (isupper(buffer.evr.vr[0]) && isupper(buffer.evr.vr[1]))
+	if ((zz->baseType == ZZ_TEMPORARY_EXPLICIT || zz->baseType == ZZ_EXPLICIT)
+	    && !(header.group == 0xfffe && (header.element == 0xe00d || header.element == 0xe000 || header.element == 0xe0dd)))
 	{
-		const char *vr = buffer.evr.vr;
+		vr = ZZ_VR(header.buffer.evr.vr[0], header.buffer.evr.vr[1]);
 
-		// Try explicit VR of type OB, OW, OF, SQ, UT or UN
-		if ((vr[0] == 'O' && (vr[1] == 'B' || vr[1] == 'W' || vr[1] == 'F'))
-		    || (vr[0] == 'S' && vr[1] == 'Q') || (vr[0] == 'U' && (vr[1] == 'T' || vr[1] == 'N')))
+		switch (vr)
 		{
-			fread(len, 4, 1, zz->fp);
+		case OB:
+		case OW:
+		case OF:
+		case SQ:
+		case UT:
+		case UN:
+			fread(len, 4, 1, zz->fp);		// the 32 bit variant
 			*len = LE_32(*len);
-		}
-		else	// TODO check VR types
-		{
-			*len = LE_16(buffer.evr.len);	// the insane 16 bit size variant
+			break;
+		default:
+			*len = LE_16(header.buffer.evr.len);	// the insane 16 bit size variant
+			break;
 		}
 	}
-	else
+	else	// the sad legacy implicit variant
 	{
-		*len = LE_32(buffer.len);
+		*len = LE_32(header.buffer.len);
 	}
 
 	return true;
