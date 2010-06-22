@@ -115,7 +115,7 @@ void dump(char *filename)
 		}
 
 		// Skip ahead
-		if (!feof(zz->fp) && len != 0xFFFFFFFF && len > 0)
+		if (!feof(zz->fp) && len != 0xFFFFFFFF && len > 0 && !(group == 0xfffe && element == 0xe000) && zz->current.vr != SQ)
 		{
 			fseek(zz->fp, pos + len, SEEK_SET);
 		}

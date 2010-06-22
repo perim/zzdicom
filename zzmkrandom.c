@@ -128,12 +128,13 @@ static void garbfill(FILE *fp)
 
 int main(int argc, char **argv)
 {
-	FILE *fp = fopen("tough.dcm", "w");
+	FILE *fp = fopen("random.dcm", "w");
 
 	(void)argc;
 	(void)argv;
 
-	srand(1000);
+	zzutil(argc, argv, 2, "<random seed>", "Generate pseudo-random DICOM file for unit testing");
+	srand(atoi(argv[1]));
 
 	if (rand() % 10 > 2) header(fp, UID_SecondaryCaptureImageStorage, UID_LittleEndianExplicitTransferSyntax);
 	explicitgeneric(fp, UID_SecondaryCaptureImageStorage);
@@ -142,12 +143,17 @@ int main(int argc, char **argv)
 	implicit(fp, 0xfffe, 0xe000, UNLIMITED);
 	garbfill(fp);
 	implicit(fp, 0xfffe, 0xe00d, 0);
+	implicit(fp, 0xfffe, 0xe000, 24);
+	garbfill(fp);
+	implicit(fp, 0xfffe, 0xe00d, 0);
 	implicit(fp, 0xfffe, 0xe000, UNLIMITED);
 	garbfill(fp);
 	implicit(fp, 0xfffe, 0xe00d, 0);
 	implicit(fp, 0xfffe, 0xe0dd, 0);
 
-	explicit2(fp, 0x0021, 0x0010, "UN", UNLIMITED);
+	wUL(fp, 0x0028, 0x9001, 1);	// marker
+
+	explicit2(fp, 0x0029, 0x0010, "UN", UNLIMITED);
 	syntax = IMPLICIT;
 	implicit(fp, 0xfffe, 0xe000, UNLIMITED);
 	garbfill(fp);
@@ -162,17 +168,3 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-
-/*
-Error - Missing attribute Type 1 Required Element=<ConversionType> Module=<SCEquipment>
-Error - Missing attribute Type 2C Conditional Element=<PatientOrientation> Module=<GeneralImage>
-Error - Missing attribute Type 1 Required Element=<SamplesPerPixel> Module=<ImagePixelMacro>
-Error - Missing attribute Type 1 Required Element=<PhotometricInterpretation> Module=<ImagePixelMacro>
-Error - Missing attribute Type 1 Required Element=<Rows> Module=<ImagePixelMacro>
-Error - Missing attribute Type 1 Required Element=<Columns> Module=<ImagePixelMacro>
-Error - Missing attribute Type 1 Required Element=<BitsAllocated> Module=<ImagePixelMacro>
-Error - Missing attribute Type 1 Required Element=<BitsStored> Module=<ImagePixelMacro>
-Error - Missing attribute Type 1 Required Element=<HighBit> Module=<ImagePixelMacro>
-Error - Missing attribute Type 1 Required Element=<PixelRepresentation> Module=<ImagePixelMacro>
-Error - Missing attribute Type 1C Conditional Element=<PixelData> Module=<ImagePixelMacro>
-*/

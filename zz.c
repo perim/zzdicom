@@ -240,7 +240,8 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 			zz->currNesting--;
 			zz->nextNesting--;
 		}
-		else if (*len == 0xffffffff)	// any undefined length value while parsing implicit has to be a sequence or an item
+		// note that any undefined length value while parsing implicit has to be a sequence or an item
+		else if (*len == 0xffffffff || (header.group == 0xfffe && header.element == 0xe000))
 		{
 			zz->nextNesting++;
 		}

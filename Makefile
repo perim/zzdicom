@@ -42,8 +42,8 @@ zzprune: $(HEADERS) $(COMMON) $(COMMONSQL) zzprune.c
 zztojpegls: $(HEADERS) $(COMMON) zztojpegls.c
 	$(CC) -o zztojpegls zztojpegls.c $(COMMON) $(CFLAGS) -lCharLS
 
-zzmkrandom: zzmkrandom.c
-	$(CC) -o zzmkrandom zzmkrandom.c $(CFLAGS)
+zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON)
+	$(CC) -o zzmkrandom zzmkrandom.c $(COMMON) $(CFLAGS)
 
 clean:
 	rm -f *.o sqlinit.h $(PROGRAMS)
