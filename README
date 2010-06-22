@@ -9,8 +9,7 @@ Limitations
 -----------
 zzdicom currently only works with little-endian DICOM data. I have never encountered big-endian 
 DICOM data in the real world (ie hospital settings), so I never saw a need for adding support for 
-this. It compiles out of the box on Linux, but it should work on other architectures, but you may
-need to remove the -DPOSIX define from the Makefile first.
+this. It compiles out of the box on Linux, but it should also work on other POSIX-y architectures.
 
 Features
 --------
@@ -40,3 +39,5 @@ zzstudies - pretty prints a list of all studies in the local DICOM database to s
 
 zzprune - checks and updates all entries in the local DICOM database, removing entries that no
 longer refer to an existing file.
+
+zzmkrandom - generates a pseudo-random DICOM file for use in manual testing or a unit testing framework

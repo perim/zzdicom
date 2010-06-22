@@ -46,7 +46,7 @@ zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON)
 	$(CC) -o zzmkrandom zzmkrandom.c $(COMMON) $(CFLAGS)
 
 clean:
-	rm -f *.o sqlinit.h $(PROGRAMS)
+	rm -f *.o sqlinit.h $(PROGRAMS) *.gcno *.gcda random.dcm
 
 check: tests/zz1.c
 	$(CC) -g -O0 -o tests/zz1 tests/zz1.c -I. $(COMMON) $(CFLAGS)
