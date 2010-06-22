@@ -1,11 +1,7 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 
-#define UID_SecondaryCaptureImageStorage "1.2.840.10008.5.1.4.1.1.7"
-#define UID_LittleEndianExplicitTransferSyntax  "1.2.840.10008.1.2.1"
+#include "zz_priv.h"
+
 #define UNLIMITED 0xffffffff
 
 enum syntax
@@ -72,7 +68,7 @@ static void wUI(FILE *fp, uint16_t group, uint16_t element, const char *string)
 	if (length % 2 != 0) fwrite("", 1, 1, fp);	// pad
 }
 
-static void explicitheader(FILE *fp, const char *sopclass, const char *transfer)
+static void header(FILE *fp, const char *sopclass, const char *transfer)
 {
 	char version[3];
 	const char *dicm = "DICM";
@@ -139,10 +135,13 @@ int main(int argc, char **argv)
 
 	srand(1000);
 
-	explicitheader(fp, UID_SecondaryCaptureImageStorage, UID_LittleEndianExplicitTransferSyntax);
+	if (rand() % 10 > 2) header(fp, UID_SecondaryCaptureImageStorage, UID_LittleEndianExplicitTransferSyntax);
 	explicitgeneric(fp, UID_SecondaryCaptureImageStorage);
 
 	explicit2(fp, 0x0020, 0x1115, "SQ", UNLIMITED);
+	implicit(fp, 0xfffe, 0xe000, UNLIMITED);
+	garbfill(fp);
+	implicit(fp, 0xfffe, 0xe00d, 0);
 	implicit(fp, 0xfffe, 0xe000, UNLIMITED);
 	garbfill(fp);
 	implicit(fp, 0xfffe, 0xe00d, 0);
@@ -150,6 +149,9 @@ int main(int argc, char **argv)
 
 	explicit2(fp, 0x0021, 0x0010, "UN", UNLIMITED);
 	syntax = IMPLICIT;
+	implicit(fp, 0xfffe, 0xe000, UNLIMITED);
+	garbfill(fp);
+	implicit(fp, 0xfffe, 0xe00d, 0);
 	implicit(fp, 0xfffe, 0xe000, UNLIMITED);
 	garbfill(fp);
 	implicit(fp, 0xfffe, 0xe00d, 0);

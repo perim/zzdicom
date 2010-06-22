@@ -110,9 +110,8 @@ static bool jpegtols(char *filename)
 			//params.colorTransform = 1;
 			//params.allowedlossyerror = 3;
 			params.bytesperline = 0;
-			if (verbose)
-				printf("Encoding %dx%d image with %d bits per sample, %d samples per pixel\n",
-				       params.width, params.height, params.bitspersample, params.components);
+			//printf("Encoding %dx%d image with %d bits per sample, %d samples per pixel\n",
+			//       params.width, params.height, params.bitspersample, params.components);
 			result = 0;
 			err = JpegLsEncode(dst, len, &result, src, len, &params);
 			switch (err)

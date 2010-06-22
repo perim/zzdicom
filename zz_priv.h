@@ -15,6 +15,8 @@
 /// Explicit VR Big Endian
 #define UID_BigEndianExplicitTransferSyntax     "1.2.840.10008.1.2.2"
 
+#define UID_SecondaryCaptureImageStorage "1.2.840.10008.5.1.4.1.1.7"
+
 #define MAX_LEN_UID		(64 + 1)
 #define MAX_LEN_PN		(64 * 5 + 1)
 #define MAX_LEN_DATETIME	(26 + 1)

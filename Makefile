@@ -1,7 +1,7 @@
 CFLAGS = -Wall -Wextra -DPOSIX -Werror -Wshadow -Wformat-security
 COMMON = zz.o
 COMMONSQL = zzsql.o
-PROGRAMS = zzanon zzdump zzverify zzgroupfix zzread zzstudies zzprune
+PROGRAMS = zzanon zzdump zzverify zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom
 HEADERS = zz.h zz_priv.h zzsql.h
 
 all: CFLAGS += -Os
@@ -19,25 +19,31 @@ sqlinit.h: SQL
 	echo ";" >> sqlinit.h
 
 zzanon: $(HEADERS) $(COMMON) zzanon.c
-	gcc -o zzanon zzanon.c $(COMMON) $(CFLAGS)
+	$(CC) -o zzanon zzanon.c $(COMMON) $(CFLAGS)
 
 zzdump: $(HEADERS) $(COMMON) zzdump.c
-	gcc -o zzdump zzdump.c $(COMMON) $(CFLAGS)
+	$(CC) -o zzdump zzdump.c $(COMMON) $(CFLAGS)
 
 zzverify: $(HEADERS) $(COMMON) zzverify.c
-	gcc -o zzverify zzverify.c $(COMMON) $(CFLAGS)
+	$(CC) -o zzverify zzverify.c $(COMMON) $(CFLAGS)
 
 zzgroupfix: $(HEADERS) $(COMMON) zzgroupfix.c
-	gcc -o zzgroupfix zzgroupfix.c $(COMMON) $(CFLAGS)
+	$(CC) -o zzgroupfix zzgroupfix.c $(COMMON) $(CFLAGS)
 
 zzread: $(HEADERS) $(COMMON) $(COMMONSQL) zzread.c
-	gcc -o zzread zzread.c $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
+	$(CC) -o zzread zzread.c $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
 
 zzstudies: $(HEADERS) $(COMMON) $(COMMONSQL) zzstudies.c
-	gcc -o zzstudies zzstudies.c $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
+	$(CC) -o zzstudies zzstudies.c $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
 
 zzprune: $(HEADERS) $(COMMON) $(COMMONSQL) zzprune.c
-	gcc -o zzprune zzprune.c $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
+	$(CC) -o zzprune zzprune.c $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
+
+zztojpegls: $(HEADERS) $(COMMON) zztojpegls.c
+	$(CC) -o zztojpegls zztojpegls.c $(COMMON) $(CFLAGS) -lCharLS
+
+zzmkrandom: zzmkrandom.c
+	$(CC) -o zzmkrandom zzmkrandom.c $(CFLAGS)
 
 clean:
 	rm -f *.o sqlinit.h $(PROGRAMS)
