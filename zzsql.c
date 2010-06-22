@@ -61,6 +61,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	uint16_t group, element;
 	uint32_t len;
 	char studyInstanceUid[MAX_LEN_UID];
+	char seriesInstanceUid[MAX_LEN_UID];
 	char patientsName[MAX_LEN_PN];
 	char modality[MAX_LEN_CS];
 	uint64_t pos;
@@ -87,7 +88,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 			fread(studyInstanceUid, 1, MIN(sizeof(studyInstanceUid) - 1, len), zz->fp);
 			break;
 		case DCM_SeriesInstanceUID:
-			fread(zz->seriesInstanceUid, 1, MIN(sizeof(zz->seriesInstanceUid) - 1, len), zz->fp);
+			fread(seriesInstanceUid, 1, MIN(sizeof(seriesInstanceUid) - 1, len), zz->fp);
 			break;
 		case DCM_PatientsName:
 			fread(patientsName, 1, MIN(sizeof(patientsName) - 1, len), zz->fp);
@@ -116,9 +117,9 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 
 	zzquery(zdb, "BEGIN TRANSACTION", NULL, NULL);
 	sprintf(rbuf, "INSERT OR REPLACE INTO instances(filename, sopclassuid, instanceuid, size, lastmodified, seriesuid) values (\"%s\", \"%s\", \"%s\", \"%lu\", \"%s\", \"%s\")",
-		zz->fullPath, zz->sopClassUid, zz->sopInstanceUid, zz->fileSize, zzdatetime(zz->modifiedTime), zz->seriesInstanceUid);
+		zz->fullPath, zz->sopClassUid, zz->sopInstanceUid, zz->fileSize, zzdatetime(zz->modifiedTime), seriesInstanceUid);
 	zzquery(zdb, rbuf, NULL, NULL);
-	sprintf(rbuf, "INSERT OR REPLACE INTO series(seriesuid, modality, studyuid) values (\"%s\", \"%s\", \"%s\")", zz->seriesInstanceUid, modality, studyInstanceUid);
+	sprintf(rbuf, "INSERT OR REPLACE INTO series(seriesuid, modality, studyuid) values (\"%s\", \"%s\", \"%s\")", seriesInstanceUid, modality, studyInstanceUid);
 	zzquery(zdb, rbuf, NULL, NULL);
 	sprintf(rbuf, "INSERT OR REPLACE INTO studies(studyuid, patientsname) values (\"%s\", \"%s\")", studyInstanceUid, patientsName);
 	zzquery(zdb, rbuf, NULL, NULL);
@@ -129,13 +130,11 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 struct zzdb *zzdbclose(struct zzdb *zdb)
 {
 	sqlite3_close(zdb->sqlite);
-	free(zdb);
 	return NULL;
 }
 
-struct zzdb *zzdbopen()
+struct zzdb *zzdbopen(struct zzdb *zdb)
 {
-	struct zzdb *zdb = malloc(sizeof(*zdb));
 	sqlite3 *db;
 	const char *dbname = "/home/per/.zzdb";
 	int rc;

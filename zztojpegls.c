@@ -20,7 +20,7 @@ static bool jpegtols(char *filename)
 {
 	struct JlsParamaters params;
 	enum JLS_ERROR err;
-	struct zzfile *zz = zzopen(filename, "r");
+	struct zzfile szz, *zz = zzopen(filename, "r", &szz);
 	struct stat st;
 	size_t result;
 	uint16_t group, element;

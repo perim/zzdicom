@@ -7,8 +7,8 @@ HEADERS = zz.h zz_priv.h zzsql.h
 all: CFLAGS += -Os
 all: sqlinit.h $(PROGRAMS)
 
-debug: CFLAGS += -O0 -g -DDEBUG
-debug: sqlinit.h $(PROGRAMS)
+debug: CFLAGS += -O0 -g -DDEBUG -fprofile-arcs -ftest-coverage
+debug: sqlinit.h $(PROGRAMS) check
 
 %.o : %.c
 	$(COMPILE.c) -o $@ $<
@@ -48,7 +48,9 @@ zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON)
 clean:
 	rm -f *.o sqlinit.h $(PROGRAMS)
 
-check:
+check: tests/zz1.c
+	$(CC) -g -O0 -o tests/zz1 tests/zz1.c -I. $(COMMON) $(CFLAGS)
+	tests/zz1
 
 install:
 	install -t /usr/local/bin $(PROGRAMS)

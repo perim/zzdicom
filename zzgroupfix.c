@@ -9,12 +9,12 @@
 
 void fix(char *filename)
 {
-	struct zzfile *zz;
+	struct zzfile szz, *zz;
 	uint16_t group, element, lastgroup = 0xffff;
 	uint32_t len, groupsize = 0, grouppos = 0;
 	const struct part6 *tag;
 
-	zz = zzopen(filename, "r");
+	zz = zzopen(filename, "r", &szz);
 
 	while (zz && !feof(zz->fp) && !ferror(zz->fp))
 	{

@@ -34,11 +34,11 @@ static int callback(void *nada, int cols, char **data, char **colnames)
 
 int main(int argc, char **argv)
 {
-	struct zzdb *zdb;
+	struct zzdb szdb, *zdb;
 	char lines[100];
 
 	zzutil(argc, argv, 1, "", "List all studies in local DICOM database");
-	zdb = zzdbopen();
+	zdb = zzdbopen(&szdb);
 	if (!zdb)
 	{
 		fprintf(stderr, "Error opening local DICOM database - aborting.\n");

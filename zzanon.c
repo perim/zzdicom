@@ -18,11 +18,11 @@ static char fill[MAX_FILL];
 
 void anonymize(char *filename)
 {
-	struct zzfile *zz;
+	struct zzfile szz, *zz;
 	uint16_t group, element, nexttag = 0;
 	uint32_t len, i;
 
-	zz = zzopen(filename, "r+");
+	zz = zzopen(filename, "r+", &szz);
 
 	while (zz && !feof(zz->fp) && nexttag < ARRAY_SIZE(taglist))
 	{

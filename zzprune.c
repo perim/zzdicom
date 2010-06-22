@@ -79,12 +79,12 @@ static int callback_instances(void *cbdata, int cols, char **data, char **colnam
 
 int main(int argc, char **argv)
 {
-	struct zzdb *zdb;
+	struct zzdb szdb, *zdb;
 	struct updatenode *iter, *next;
-	struct zzfile *zz;
+	struct zzfile szz, *zz;
 
 	zzutil(argc, argv, 1, "", "Program to update the local DICOM database for changed and deleted files");
-	zdb = zzdbopen();
+	zdb = zzdbopen(&szdb);
 	if (zdb)
 	{
 		// Find and delete instances without matching physical files, updated changed files
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 		for (iter = first; iter; iter = next)	// need it outside select loop for transactions to work
 		{
 			next = iter->next;
-			zz = zzopen(iter->path, "r");
+			zz = zzopen(iter->path, "r", &szz);
 			if (zz)
 			{
 				zzdbupdate(zdb, zz);

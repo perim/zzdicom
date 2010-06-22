@@ -46,14 +46,14 @@ static const char *vr2str(enum VR vr)
 
 void dump(char *filename)
 {
-	struct zzfile *zz;
+	struct zzfile szz, *zz;
 	uint16_t group, element;
 	uint32_t len, pos;
 	const struct part6 *tag;
 	char value[MAX_LEN_VALUE];
 	int i;
 
-	zz = zzopen(filename, "r");
+	zz = zzopen(filename, "r", &szz);
 
 	while (zz && !feof(zz->fp) && !ferror(zz->fp))
 	{

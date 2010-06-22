@@ -16,7 +16,7 @@ struct zzdb
 };
 
 bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz);
-struct zzdb *zzdbopen(void);
+struct zzdb *zzdbopen(struct zzdb *indb);
 struct zzdb *zzdbclose(struct zzdb *zdb);
 
 bool zzquery(struct zzdb *zdb, const char *statement, int (*callback)(void*,int,char**,char**), void *cbdata);

@@ -3,10 +3,11 @@
 
 int main(int argc, char **argv)
 {
-	struct zzdb *zdb;
+	struct zzdb szdb, *zdb;
+	struct zzfile szz, *zz;
 	int i;
 
-	zdb = zzdbopen();
+	zdb = zzdbopen(&szdb);
 	if (!zdb)
 	{
 		fprintf(stderr, "Error opening local DICOM database - aborting.\n");
@@ -14,7 +15,7 @@ int main(int argc, char **argv)
 	}
 	for (i = zzutil(argc, argv, 2, "<filenames>", "Add files to local DICOM database"); i < argc; i++)
 	{
-		struct zzfile *zz = zzopen(argv[i], "r");
+		zz = zzopen(argv[i], "r", &szz);
 		if (zz)
 		{
 			zzdbupdate(zdb, zz);

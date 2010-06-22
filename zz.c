@@ -8,6 +8,7 @@
 #include "zz.h"
 #include "zz_priv.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -24,8 +25,9 @@ const char *versionString =
 static bool verbose = false;
 static bool testOnly = false;
 
-struct zzfile *zzopen(const char *filename, const char *mode)
+struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile)
 {
+	char transferSyntaxUid[MAX_LEN_UID];
 	struct zzfile *zz;
 	char dicm[4], endianbuf[6];
 	uint16_t group, element;
@@ -33,25 +35,26 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 	bool done = false;
 	struct stat st;
 
+	if (!infile || !mode || !filename)
+	{
+		return NULL;
+	}
+	zz = infile;
+	memset(zz, 0, sizeof(*zz));
 	if (stat(filename, &st) != 0)
 	{
 		fprintf(stderr, "%s could not be found: %s\n", filename, strerror(errno));
 		return NULL;
 	}
-
-	zz = malloc(sizeof(*zz));
-	if (!zz) return NULL;
-	memset(zz, 0, sizeof(*zz));
 	zz->fp = fopen(filename, mode);
 	if (!zz->fp)
 	{
 		fprintf(stderr, "%s could not be opened: %s\n", filename, strerror(errno));
-		free(zz);
 		return NULL;
 	}
 	zz->fileSize = st.st_size;
 	zz->modifiedTime = st.st_mtime;
-	zz->fullPath = realpath(filename, NULL);
+	realpath(filename, zz->fullPath);
 #ifdef POSIX
 	posix_fadvise(fileno(zz->fp), 0, 4096 * 4, POSIX_FADV_SEQUENTIAL);	// request 4 pages right away
 #endif
@@ -101,18 +104,17 @@ struct zzfile *zzopen(const char *filename, const char *mode)
 			result = fread(zz->sopInstanceUid, 1, MIN(sizeof(zz->sopInstanceUid) - 1, len), zz->fp);
 			break;
 		case DCM_TransferSyntaxUID:
-			result = fread(zz->transferSyntaxUid, 1, MIN(sizeof(zz->transferSyntaxUid) - 1, len), zz->fp);
+			result = fread(transferSyntaxUid, 1, MIN(sizeof(transferSyntaxUid) - 1, len), zz->fp);
 			done = true;	// not ACR-NEMA, last interesting tag, so stop scanning
 			zz->acrNema = false;
-			if (zz->baseType == ZZ_EXPLICIT && strcmp(zz->transferSyntaxUid, UID_LittleEndianImplicitTransferSyntax) == 0)
+			if (zz->baseType == ZZ_EXPLICIT && strcmp(transferSyntaxUid, UID_LittleEndianImplicitTransferSyntax) == 0)
 			{
 				zz->baseType = ZZ_TEMPORARY_EXPLICIT;	// once over the header, drop explicit and start parsing implicit
 			}
-			else if (strcmp(zz->transferSyntaxUid, UID_BigEndianExplicitTransferSyntax) == 0)
+			else if (strcmp(transferSyntaxUid, UID_BigEndianExplicitTransferSyntax) == 0)
 			{
 				fprintf(stderr, "%s - big endian transfer syntax found - not supported", filename);
 				fclose(zz->fp);
-				free(zz);
 				return NULL;
 			}
 			// else continue to believe it is explicit little-endian, which really is the only sane thing to use
@@ -333,4 +335,24 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 		exit(!usageReq);
 	}
 	return ignparams;
+}
+
+void zz_c_test()
+{
+	char filename[12];
+	struct zzfile szz;
+	int fd;
+	char value;
+
+	assert(zzopen(NULL, NULL, NULL) == NULL);
+	assert(zzopen("/nonexistent", "r", &szz) == NULL);
+	strcpy(filename, "/tmp/XXXXXX");
+	fd = mkstemp(filename);
+	fchmod(fd, 0);	// make inaccessible
+	assert(zzopen(filename, "r", &szz) == NULL);
+	fchmod(fd, S_IWUSR | S_IRUSR);	// make accessible
+	value = 1; write(fd, &value, 1);
+	value = 0; write(fd, &value, 1);
+	assert(zzopen(filename, "r", &szz) == NULL);	// pretends to be big-endian
+	close(fd);
 }

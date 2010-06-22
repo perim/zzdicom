@@ -13,12 +13,12 @@
 
 void dump(char *filename)
 {
-	struct zzfile *zz;
+	struct zzfile szz, *zz;
 	uint16_t group, element, lastgroup = 0xffff, lastelement = 0;
 	uint32_t len, groupsize = 0;
 	uint64_t grouppos = 0, pos;
 
-	zz = zzopen(filename, "r");
+	zz = zzopen(filename, "r", &szz);
 
 	while (zz && !feof(zz->fp) && !ferror(zz->fp))
 	{

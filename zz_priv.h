@@ -5,6 +5,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <limits.h>
 
 // From dcmtk:
 
@@ -84,11 +85,9 @@ struct zzfile
 	uint64_t	fileSize;
 	uint32_t	headerSize;
 	uint32_t	startPos;
-	char		*fullPath;
-	char		sopClassUid[MAX_LEN_UID];
-	char		seriesInstanceUid[MAX_LEN_UID];
+	char		fullPath[PATH_MAX];
+	char		sopClassUid[MAX_LEN_UID];	// TODO convert to enum
 	char		sopInstanceUid[MAX_LEN_UID];
-	char		transferSyntaxUid[MAX_LEN_UID];
 	bool		acrNema;
 	time_t		modifiedTime;
 	enum zzbasetype	baseType;
@@ -109,10 +108,10 @@ uint16_t zzgetuint16(struct zzfile *zz);
 int32_t zzgetint32(struct zzfile *zz);
 int16_t zzgetint16(struct zzfile *zz);
 
-struct zzfile *zzopen(const char *filename, const char *mode);
+struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile);
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len);
 const struct part6 *zztag(uint16_t group, uint16_t element);
-static inline struct zzfile *zzclose(struct zzfile *zz) { if (zz) { fclose(zz->fp); free(zz->fullPath); free(zz); } return NULL; }
+static inline struct zzfile *zzclose(struct zzfile *zz) { if (zz) { fclose(zz->fp); } return NULL; }
 
 /// Utility function to process some common command-line arguments. Returns the number of initial arguments to ignore.
 int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help);
