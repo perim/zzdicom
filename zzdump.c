@@ -14,6 +14,7 @@ void dump(char *filename)
 	uint32_t len, pos;
 	const struct part6 *tag;
 	char value[MAX_LEN_VALUE];
+	int i;
 
 	zz = zzopen(filename, "r");
 
@@ -24,6 +25,7 @@ void dump(char *filename)
 		pos = ftell(zz->fp);
 		tag = zztag(group, element);
 
+		for (i = 0; i < zz->currNesting; i++) printf("  ");
 		if (!tag)
 		{
 			printf("(%04x,%04x) -- unknown tag\n", group, element);

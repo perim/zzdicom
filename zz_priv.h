@@ -71,7 +71,7 @@ enum zzbasetype
 	ZZ_IMPLICIT,
 	ZZ_TEMPORARY_EXPLICIT,
 	ZZ_EXPLICIT,
-	ZZ_TEMPORARY_IMPLICIT
+	ZZ_TEMPORARY_IMPLICIT	// anything higher than this is recursively ZZ_TEMPORARY_IMPLICIT, used for UN VR
 };
 
 struct zzfile
@@ -88,6 +88,7 @@ struct zzfile
 	bool		acrNema;
 	time_t		modifiedTime;
 	enum zzbasetype	baseType;
+	int		currNesting, nextNesting;
 };
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))

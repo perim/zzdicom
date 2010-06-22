@@ -185,11 +185,17 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 	fread(&header, 8, 1, zz->fp);		// group+element then either VR + 0, VR+VL, or just VL
 	*group = header.group;
 	*element = header.element;
+	zz->currNesting = zz->nextNesting;
 
-	// Drop temporary explicit state?
+	// Drop temporary explicit state? This happens when leaving part 10 header, and transfer syntax is implicit
 	if (zz->baseType == ZZ_TEMPORARY_EXPLICIT && ftell(zz->fp) > zz->headerSize)
 	{
 		zz->baseType = ZZ_IMPLICIT;
+	}
+	// Drop temporary implicit state? This happens when leaving a UN VR tag
+	else if (zz->baseType >= ZZ_TEMPORARY_IMPLICIT && header.group == 0xfffe && header.element == 0xe0dd)
+	{
+		zz->baseType--;	// can be nested
 	}
 
 	// Try explicit VR
@@ -200,12 +206,12 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 
 		switch (vr)
 		{
+		case UN:
+		case SQ:
 		case OB:
 		case OW:
 		case OF:
-		case SQ:
 		case UT:
-		case UN:
 			fread(len, 4, 1, zz->fp);		// the 32 bit variant
 			*len = LE_32(*len);
 			break;
@@ -213,10 +219,29 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 			*len = LE_16(header.buffer.evr.len);	// the insane 16 bit size variant
 			break;
 		}
+
+		// TODO - check if UN data is big-endian, and make a cross error message if it is
+		if (vr == SQ || (vr == UN && *len == 0xffffffff))	// UN of undefined length has to be parsed as SQ; if fixed length, treat as black box
+		{
+			zz->nextNesting++;
+			if (zz->baseType == ZZ_TEMPORARY_EXPLICIT)
+			{
+				zz->baseType++;	// we are inside a UN tag, and found another sequence
+			}
+		}
 	}
 	else	// the sad legacy implicit variant
 	{
 		*len = LE_32(header.buffer.len);
+		if (header.group == 0xfffe && (header.element == 0xe0dd || header.element == 0xe00d))
+		{
+			zz->currNesting--;
+			zz->nextNesting--;
+		}
+		else if (*len == 0xffffffff)	// any undefined length value while parsing implicit has to be a sequence or an item
+		{
+			zz->nextNesting++;
+		}
 	}
 
 	return true;
