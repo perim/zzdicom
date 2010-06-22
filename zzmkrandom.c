@@ -74,6 +74,7 @@ static void header(FILE *fp, const char *sopclass, const char *transfer)
 	const char *dicm = "DICM";
 	char *zeroes = malloc(128);
 	uint32_t size;
+	const uint32_t startpos = 128 + 4 + 8;
 
 	version[0] = 0;
 	version[1] = 1;
@@ -93,8 +94,8 @@ static void header(FILE *fp, const char *sopclass, const char *transfer)
 //	wAE(fp, 0x0002, 0x0016, "TEST");
 
 	// write group size
-	size = ftell(fp);
-	fseek(fp, 128+4+8, SEEK_SET);
+	size = ftell(fp) - (startpos + 4);
+	fseek(fp, startpos, SEEK_SET);
 	fwrite(&size, 4, 1, fp);	// set size
 	fseek(fp, 0, SEEK_END);		// return position
 }
@@ -145,7 +146,7 @@ int main(int argc, char **argv)
 	implicit(fp, 0xfffe, 0xe00d, 0);
 	implicit(fp, 0xfffe, 0xe000, 24);
 	garbfill(fp);
-	implicit(fp, 0xfffe, 0xe00d, 0);
+//	implicit(fp, 0xfffe, 0xe00d, 0);	-- this crashed dicom3tools; not really legal dicom
 	implicit(fp, 0xfffe, 0xe000, UNLIMITED);
 	garbfill(fp);
 	implicit(fp, 0xfffe, 0xe00d, 0);
