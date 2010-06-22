@@ -7,6 +7,43 @@
 
 #define MAX_LEN_VALUE 40
 
+static const char *vr2str(enum VR vr)
+{
+	switch (vr)
+	{
+	case AE: return "AE";
+	case AS: return "AS";
+	case AT: return "AT";
+	case CS: return "CS";
+	case DA: return "DA";
+	case DS: return "DS";
+	case DT: return "DT";
+	case FL: return "FL";
+	case FD: return "FD";
+	case IS: return "IS";
+	case LO: return "LO";
+	case LT: return "LT";
+	case OB: return "OB";
+	case OW: return "OW";
+	case OF: return "OF";
+	case PN: return "PN";
+	case SH: return "SH";
+	case SL: return "SL";
+	case SQ: return "SQ";
+	case SS: return "SS";
+	case ST: return "ST";
+	case TM: return "TM";
+	case UI: return "UI";
+	case UL: return "UL";
+	case US: return "US";
+	case UN: return "UN";
+	case UT: return "UT";
+	case OX: return "??";
+	case NO: return "--";
+	}
+	return "zz";	// to satisfy compiler
+}
+
 void dump(char *filename)
 {
 	struct zzfile *zz;
@@ -28,7 +65,7 @@ void dump(char *filename)
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
 		if (!tag)
 		{
-			printf("(%04x,%04x) -- unknown tag\n", group, element);
+			printf("(%04x,%04x) %s -- unknown tag\n", group, element, zz->current.vr != NO ? vr2str(zz->current.vr) : tag->VR);
 			if (!feof(zz->fp) && len != 0xFFFFFFFF && len > 0)
 			{
 				fseek(zz->fp, len, SEEK_CUR);
@@ -68,7 +105,8 @@ void dump(char *filename)
 		}
 
 		// Presenting in DCMTK's syntax
-		printf("(%04x,%04x) %-5s %-42s # %4d, %s %s\n", tag->group, tag->element, tag->VR, value, len, tag->VM, tag->description);
+		printf("(%04x,%04x) %s %-42s # %4d, %s %s\n", tag->group, tag->element, zz->current.vr != NO ? vr2str(zz->current.vr) : tag->VR, 
+		       value, len, tag->VM, tag->description);
 
 		// Abort early, skip loading pixel data into memory if possible
 		if ((uint32_t)ftell(zz->fp) + len == zz->fileSize)

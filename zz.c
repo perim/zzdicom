@@ -202,7 +202,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 	if ((zz->baseType == ZZ_TEMPORARY_EXPLICIT || zz->baseType == ZZ_EXPLICIT)
 	    && !(header.group == 0xfffe && (header.element == 0xe00d || header.element == 0xe000 || header.element == 0xe0dd)))
 	{
-		vr = ZZ_VR(header.buffer.evr.vr[0], header.buffer.evr.vr[1]);
+		zz->current.vr = vr = ZZ_VR(header.buffer.evr.vr[0], header.buffer.evr.vr[1]);
 
 		switch (vr)
 		{
@@ -233,6 +233,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 	else	// the sad legacy implicit variant
 	{
 		*len = LE_32(header.buffer.len);
+		zz->current.vr = NO;	// no info
 		if (header.group == 0xfffe && (header.element == 0xe0dd || header.element == 0xe00d))
 		{
 			zz->currNesting--;

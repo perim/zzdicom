@@ -51,7 +51,9 @@ enum VR
 	UN = ('U'<<8)|'N',
 	UT = ('U'<<8)|'T',
 	/* special tag (multiple choices) */
-	OX = ('O'<<8)|'X'
+	OX = ('O'<<8)|'X',
+	/* special tag (no info - implicit syntax) */
+	NO = ('N'<<8)|'O',
 };
 
 #define ZZ_VR(_m1, _m2) ((_m1 << 8) | _m2)
@@ -89,6 +91,11 @@ struct zzfile
 	time_t		modifiedTime;
 	enum zzbasetype	baseType;
 	int		currNesting, nextNesting;
+
+	struct
+	{
+		enum VR	vr;
+	} current;
 };
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
