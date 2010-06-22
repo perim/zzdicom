@@ -208,6 +208,8 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 		{
 		case UN:
 		case SQ:
+			zz->nextNesting++;
+			// fall through
 		case OB:
 		case OW:
 		case OF:
@@ -221,10 +223,9 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 		}
 
 		// TODO - check if UN data is big-endian, and make a cross error message if it is
-		if (vr == SQ || (vr == UN && *len == 0xffffffff))	// UN of undefined length has to be parsed as SQ; if fixed length, treat as black box
+		if (vr == UN && *len == 0xffffffff)	// UN of undefined length has to be parsed as SQ; if fixed length, treat as black box
 		{
-			zz->nextNesting++;
-			if (zz->baseType == ZZ_TEMPORARY_EXPLICIT)
+			if (zz->baseType == ZZ_TEMPORARY_IMPLICIT || zz->baseType == ZZ_EXPLICIT)
 			{
 				zz->baseType++;	// we are inside a UN tag, and found another sequence
 			}
