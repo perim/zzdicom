@@ -2,8 +2,6 @@
 
 #include "zz_priv.h"
 
-#define UNLIMITED 0xffffffff
-
 enum syntax
 {
 	IMPLICIT, EXPLICIT

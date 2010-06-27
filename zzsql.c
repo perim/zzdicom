@@ -66,7 +66,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	char modality[MAX_LEN_CS];
 	uint64_t pos;
 
-	fseek(zz->fp, zz->startPos, SEEK_SET);
+	fseek(zz->fp, zz->ladder[0].pos, SEEK_SET);	// start position of base group is start of DICOM data
 
 	modified[0] = '\0';
 	memset(studyInstanceUid, 0, sizeof(studyInstanceUid));

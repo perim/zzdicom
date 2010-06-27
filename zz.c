@@ -78,15 +78,15 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	// The reason for this check is that some broken early DICOM implementations wrote the header in implicit.
 	if (isupper(endianbuf[4]) && isupper(endianbuf[5]))
 	{
-		zz->baseType = ZZ_EXPLICIT;
+		zz->ladder[0].txsyn = ZZ_EXPLICIT;
 	}
 	else
 	{
-		zz->baseType = ZZ_IMPLICIT;
+		zz->ladder[0].txsyn = ZZ_IMPLICIT;
 	}
 
 	// Grab some useful data before handing back control
-	zz->startPos = ftell(zz->fp);
+	zz->ladder[0].pos = ftell(zz->fp);
 	while (zzread(zz, &group, &element, &len) && !done && !feof(zz->fp) && !ferror(zz->fp))
 	{
 		int result = len;
@@ -95,7 +95,11 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 		switch (ZZ_KEY(group, element))
 		{
 		case DCM_FileMetaInformationGroupLength:
-			zz->headerSize = zzgetuint32(zz);
+			zz->ladderidx = 1;
+			zz->ladder[1].pos = ftell(zz->fp);
+			zz->ladder[1].size = zzgetuint32(zz);
+			zz->ladder[1].txsyn = zz->ladder[0].txsyn;
+			zz->ladder[1].group = 0x0002;
 			break;
 		case DCM_MediaStorageSOPClassUID:
 			result = fread(zz->sopClassUid, 1, MIN(sizeof(zz->sopClassUid) - 1, len), zz->fp);
@@ -107,9 +111,10 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 			result = fread(transferSyntaxUid, 1, MIN(sizeof(transferSyntaxUid) - 1, len), zz->fp);
 			done = true;	// not ACR-NEMA, last interesting tag, so stop scanning
 			zz->acrNema = false;
-			if (zz->baseType == ZZ_EXPLICIT && strcmp(transferSyntaxUid, UID_LittleEndianImplicitTransferSyntax) == 0)
+			if (strcmp(transferSyntaxUid, UID_LittleEndianImplicitTransferSyntax) == 0)
 			{
-				zz->baseType = ZZ_TEMPORARY_EXPLICIT;	// once over the header, drop explicit and start parsing implicit
+				// once over the header, start parsing implicit
+				zz->ladder[0].txsyn = ZZ_IMPLICIT;
 			}
 			else if (strcmp(transferSyntaxUid, UID_BigEndianExplicitTransferSyntax) == 0)
 			{
@@ -136,7 +141,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 			fseek(zz->fp, cur + len, SEEK_SET);	// skip data
 		}
 	}
-	fseek(zz->fp, zz->startPos, SEEK_SET);
+	fseek(zz->fp, zz->ladder[0].pos, SEEK_SET);
 
 	return zz;
 }
@@ -175,7 +180,9 @@ int16_t zzgetint16(struct zzfile *zz)
 
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len)
 {
-	enum VR vr;
+	enum zztxsyn syntax = zz->ladder[zz->ladderidx].txsyn;
+	const uint32_t ladderpos = zz->ladder[zz->ladderidx].pos;
+	const uint32_t laddersize = zz->ladder[zz->ladderidx].size;
 	// Represent the three different variants of tag headers in one union
 	struct
 	{
@@ -183,33 +190,40 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 		uint16_t element;
 		union { uint32_t len; struct { char vr[2]; uint16_t len; } evr; } buffer;
 	} header;
+	zzKey key;
 
 	fread(&header, 8, 1, zz->fp);		// group+element then either VR + 0, VR+VL, or just VL
 	*group = header.group;
 	*element = header.element;
 	zz->currNesting = zz->nextNesting;
+	key = ZZ_KEY(header.group, header.element);
 
-	// Drop temporary explicit state? This happens when leaving part 10 header, and transfer syntax is implicit
-	if (zz->baseType == ZZ_TEMPORARY_EXPLICIT && ftell(zz->fp) > zz->headerSize)
+	// Did we leave a group, sequence or item?
+	if (zz->ladderidx > 0 && ((laddersize != 0xffff && (uint32_t)ftell(zz->fp) - ladderpos > laddersize) || key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem))
 	{
-		zz->baseType = ZZ_IMPLICIT;
+		if (zz->ladder[zz->ladderidx].group == 0xffff)	// leaving a sequence or item, ie not a group
+		{
+			zz->currNesting--;
+			zz->nextNesting--;
+		}
+		zz->ladderidx--;
+		syntax = zz->ladder[zz->ladderidx].txsyn;
 	}
-	// Drop temporary implicit state? This happens when leaving a UN VR tag
-	else if (zz->baseType >= ZZ_TEMPORARY_IMPLICIT && header.group == 0xfffe && header.element == 0xe0dd)
+
+	if (key == DCM_Item)
 	{
-		zz->baseType--;	// can be nested
+		zz->nextNesting++;
 	}
 
 	// Try explicit VR
-	if ((zz->baseType == ZZ_TEMPORARY_EXPLICIT || zz->baseType == ZZ_EXPLICIT)
-	    && !(header.group == 0xfffe && (header.element == 0xe00d || header.element == 0xe000 || header.element == 0xe0dd)))
+	if (syntax == ZZ_EXPLICIT && key != DCM_Item && key != DCM_ItemDelimitationItem && key != DCM_SequenceDelimitationItem)
 	{
-		zz->current.vr = vr = ZZ_VR(header.buffer.evr.vr[0], header.buffer.evr.vr[1]);
+		zz->current.vr = ZZ_VR(header.buffer.evr.vr[0], header.buffer.evr.vr[1]);
 
-		switch (vr)
+		switch (zz->current.vr)
 		{
-		case UN:
 		case SQ:
+		case UN:
 			zz->nextNesting++;
 			// fall through
 		case OB:
@@ -223,30 +237,32 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 			*len = LE_16(header.buffer.evr.len);	// the insane 16 bit size variant
 			break;
 		}
-
-		// TODO - check if UN data is big-endian, and make a cross error message if it is
-		if (vr == UN && *len == 0xffffffff)	// UN of undefined length has to be parsed as SQ; if fixed length, treat as black box
-		{
-			if (zz->baseType == ZZ_TEMPORARY_IMPLICIT || zz->baseType == ZZ_EXPLICIT)
-			{
-				zz->baseType++;	// we are inside a UN tag, and found another sequence
-			}
-		}
 	}
 	else	// the sad legacy implicit variant
 	{
-		*len = LE_32(header.buffer.len);
 		zz->current.vr = NO;	// no info
-		if (header.group == 0xfffe && (header.element == 0xe0dd || header.element == 0xe00d))
+		*len = LE_32(header.buffer.len);
+	}
+
+	if (header.element == 0x0000 || (key != DCM_PixelData && *len == UNLIMITED) || zz->current.vr == SQ || key == DCM_Item)
+	{
+		// Entered into a group or sequence, copy parameters
+		if (zz->ladderidx >= MAX_LADDER)
 		{
-			zz->currNesting--;
-			zz->nextNesting--;
+			return false;	// stop parsing and give up!
 		}
-		// note that any undefined length value while parsing implicit has to be a sequence or an item
-		else if (*len == 0xffffffff || (header.group == 0xfffe && header.element == 0xe000))
+		zz->ladderidx++;
+		zz->ladder[zz->ladderidx].pos = ftell(zz->fp);
+		zz->ladder[zz->ladderidx].size = *len;
+		if (zz->current.vr != UN)
 		{
-			zz->nextNesting++;
+			zz->ladder[zz->ladderidx].txsyn = zz->ladder[zz->ladderidx - 1].txsyn;	// inherit transfer syntax
 		}
+		else
+		{
+			zz->ladder[zz->ladderidx].txsyn = ZZ_IMPLICIT;	// UN is always implicit
+		}
+		zz->ladder[zz->ladderidx].group = header.element == 0x0000 ? header.group : 0xffff;	// mark as group or sequence
 	}
 
 	return true;

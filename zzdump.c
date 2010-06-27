@@ -75,23 +75,23 @@ void dump(char *filename)
 		memset(value, 0, sizeof(value));
 		if (len == 0)
 		{
-			strcpy(value, "(null)");
+			strcpy(value, "(no value available)");
 		}
 		else if (tag->VR[0] == 'U' && tag->VR[1] == 'L')
 		{
-			snprintf(value, sizeof(value) - 1, "%u", zzgetuint32(zz));
+			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint32(zz));
 		}
 		else if (tag->VR[0] == 'U' && tag->VR[1] == 'S')
 		{
-			snprintf(value, sizeof(value) - 1, "%u", zzgetuint16(zz));
+			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint16(zz));
 		}
 		else if (tag->VR[0] == 'S' && tag->VR[1] == 'S')
 		{
-			snprintf(value, sizeof(value) - 1, "%u", zzgetint16(zz));
+			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint16(zz));
 		}
 		else if (tag->VR[0] == 'S' && tag->VR[1] == 'L')
 		{
-			snprintf(value, sizeof(value) - 1, "%u", zzgetint32(zz));
+			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint32(zz));
 		}
 		else if ((tag->VR[0] == 'L' && tag->VR[1] == 'O') || (tag->VR[0] == 'S' && tag->VR[1] == 'H')
 		         || (tag->VR[0] == 'C' && tag->VR[1] == 'S') || (tag->VR[0] == 'D' && tag->VR[1] == 'S')

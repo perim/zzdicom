@@ -22,6 +22,7 @@
 #define MAX_LEN_PN		(64 * 5 + 1)
 #define MAX_LEN_DATETIME	(26 + 1)
 #define MAX_LEN_CS		(16 + 1)
+#define UNLIMITED		0xffffffff
 
 /// Enumerant for Value Representations. Approach taken from XMedCon.
 enum VR
@@ -71,32 +72,38 @@ struct part6
 	const char *description;
 };
 
-enum zzbasetype
+enum zztxsyn
 {
 	ZZ_IMPLICIT,
-	ZZ_TEMPORARY_EXPLICIT,
-	ZZ_EXPLICIT,
-	ZZ_TEMPORARY_IMPLICIT	// anything higher than this is recursively ZZ_TEMPORARY_IMPLICIT, used for UN VR
+	ZZ_EXPLICIT
 };
+
+/// Maximum amount of recursiveness in a DICOM file
+#define MAX_LADDER 16
 
 struct zzfile
 {
 	FILE		*fp;
 	uint64_t	fileSize;
-	uint32_t	headerSize;
-	uint32_t	startPos;
 	char		fullPath[PATH_MAX];
 	char		sopClassUid[MAX_LEN_UID];	// TODO convert to enum
 	char		sopInstanceUid[MAX_LEN_UID];
 	bool		acrNema;
 	time_t		modifiedTime;
-	enum zzbasetype	baseType;
-	int		currNesting, nextNesting;
+	int		currNesting, nextNesting, ladderidx;
 
 	struct
 	{
 		enum VR	vr;
 	} current;
+
+	struct
+	{
+		long		pos;		// file position where group begins, this - 4 is value position (except for group zero)
+		uint32_t	size;		// size of group/sequence
+		enum zztxsyn	txsyn;		// transfer syntax of this group
+		uint16_t	group;		// if group type, which group; 0xffff if not group
+	} ladder[MAX_LADDER];
 };
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
