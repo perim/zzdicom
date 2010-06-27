@@ -1,6 +1,14 @@
 #include <string.h>
 
 #include "zz_priv.h"
+#include "byteorder.h"
+
+// Magic values
+#define MAGIC1 0xfffee00d
+#define MAGIC2 BSWAP_32(0xfffee00d)
+#define MAGIC3 0xfffee0dd
+#define MAGIC4 BSWAP_32(0xfffee0dd)
+#define MAGIC5 ((0x0010 << 24) | (0x0001 << 16) | ('S' << 8) | ('S'))
 
 enum syntax
 {
@@ -121,8 +129,22 @@ static void explicitgeneric(FILE *fp, const char *sopclass)
 
 static void garbfill(FILE *fp)
 {
-	wUL(fp, 0x0028, 0x9001, 1);
-	wUL(fp, 0x0028, 0x9002, 2);
+	switch (rand() % 3)
+	{
+	case 0:
+		wUL(fp, 0x0028, 0x9001, MAGIC1);
+		wUL(fp, 0x0028, 0x9002, MAGIC2);
+		break;
+	case 1:
+		wUL(fp, 0x0028, 0x9001, MAGIC3);
+		wUL(fp, 0x0028, 0x9002, MAGIC4);
+		break;
+	case 2:
+	default:
+		wUL(fp, 0x0028, 0x9001, MAGIC5);
+		wUL(fp, 0x0028, 0x9002, MAGIC1);
+		break;
+	}
 }
 
 int main(int argc, char **argv)
