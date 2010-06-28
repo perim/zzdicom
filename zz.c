@@ -146,6 +146,21 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	return zz;
 }
 
+bool zzgetstring(struct zzfile *zz, char *input, size_t strsize)
+{
+	const size_t desired = MIN(zz->current.length, strsize - 1);
+	size_t result;
+	char *last;
+
+	result = fread(input, 1, desired, zz->fp);
+	input[MIN(result, strsize - 1)] = '\0';	// make sure we zero terminate
+	while ((last = strrchr(input, ' ')))	// remove trailing whitespace
+	{
+		*last = '\0';
+	}
+	return result == desired;
+}
+
 uint32_t zzgetuint32(struct zzfile *zz)
 {
 	uint32_t val;
@@ -264,6 +279,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 		}
 		zz->ladder[zz->ladderidx].group = header.element == 0x0000 ? header.group : 0xffff;	// mark as group or sequence
 	}
+	zz->current.length = *len;
 
 	return true;
 }

@@ -64,15 +64,28 @@ static void wOB(FILE *fp, uint16_t group, uint16_t element, const char *string, 
 
 static void wUI(FILE *fp, uint16_t group, uint16_t element, const char *string)
 {
-	int length = strlen(string) + 1;
+	int length = MIN(strlen(string), 64);
 	int wlen = length;
 
 	if (length % 2 != 0) wlen++;			// padding
 	if (syntax == EXPLICIT) explicit1(fp, group, element, "UI", wlen);
 	else implicit(fp, group, element, wlen);
 	fwrite(string, 1, length, fp);
-	if (length % 2 != 0) fwrite("", 1, 1, fp);	// pad
+	if (length % 2 != 0) fwrite("", 1, 1, fp);	// pad with null
 }
+
+static void wstr(FILE *fp, uint16_t group, uint16_t element, const char *string, size_t maxlen)
+{
+	int length = MIN(strlen(string), maxlen);
+	int wlen = length;
+
+	if (length % 2 != 0) wlen++;			// padding
+	if (syntax == EXPLICIT) explicit1(fp, group, element, "UI", wlen);
+	else implicit(fp, group, element, wlen);
+	fwrite(string, 1, length, fp);
+	if (length % 2 != 0) fwrite(" ", 1, 1, fp);	// pad with spaces
+}
+static inline void wSH(FILE *fp, uint16_t group, uint16_t element, const char *string) { wstr(fp, group, element, string, 16); }
 
 static void header(FILE *fp, const char *sopclass, const char *transfer)
 {
@@ -96,7 +109,7 @@ static void header(FILE *fp, const char *sopclass, const char *transfer)
 	wUI(fp, 0x0002, 0x0003, "1.2.3.4.0");
 	wUI(fp, 0x0002, 0x0010, transfer);
 	wUI(fp, 0x0002, 0x0012, "1.2.3.4.8.2");
-//	wSH(fp, 0x0002, 0x0013, "TEST");
+	wSH(fp, 0x0002, 0x0013, "TEST");
 //	wAE(fp, 0x0002, 0x0016, "TEST");
 
 	// write group size
@@ -106,44 +119,42 @@ static void header(FILE *fp, const char *sopclass, const char *transfer)
 	fseek(fp, 0, SEEK_END);		// return position
 }
 
-static void explicitgeneric(FILE *fp, const char *sopclass)
+static void emptyvalue(FILE *fp, uint16_t group, uint16_t element, const char *vr)
+{
+	if (syntax == EXPLICIT) explicit1(fp, group, element, vr, 0);
+	else implicit(fp, group, element, 0);
+}
+
+static void genericfile(FILE *fp, const char *sopclass)
 {
 	wUI(fp, 0x0008, 0x0016, sopclass);
 	wUI(fp, 0x0008, 0x0018, "1.2.3.4.0");
-
-	explicit1(fp, 0x0008, 0x0020, "DA", 0);
-	explicit1(fp, 0x0008, 0x0030, "TM", 0);
-	explicit1(fp, 0x0008, 0x0050, "SH", 0);
-	explicit1(fp, 0x0008, 0x0090, "PN", 0);
-	explicit1(fp, 0x0010, 0x0010, "PN", 0);
-	explicit1(fp, 0x0010, 0x0020, "LO", 0);
-	explicit1(fp, 0x0010, 0x0030, "DA", 0);
-	explicit1(fp, 0x0010, 0x0040, "CS", 0);
+	emptyvalue(fp, 0x0008, 0x0020, "DA");
+	emptyvalue(fp, 0x0008, 0x0030, "TM");
+	wSH(fp, 0x0008, 0x0050, "1234567890123456");
+	emptyvalue(fp, 0x0008, 0x0090, "PN");
+	emptyvalue(fp, 0x0010, 0x0010, "PN");
+	emptyvalue(fp, 0x0010, 0x0020, "LO");
+	emptyvalue(fp, 0x0010, 0x0030, "DA");
+	emptyvalue(fp, 0x0010, 0x0040, "CS");
 	wUI(fp, 0x0020, 0x000d, "1.2.3.4.1");
 	wUI(fp, 0x0020, 0x000e, "1.2.3.4.2");
-	explicit1(fp, 0x0020, 0x0010, "SH", 0);
-	explicit1(fp, 0x0020, 0x0011, "IS", 0);
-	explicit1(fp, 0x0020, 0x0013, "IS", 0);
-	explicit1(fp, 0x0020, 0x0060, "CS", 0);
+	emptyvalue(fp, 0x0020, 0x0010, "SH");
+	emptyvalue(fp, 0x0020, 0x0011, "IS");
+	emptyvalue(fp, 0x0020, 0x0013, "IS");
+	emptyvalue(fp, 0x0020, 0x0060, "CS");
 }
 
 static void garbfill(FILE *fp)
 {
-	switch (rand() % 3)
+	switch (rand() % 5)
 	{
-	case 0:
-		wUL(fp, 0x0028, 0x9001, MAGIC1);
-		wUL(fp, 0x0028, 0x9002, MAGIC2);
-		break;
-	case 1:
-		wUL(fp, 0x0028, 0x9001, MAGIC3);
-		wUL(fp, 0x0028, 0x9002, MAGIC4);
-		break;
-	case 2:
+	case 0: wUL(fp, 0x0028, 0x9001, MAGIC1); wUL(fp, 0x0028, 0x9002, MAGIC2); break;
+	case 1: wUL(fp, 0x0028, 0x9001, MAGIC3); wUL(fp, 0x0028, 0x9002, MAGIC4); break;
+	case 2: wUL(fp, 0x0028, 0x9001, MAGIC2); wUL(fp, 0x0028, 0x9002, MAGIC5); break;
+	case 3: wUL(fp, 0x0028, 0x9001, MAGIC5); wUL(fp, 0x0028, 0x9002, MAGIC3); break;
 	default:
-		wUL(fp, 0x0028, 0x9001, MAGIC5);
-		wUL(fp, 0x0028, 0x9002, MAGIC1);
-		break;
+	case 4: wUL(fp, 0x0028, 0x9001, MAGIC4); wUL(fp, 0x0028, 0x9002, MAGIC1); break;
 	}
 }
 
@@ -154,36 +165,57 @@ int main(int argc, char **argv)
 	(void)argc;
 	(void)argv;
 
-	zzutil(argc, argv, 2, "<random seed>", "Generate pseudo-random DICOM file for unit testing");
-	srand(atoi(argv[1]));
+	zzutil(argc, argv, 1, "<random seed>", "Generate pseudo-random DICOM file for unit testing");
+	if (argc > 1)
+	{
+		srand(atoi(argv[1]));
+	}
+	else
+	{
+		srand(1);
+	}
 
-	if (rand() % 10 > 2) header(fp, UID_SecondaryCaptureImageStorage, UID_LittleEndianExplicitTransferSyntax);
-	explicitgeneric(fp, UID_SecondaryCaptureImageStorage);
+	switch (rand() % 15)
+	{
+	case 0: syntax = EXPLICIT; break;	// no header, explicit
+	case 1: syntax = IMPLICIT; break;	// no header, implicit
+	case 2: syntax = EXPLICIT; header(fp, UID_SecondaryCaptureImageStorage, UID_LittleEndianImplicitTransferSyntax); syntax = IMPLICIT; break;	// implicit with explicit header
+	case 3: syntax = IMPLICIT; header(fp, UID_SecondaryCaptureImageStorage, UID_LittleEndianImplicitTransferSyntax); break;	// implicit header, buggy like CTN
+	default: syntax = EXPLICIT; header(fp, UID_SecondaryCaptureImageStorage, UID_LittleEndianExplicitTransferSyntax); break;	// normal case
+	}
+	genericfile(fp, UID_SecondaryCaptureImageStorage);
 
-	explicit2(fp, 0x0020, 0x1115, "SQ", UNLIMITED);
-	implicit(fp, 0xfffe, 0xe000, UNLIMITED);
-	garbfill(fp);
-	implicit(fp, 0xfffe, 0xe00d, 0);
-	implicit(fp, 0xfffe, 0xe000, 24);
-	garbfill(fp);
-//	implicit(fp, 0xfffe, 0xe00d, 0);	-- this crashed dicom3tools; not really legal dicom
-	implicit(fp, 0xfffe, 0xe000, UNLIMITED);
-	garbfill(fp);
-	implicit(fp, 0xfffe, 0xe00d, 0);
-	implicit(fp, 0xfffe, 0xe0dd, 0);
+	if (syntax == EXPLICIT && rand() % 10 > 2)	// add SQ block
+	{
+		explicit2(fp, 0x0020, 0x1115, "SQ", UNLIMITED);
+		implicit(fp, 0xfffe, 0xe000, UNLIMITED);
+		garbfill(fp);
+		implicit(fp, 0xfffe, 0xe00d, 0);
+		implicit(fp, 0xfffe, 0xe000, 24);
+		garbfill(fp);
+		if (rand() % 10 > 9) implicit(fp, 0xfffe, 0xe00d, 0);	// this crashed dicom3tools; not really legal dicom
+		implicit(fp, 0xfffe, 0xe000, UNLIMITED);
+		garbfill(fp);
+		implicit(fp, 0xfffe, 0xe00d, 0);
+		implicit(fp, 0xfffe, 0xe0dd, 0);
+	}
 
-	wUL(fp, 0x0028, 0x9001, 1);	// marker
+	if (rand() % 10 > 5) garbfill(fp);
 
-	explicit2(fp, 0x0029, 0x0010, "UN", UNLIMITED);
-	syntax = IMPLICIT;
-	implicit(fp, 0xfffe, 0xe000, UNLIMITED);
-	garbfill(fp);
-	implicit(fp, 0xfffe, 0xe00d, 0);
-	implicit(fp, 0xfffe, 0xe000, UNLIMITED);
-	garbfill(fp);
-	implicit(fp, 0xfffe, 0xe00d, 0);
-	implicit(fp, 0xfffe, 0xe0dd, 0);
-	syntax = EXPLICIT;
+	if (syntax == EXPLICIT && rand() % 10 > 2)	// add UN block
+	{
+		enum syntax old_syntax = syntax;
+		explicit2(fp, 0x0029, 0x0010, "UN", UNLIMITED);
+		syntax = IMPLICIT;
+		implicit(fp, 0xfffe, 0xe000, UNLIMITED);
+		garbfill(fp);
+		implicit(fp, 0xfffe, 0xe00d, 0);
+		implicit(fp, 0xfffe, 0xe000, UNLIMITED);
+		garbfill(fp);
+		implicit(fp, 0xfffe, 0xe00d, 0);
+		implicit(fp, 0xfffe, 0xe0dd, 0);
+		syntax = old_syntax;
+	}
 
 	fclose(fp);
 

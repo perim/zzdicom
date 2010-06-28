@@ -95,6 +95,7 @@ struct zzfile
 	struct
 	{
 		enum VR	vr;
+		size_t	length;
 	} current;
 
 	struct
@@ -114,6 +115,7 @@ uint32_t zzgetuint32(struct zzfile *zz);
 uint16_t zzgetuint16(struct zzfile *zz);
 int32_t zzgetint32(struct zzfile *zz);
 int16_t zzgetint16(struct zzfile *zz);
+bool zzgetstring(struct	zzfile *zz, char *input, size_t size);
 
 struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile);
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len);

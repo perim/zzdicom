@@ -5,7 +5,7 @@
 #include <string.h>
 #include <ctype.h>
 
-#define MAX_LEN_VALUE 40
+#define MAX_LEN_VALUE 42
 
 static const char *vr2str(enum VR vr)
 {
@@ -51,9 +51,21 @@ void dump(char *filename)
 	uint32_t len, pos;
 	const struct part6 *tag;
 	char value[MAX_LEN_VALUE];
+	char tmp[MAX_LEN_VALUE];
 	int i;
+	bool header = false;	// written header?
 
 	zz = zzopen(filename, "r", &szz);
+
+	if (zz)
+	{
+		printf("\n# Dicom-File-Format\n");
+		if (zz->ladderidx > 0)
+		{
+			printf("\n# Dicom-Meta-Information-Header\n");
+			printf("# Used TransferSyntax: %s\n", zz->ladder[1].txsyn == ZZ_EXPLICIT ? "Little Endian Explicit" : "Little Endian Implicit");
+		}
+	}
 
 	while (zz && !feof(zz->fp) && !ferror(zz->fp))
 	{
@@ -61,6 +73,13 @@ void dump(char *filename)
 
 		pos = ftell(zz->fp);
 		tag = zztag(group, element);
+
+		if (zz->ladderidx == 0 && !header)
+		{
+			printf("\n# Dicom-Data-Set\n");
+			printf("# Used TransferSyntax: %s\n", zz->ladder[0].txsyn == ZZ_EXPLICIT ? "Little Endian Explicit" : "Little Endian Implicit");
+			header = true;
+		}
 
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
 		if (!tag)
@@ -101,7 +120,12 @@ void dump(char *filename)
 		         || (tag->VR[0] == 'I' && tag->VR[1] == 'S') || (tag->VR[0] == 'U' && tag->VR[1] == 'T')
 		         || (tag->VR[0] == 'T' && tag->VR[1] == 'M') || (tag->VR[0] == 'D' && tag->VR[1] == 'A'))
 		{
-			fread(value, MIN(len, sizeof(value) - 1), 1, zz->fp);
+			zzgetstring(zz, tmp, sizeof(tmp));
+			tmp[sizeof(tmp) - 4] = '\0';  // add trailing dots if cut off
+			tmp[sizeof(tmp) - 5] = '.';
+			tmp[sizeof(tmp) - 6] = '.';
+			tmp[sizeof(tmp) - 7] = '.';
+			snprintf(value, sizeof(value) - 1, "[%s]", tmp);
 		}
 
 		// Presenting in DCMTK's syntax
