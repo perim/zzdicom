@@ -7,6 +7,7 @@
 
 #define MAX_LEN_VALUE 42
 
+// Not implemented as reversing the bitshifting of the enum definition because this way it is reentrant
 static const char *vr2str(enum VR vr)
 {
 	switch (vr)
@@ -133,13 +134,13 @@ void dump(char *filename)
 		       value, len, tag->VM, tag->description);
 
 		// Abort early, skip loading pixel data into memory if possible
-		if ((uint32_t)ftell(zz->fp) + len == zz->fileSize)
+		if ((uint32_t)ftell(zz->fp) + len >= zz->fileSize)
 		{
 			break;
 		}
 
 		// Skip ahead
-		if (!feof(zz->fp) && len != 0xFFFFFFFF && len > 0 && !(group == 0xfffe && element == 0xe000) && zz->current.vr != SQ)
+		if (!feof(zz->fp) && len != UNLIMITED && len > 0 && !(group == 0xfffe && element == 0xe000) && zz->current.vr != SQ)
 		{
 			fseek(zz->fp, pos + len, SEEK_SET);
 		}
