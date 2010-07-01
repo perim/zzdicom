@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
-#include <time.h>
 
 static int counter = 0;
 

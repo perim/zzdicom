@@ -2,7 +2,6 @@
 #define ZZSQL_H
 
 #define _XOPEN_SOURCE
-#include <time.h>
 #include <stdbool.h>
 #include <sqlite3.h>
 

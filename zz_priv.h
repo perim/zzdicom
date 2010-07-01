@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
+#include <time.h>
 
 // From dcmtk:
 
@@ -15,6 +16,8 @@
 #define UID_LittleEndianExplicitTransferSyntax  "1.2.840.10008.1.2.1"
 /// Explicit VR Big Endian
 #define UID_BigEndianExplicitTransferSyntax     "1.2.840.10008.1.2.2"
+/// JPEG-LS Lossless Image Compression
+#define UID_JPEGLSLosslessTransferSyntax        "1.2.840.10008.1.2.4.80"
 
 #define UID_SecondaryCaptureImageStorage "1.2.840.10008.5.1.4.1.1.7"
 
