@@ -87,7 +87,7 @@ enum zztxsyn
 struct zzfile
 {
 	FILE		*fp;
-	uint64_t	fileSize;
+	long		fileSize;
 	char		fullPath[PATH_MAX];
 	char		sopClassUid[MAX_LEN_UID];	// TODO convert to enum
 	char		sopInstanceUid[MAX_LEN_UID];
@@ -104,7 +104,7 @@ struct zzfile
 	struct
 	{
 		long		pos;		// file position where group begins, this - 4 is value position (except for group zero)
-		uint32_t	size;		// size of group/sequence
+		long		size;		// size of group/sequence
 		enum zztxsyn	txsyn;		// transfer syntax of this group
 		uint16_t	group;		// if group type, which group; 0xffff if not group
 	} ladder[MAX_LADDER];

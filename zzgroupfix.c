@@ -11,7 +11,8 @@ void fix(char *filename)
 {
 	struct zzfile szz, *zz;
 	uint16_t group, element, lastgroup = 0xffff;
-	uint32_t len, groupsize = 0, grouppos = 0;
+	uint32_t len;
+	long groupsize = 0, grouppos = 0;
 	const struct part6 *tag;
 
 	zz = zzopen(filename, "r", &szz);
@@ -28,7 +29,7 @@ void fix(char *filename)
 				{
 					uint32_t cur = ftell(zz->fp);
 
-					fprintf(stdout, "Wrong group %x size - told it was %u, but it was %ld - fixing!\n", group, groupsize, ftell(zz->fp) - grouppos);
+					fprintf(stdout, "Wrong group %x size - told it was %ld, but it was %ld - fixing!\n", group, groupsize, ftell(zz->fp) - grouppos);
 					fseek(zz->fp, grouppos - 4, SEEK_SET);
 					fwrite(&grouppos, 4, 1, zz->fp);
 					fseek(zz->fp, cur, SEEK_SET);

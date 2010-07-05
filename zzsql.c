@@ -76,7 +76,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	while (zzread(zz, &group, &element, &len))
 	{
 		// Abort early, skip loading pixel data into memory if possible
-		if ((uint32_t)ftell(zz->fp) + len == zz->fileSize)
+		if (ftell(zz->fp) + len == zz->fileSize)
 		{
 			break;
 		}

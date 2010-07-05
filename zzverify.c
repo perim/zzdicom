@@ -16,7 +16,7 @@ void dump(char *filename)
 	struct zzfile szz, *zz;
 	uint16_t group, element, lastgroup = 0xffff, lastelement = 0;
 	uint32_t len, groupsize = 0;
-	uint64_t grouppos = 0, pos;
+	long grouppos = 0, pos;
 
 	zz = zzopen(filename, "r", &szz);
 
@@ -30,7 +30,8 @@ void dump(char *filename)
 			{
 				if (ftell(zz->fp) - grouppos != groupsize)
 				{
-					fprintf(stderr, "Wrong group %x size - told it was %u, but it was %ld\n", group, groupsize, ftell(zz->fp) - grouppos);
+					fprintf(stderr, "Wrong group %x size - told it was %u, but it was %ld\n", 
+					        group, groupsize, ftell(zz->fp) - grouppos);
 				}
 			}
 
