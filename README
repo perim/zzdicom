@@ -14,7 +14,8 @@ this. It compiles out of the box on Linux, but it should also work on other POSI
 Features
 --------
 The software was written with performance as a high priority, and the little it does, it does far
-faster than any other DICOM software that I have tested.
+faster than any other DICOM software that I have tested. The core parser does not utilize any
+dynamic memory management.
 
 The tools
 ---------

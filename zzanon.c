@@ -1,7 +1,3 @@
-// In-place, minimal DICOM anonymizer. Only supports little endian data sets (the only kind I ever encountered).
-// It makes some ugly assumptions about size never being larger than what you would get with two consequetive
-// uppercase letters being the bytes that code for the uint16_t for size, before we get to pixel data.
-
 #include "zz_priv.h"
 
 #include <stdlib.h>
