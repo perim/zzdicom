@@ -225,11 +225,6 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 		syntax = zz->ladder[zz->ladderidx].txsyn;
 	}
 
-	if (key == DCM_Item)
-	{
-		zz->nextNesting++;
-	}
-
 	// Try explicit VR
 	if (syntax == ZZ_EXPLICIT && key != DCM_Item && key != DCM_ItemDelimitationItem && key != DCM_SequenceDelimitationItem)
 	{
@@ -257,6 +252,40 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len
 	{
 		zz->current.vr = NO;	// no info
 		*len = LE_32(header.buffer.len);
+	}
+
+	switch (key)
+	{
+	case DCM_Item:
+		zz->nextNesting++;
+		if (zz->pxstate == ZZ_PIXELDATA)
+		{
+			zz->pxstate = ZZ_OFFSET_TABLE;
+		}
+		else if (zz->pxstate == ZZ_OFFSET_TABLE)
+		{
+			zz->pxstate = ZZ_PIXELITEM;
+		}
+		break;
+	case DCM_PixelData:
+		if (*len == UNLIMITED)
+		{
+			// Start special ugly handling of the encapsulated pixel data attribute
+			zz->pxstate = ZZ_PIXELDATA;
+			zz->nextNesting++;
+		}
+		break;
+	case DCM_SequenceDelimitationItem:
+		if (zz->pxstate != ZZ_NOT_PIXEL)
+		{
+			zz->pxstate = ZZ_NOT_PIXEL;
+			zz->currNesting--;
+			zz->nextNesting--;
+		}
+		break;
+	case DCM_ItemDelimitationItem:
+	default:
+		break;
 	}
 
 	if (header.element == 0x0000 || (key != DCM_PixelData && *len == UNLIMITED) || zz->current.vr == SQ || key == DCM_Item)

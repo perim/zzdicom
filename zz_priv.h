@@ -81,6 +81,14 @@ enum zztxsyn
 	ZZ_EXPLICIT
 };
 
+enum zzpxstate
+{
+	ZZ_NOT_PIXEL,
+	ZZ_PIXELDATA,
+	ZZ_OFFSET_TABLE,
+	ZZ_PIXELITEM
+};
+
 /// Maximum amount of recursiveness in a DICOM file
 #define MAX_LADDER 16
 
@@ -94,6 +102,7 @@ struct zzfile
 	bool		acrNema;
 	time_t		modifiedTime;
 	int		currNesting, nextNesting, ladderidx;
+	enum zzpxstate	pxstate;
 
 	struct
 	{
