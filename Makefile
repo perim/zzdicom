@@ -1,8 +1,9 @@
 CFLAGS = -Wall -Wextra -DPOSIX -Werror -Wshadow -Wformat-security
 COMMON = zz.o
 COMMONSQL = zzsql.o
+COMMONWRITE = zzwrite.o
 PROGRAMS = zzanon zzdump zzverify zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom
-HEADERS = zz.h zz_priv.h zzsql.h
+HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h
 
 all: CFLAGS += -Os
 all: sqlinit.h $(PROGRAMS)
@@ -48,9 +49,15 @@ zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON)
 clean:
 	rm -f *.o sqlinit.h $(PROGRAMS) *.gcno *.gcda random.dcm
 
-check: tests/zz1.c
-	$(CC) -o tests/zz1 tests/zz1.c -I. $(COMMON) $(CFLAGS)
+check: tests/zz1 tests/zzw
 	tests/zz1 2> /dev/null
+	tests/zzw
+
+tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
+
+tests/zzw: tests/zzw.c $(HEADERS) $(COMMON) $(COMMONWRITE)
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE)
 
 install:
 	install -t /usr/local/bin $(PROGRAMS)
