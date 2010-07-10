@@ -66,8 +66,21 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 		rewind(zz->fp);	// try anyway
 	}
 
+	if (fread(&endianbuf, 1, 6, zz->fp) != 6 || fseek(zz->fp, -6, SEEK_CUR) != 0)
+	{
+		return NULL;	// not big enough to be a DICOM file
+	}
+
+	// Safety check - are we really reading a part 10 file? First tag MUST be (0x0002, 0x0000)
+	if (endianbuf[0] != 2 || endianbuf[1] != 0 || endianbuf[2] != 0 || endianbuf[3] != 0)
+	{
+		rewind(zz->fp);				// rewind and try over without the part10
+		fread(&endianbuf, 1, 6, zz->fp);
+		fseek(zz->fp, -6, SEEK_CUR);
+	}
+
 	// Check for big-endian syntax - not supported
-	if (fread(&endianbuf, 1, 6, zz->fp) != 6 || fseek(zz->fp, -6, SEEK_CUR) != 0 || endianbuf[0] < endianbuf[1])
+	if (endianbuf[0] < endianbuf[1])
 	{
 		fprintf(stderr, "%s appears to be big-endian - this is not supported\n", filename);
 		return zzclose(zz);
@@ -402,7 +415,7 @@ void zz_c_test()
 {
 	char filename[12];
 	struct zzfile szz;
-	int fd;
+	int fd, i;
 	char value;
 
 	assert(zzopen(NULL, NULL, NULL) == NULL);
@@ -412,8 +425,10 @@ void zz_c_test()
 	fchmod(fd, 0);	// make inaccessible
 	assert(zzopen(filename, "r", &szz) == NULL);
 	fchmod(fd, S_IWUSR | S_IRUSR);	// make accessible
-	value = 1; write(fd, &value, 1);
 	value = 0; write(fd, &value, 1);
+	value = 1; write(fd, &value, 1);
+	assert(zzopen(filename, "r", &szz) == NULL);	// too small
+	for (i = 0; i < 128; i++) write(fd, &value, 1);	// filler
 	assert(zzopen(filename, "r", &szz) == NULL);	// pretends to be big-endian
 	close(fd);
 }
