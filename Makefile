@@ -40,8 +40,8 @@ zzstudies: zzstudies.c $(HEADERS) $(COMMON) $(COMMONSQL)
 zzprune: zzprune.c $(HEADERS) $(COMMON) $(COMMONSQL)
 	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
 
-zztojpegls: zztojpegls.c $(HEADERS) $(COMMON)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) -lCharLS
+zztojpegls: zztojpegls.c $(HEADERS) $(COMMON) $(COMMONWRITE)
+	$(CC) -o $@ $< $(COMMON) $(COMMONWRITE) $(CFLAGS) -lCharLS
 
 zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON) $(COMMONWRITE)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE)

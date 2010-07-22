@@ -86,7 +86,7 @@ int main(int argc, char **argv)
 		break;
 	case 1:
 		zz->ladder[0].txsyn = ZZ_IMPLICIT;	// implicit header, buggy like CTN
-		zzwHeader(zz, UID_SecondaryCaptureImageStorage, UID_LittleEndianImplicitTransferSyntax);
+		zzwHeader(zz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianImplicitTransferSyntax);
 		break;
 	case 2:
 		zz->ladder[0].txsyn = ZZ_EXPLICIT;	// no header, explicit
@@ -95,12 +95,12 @@ int main(int argc, char **argv)
 		zz->ladder[0].txsyn = ZZ_IMPLICIT;	// implicit with explicit header
 		zz->ladderidx = 1;
 		zz->ladder[1].txsyn = ZZ_EXPLICIT;
-		zzwHeader(zz, UID_SecondaryCaptureImageStorage, UID_LittleEndianExplicitTransferSyntax);
+		zzwHeader(zz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianExplicitTransferSyntax);
 		zz->ladderidx = 0;
 		break;
 	default:
 		zz->ladder[0].txsyn = ZZ_EXPLICIT;	// explicit with explicit header
-		zzwHeader(zz, UID_SecondaryCaptureImageStorage, UID_LittleEndianExplicitTransferSyntax);
+		zzwHeader(zz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianExplicitTransferSyntax);
 		break;
 	}
 

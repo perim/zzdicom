@@ -13,7 +13,8 @@ void zzwUL(struct zzfile *zz, zzKey key, uint32_t value);
 void zzwSQ(struct zzfile *zz, zzKey key, uint32_t size);
 void zzwUN(struct zzfile *zz, zzKey key, uint32_t size);
 
-void zzwHeader(struct zzfile *zz, const char *sopclass, const char *transfer);
+void zzwHeader(struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer);
 void zzwEmpty(struct zzfile *zz, zzKey key, const char *vr);
+struct zzfile *zzcreate(const char *filename, struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer);
 
 #endif

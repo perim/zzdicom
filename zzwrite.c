@@ -3,6 +3,7 @@
 
 #include "zz_priv.h"
 #include "byteorder.h"
+#include "zzwrite.h"
 
 static inline bool explicit(struct zzfile *zz) { return zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT; }
 
@@ -105,11 +106,22 @@ void zzwAE(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, str
 void zzwAS(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, 4); }
 void zzwCS(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, 16); }
 
-void zzwHeader(struct zzfile *zz, const char *sopclass, const char *transfer)
+struct zzfile *zzcreate(const char *filename, struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer)
+{
+	memset(zz, 0, sizeof(*zz));
+	zz->acrNema = false;
+	zz->ladder[0].txsyn = ZZ_EXPLICIT;
+	zz->fp = fopen(filename, "w");
+	if (!zz->fp) return NULL;
+	zzwHeader(zz, sopclass, sopinstanceuid, transfer);
+	return zz;
+}
+
+void zzwHeader(struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer)
 {
 	char version[3];
 	const char *dicm = "DICM";
-	char *zeroes = malloc(128);
+	char zeroes[128];			// FIXME, i hate this inefficiency
 	uint32_t size;
 	const uint32_t startpos = 128 + 4 + 8;
 
@@ -118,13 +130,13 @@ void zzwHeader(struct zzfile *zz, const char *sopclass, const char *transfer)
 	version[2] = 0;
 	memset(zeroes, 0, sizeof(zeroes));
 
-	fwrite(zeroes, 1, 128, zz->fp);	// TODO, randomly forget these two
+	fwrite(zeroes, 1, 128, zz->fp);
 	fwrite(dicm, 1, 4, zz->fp);
 
 	zzwUL(zz, DCM_FileMetaInformationGroupLength, 0);	// length zero, fixing it below
 	zzwOB(zz, DCM_FileMetaInformationVersion, version, 2);
 	zzwUI(zz, DCM_MediaStorageSOPClassUID, sopclass);
-	zzwUI(zz, DCM_MediaStorageSOPInstanceUID, "1.2.3.4.0");
+	zzwUI(zz, DCM_MediaStorageSOPInstanceUID, sopinstanceuid);
 	zzwUI(zz, DCM_TransferSyntaxUID, transfer);
 	zzwUI(zz, DCM_ImplementationClassUID, "1.2.3.4.8.2");
 	zzwSH(zz, DCM_ImplementationVersionName, "zzdicom");
