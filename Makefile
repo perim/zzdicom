@@ -43,8 +43,8 @@ zzprune: zzprune.c $(HEADERS) $(COMMON) $(COMMONSQL)
 zztojpegls: zztojpegls.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) -lCharLS
 
-zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
+zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON) $(COMMONWRITE)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE)
 
 clean:
 	rm -f *.o sqlinit.h $(PROGRAMS) *.gcno *.gcda random.dcm

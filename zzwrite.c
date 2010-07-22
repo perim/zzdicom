@@ -34,6 +34,22 @@ static void explicit2(FILE *fp, uint16_t group, uint16_t element, const char *vr
 	fwrite(&length, 4, 1, fp);
 }
 
+void zzwSQ(struct zzfile *zz, zzKey key, uint32_t size)
+{
+	const uint16_t group = ZZ_GROUP(key);
+	const uint16_t element = ZZ_ELEMENT(key);
+
+	explicit2(zz->fp, group, element, "SQ", size);
+}
+
+void zzwUN(struct zzfile *zz, zzKey key, uint32_t size)
+{
+	const uint16_t group = ZZ_GROUP(key);
+	const uint16_t element = ZZ_ELEMENT(key);
+
+	explicit2(zz->fp, group, element, "UN", size);
+}
+
 void zzwUL(struct zzfile *zz, zzKey key, uint32_t value)
 {
 	const uint16_t group = ZZ_GROUP(key);
