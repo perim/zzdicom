@@ -68,10 +68,20 @@ void zzwOB(struct zzfile *zz, zzKey key, const char *string, int length)
 	int wlen = length;
 
 	if (length % 2 != 0) wlen++;			// padding
-	if (explicit(zz)) explicit2(zz->fp, group, element, "OB", length);
-	else implicit(zz->fp, group, element, length);
+	if (explicit(zz)) explicit2(zz->fp, group, element, "OB", wlen);
+	else implicit(zz->fp, group, element, wlen);
 	fwrite(string, 1, length, zz->fp);
 	if (length % 2 != 0) fwrite("", 1, 1, zz->fp);	// pad
+}
+
+void zzwOW(struct zzfile *zz, zzKey key, const char *string, int length)
+{
+	const uint16_t group = ZZ_GROUP(key);
+	const uint16_t element = ZZ_ELEMENT(key);
+
+	if (explicit(zz)) explicit2(zz->fp, group, element, "OW", length * 2);
+	else implicit(zz->fp, group, element, length * 2);
+	fwrite(string, 2, length, zz->fp);
 }
 
 void zzwUI(struct zzfile *zz, zzKey key, const char *string)
@@ -88,7 +98,7 @@ void zzwUI(struct zzfile *zz, zzKey key, const char *string)
 	if (length % 2 != 0) fwrite("", 1, 1, zz->fp);	// pad with null
 }
 
-static void wstr(struct zzfile *zz, zzKey key, const char *string, size_t maxlen)
+static void wstr(struct zzfile *zz, zzKey key, const char *string, const char *vr, size_t maxlen)
 {
 	const uint16_t group = ZZ_GROUP(key);
 	const uint16_t element = ZZ_ELEMENT(key);
@@ -96,15 +106,15 @@ static void wstr(struct zzfile *zz, zzKey key, const char *string, size_t maxlen
 	int wlen = length;
 
 	if (length % 2 != 0) wlen++;			// padding
-	if (explicit(zz)) explicit1(zz->fp, group, element, "UI", wlen);
+	if (explicit(zz)) explicit1(zz->fp, group, element, vr, wlen);
 	else implicit(zz->fp, group, element, wlen);
 	fwrite(string, 1, length, zz->fp);
 	if (length % 2 != 0) fwrite(" ", 1, 1, zz->fp);	// pad with spaces
 }
-void zzwSH(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, 16); }
-void zzwAE(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, 16); }
-void zzwAS(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, 4); }
-void zzwCS(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, 16); }
+void zzwSH(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, "SH", 16); }
+void zzwAE(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, "AE", 16); }
+void zzwAS(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, "AS", 4); }
+void zzwCS(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, "CS", 16); }
 
 struct zzfile *zzcreate(const char *filename, struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer)
 {

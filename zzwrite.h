@@ -7,6 +7,7 @@ void zzwAE(struct zzfile *zz, zzKey key, const char *string);
 void zzwAS(struct zzfile *zz, zzKey key, const char *string);
 void zzwCS(struct zzfile *zz, zzKey key, const char *string);
 void zzwOB(struct zzfile *zz, zzKey key, const char *string, int length);
+void zzwOW(struct zzfile *zz, zzKey key, const char *string, int length);
 void zzwSH(struct zzfile *zz, zzKey key, const char *string);
 void zzwUI(struct zzfile *zz, zzKey key, const char *string);
 void zzwUL(struct zzfile *zz, zzKey key, uint32_t value);

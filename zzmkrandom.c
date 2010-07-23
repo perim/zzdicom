@@ -54,6 +54,25 @@ static void garbfill(struct zzfile *zz)
 	}
 }
 
+static void zzwOBnoise(struct zzfile *zz, zzKey key)
+{
+	char *buf;
+	size_t size;
+
+	size = rand() % 9999;
+	buf = malloc(size);
+	memset(buf, rand(), size);
+	if (!explicit(zz) && key == DCM_PixelData)
+	{
+		zzwOW(zz, key, buf, size / 2);
+	}
+	else
+	{
+		zzwOB(zz, key, buf, size);
+	}
+	free(buf);
+}
+
 int main(int argc, char **argv)
 {
 	const char *outputfile = "random.dcm";
@@ -95,7 +114,7 @@ int main(int argc, char **argv)
 		zz->ladder[0].txsyn = ZZ_IMPLICIT;	// implicit with explicit header
 		zz->ladderidx = 1;
 		zz->ladder[1].txsyn = ZZ_EXPLICIT;
-		zzwHeader(zz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianExplicitTransferSyntax);
+		zzwHeader(zz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianImplicitTransferSyntax);
 		zz->ladderidx = 0;
 		break;
 	default:
@@ -137,6 +156,9 @@ int main(int argc, char **argv)
 		implicit(zz->fp, 0xfffe, 0xe0dd, 0);
 		zz->ladderidx--;
 	}
+
+	if (rand() % 10 > 2) zzwOBnoise(zz, DCM_PixelData);
+	if (rand() % 10 > 7) zzwOBnoise(zz, DCM_DataSetTrailingPadding);
 
 	fclose(zz->fp);
 
