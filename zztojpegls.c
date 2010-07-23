@@ -4,22 +4,87 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
-#include <time.h>
 #include <stdbool.h>
 #include <errno.h>
 #include <limits.h>
+#include <sys/mman.h>
 
 #include "charlsintf.h"	// private port of CharLS pseudo-C interface to real C interface
 
 #include "zz_priv.h"
 #include "zzsql.h"
+#include "zzwrite.h"
 
-extern bool verbose;	// TODO, fix ugly global
+static const char *vr2str(enum VR vr)
+{
+        switch (vr)
+        {
+	case AE: return "AE";
+        case AS: return "AS";
+        case AT: return "AT";
+        case CS: return "CS";
+        case DA: return "DA";
+        case DS: return "DS";
+        case DT: return "DT";
+        case FL: return "FL";
+        case FD: return "FD";
+        case IS: return "IS";
+        case LO: return "LO";
+        case LT: return "LT";
+        case OB: return "OB";
+        case OW: return "OW";
+        case OF: return "OF";
+        case PN: return "PN";
+        case SH: return "SH";
+        case SL: return "SL";
+        case SQ: return "SQ";
+        case SS: return "SS";
+        case ST: return "ST";
+        case TM: return "TM";
+        case UI: return "UI";
+        case UL: return "UL";
+        case US: return "US";
+        case UN: return "UN";
+        case UT: return "UT";
+        case OX: return "??";
+        case NO: return "UN";
+        }
+	return "zz";    // to satisfy compiler
+}
+
+static void implicit(FILE *fp, uint16_t group, uint16_t element, uint32_t length)
+{
+        fwrite(&group, 2, 1, fp);
+        fwrite(&element, 2, 1, fp);
+        fwrite(&length, 4, 1, fp);
+}
+
+static void explicit1(FILE *fp, uint16_t group, uint16_t element, const char *vr, uint16_t length)
+{
+        fwrite(&group, 2, 1, fp);
+        fwrite(&element, 2, 1, fp);
+        fwrite(&vr[0], 1, 1, fp);
+        fwrite(&vr[1], 1, 1, fp);
+        fwrite(&length, 2, 1, fp);
+}
+
+static void explicit2(FILE *fp, uint16_t group, uint16_t element, const char *vr, uint32_t length)
+{
+        uint16_t zero = 0;
+
+        fwrite(&group, 2, 1, fp);
+        fwrite(&element, 2, 1, fp);
+        fwrite(&vr[0], 1, 1, fp);
+        fwrite(&vr[1], 1, 1, fp);
+        fwrite(&zero, 2, 1, fp);
+        fwrite(&length, 4, 1, fp);
+}
 
 static bool jpegtols(char *filename)
 {
 	struct JlsParamaters params;
 	enum JLS_ERROR err;
+	struct zzfile szw, *zw;
 	struct zzfile szz, *zz = zzopen(filename, "r", &szz);
 	struct stat st;
 	size_t result;
@@ -27,7 +92,8 @@ static bool jpegtols(char *filename)
 	char *src, *dst;
 	uint32_t len, pos, size;
 	char newname[PATH_MAX], *cptr;
-	FILE *fp;
+	void *addr;
+	const struct part6 *tag;
 
 	if (!zz)
 	{
@@ -45,24 +111,70 @@ static bool jpegtols(char *filename)
 		return false;
 	}
 	strcat(newname, "-ls");
-	fp = fopen(newname, "w");
-	if (!fp)
+	zw = zzcreate(newname, &szw, zz->sopClassUid, zz->sopInstanceUid, UID_JPEGLSLosslessTransferSyntax);
+	if (!zw)
 	{
 		fprintf(stderr, "%s - could not create out file: %s\n", newname, strerror(errno));
+		zz = zzclose(zz);
+		return false;
+	}
+	// memory map the entire file to avoid the hassle of dynamic memory management
+	addr = mmap(NULL, zz->fileSize, PROT_READ, MAP_SHARED, fileno(zz->fp), 0);
+	if (addr == MAP_FAILED)
+	{
+		fprintf(stderr, "%s - could not mmap file: %s\n", filename, strerror(errno));
+		zz = zzclose(zz);
 		return false;
 	}
 
 	memset(&params, 0, sizeof(params));
+	
 	while (!feof(zz->fp) && !ferror(zz->fp))
 	{
+		zzKey key;
+
 		zzread(zz, &group, &element, &len);
+		key = ZZ_KEY(group, element);
 
 		pos = ftell(zz->fp);
 
-		// Copy (or alter) contents
+		if (group > 0x0002 && key != DCM_PixelData && element != 0)
+		{
+			const char *vr = vr2str(zz->current.vr);
+
+			if (zz->current.vr == NO)
+			{
+				tag = zztag(group, element);
+				if (tag)
+				{
+					vr = tag->VR;
+				}
+			}
+
+			// copy contents, transforming it to explicit VR on the way, if necessary
+			switch (zz->current.vr)
+			{
+			case SQ:
+			case UN:
+			case OB:
+			case OW:
+			case OF:
+			case UT:
+				explicit2(zw->fp, group, element, vr, len);
+				break;
+			default:
+				explicit1(zw->fp, group, element, vr, len);
+				break;
+			}
+			fwrite(addr + pos, len, 1, zw->fp);	// write from mmap backing
+		}
+		else if (element == 0)
+		{
+			explicit1(zw->fp, group, element, "UL", 0);
+		}
 
 		// Read out valuable info
-		switch (ZZ_KEY(group, element))
+		switch (key)
 		{
 		case DCM_BitsStored:
 			break;
@@ -100,13 +212,13 @@ static bool jpegtols(char *filename)
 			}
 			break;
 		case DCM_PixelData:
-			src = malloc(len);
+			src = addr + pos; // malloc(len);
 			dst = malloc(len);	// assume that we will not compress worse
-			result = fread(src, len, 1, zz->fp);
-			if (result != 1)
+			//result = fread(src, len, 1, zz->fp);
+/*			if (result != 1)
 			{
 				fprintf(stderr, "%s - bad image length (len %d != result %d)\n", filename, len, (int)result);
-			}
+			}*/
 			//params.colorTransform = 1;
 			//params.allowedlossyerror = 3;
 			params.bytesperline = 0;
@@ -126,8 +238,18 @@ static bool jpegtols(char *filename)
 			case UnsupportedBitDepthForTransform: fprintf(stderr, "%s - unsupported bit depth\n", filename); break;
 			case UnsupportedColorTransform: fprintf(stderr, "%s - unsupported color transform\n", filename); break;
 			};
-			free(src);
+			explicit2(zw->fp, group, element, "OB", UNLIMITED);
+			implicit(zw->fp, 0xfffe, 0xe000, 0);		// offset table
+			implicit(zw->fp, 0xfffe, 0xe000, result);		// pixel data
+			fwrite(dst, result, 1, zw->fp);
+			implicit(zw->fp, 0xfffe, 0xe0dd, 0);		// seq delim
+			// just plain ignore the padding requirement, who cares about that anymore in this day and age?
+			//free(src);
 			free(dst);
+			munmap(addr, zz->fileSize);
+			zz = zzclose(zz);
+			zw = zzclose(zw);
+			return true;	// no, do not bother with any padding after the pixel data
 			break;
 		default:
 			break;
@@ -140,8 +262,10 @@ static bool jpegtols(char *filename)
 		}
 	}
 
-	fclose(fp);
+	// FIXME : we should not really get here... handle it better, ideally remove file and warn user
+	munmap(addr, zz->fileSize);
 	zz = zzclose(zz);
+	zw = zzclose(zw);
 	return true;
 }
 
