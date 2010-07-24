@@ -54,12 +54,10 @@ static void garbfill(struct zzfile *zz)
 	}
 }
 
-static void zzwOBnoise(struct zzfile *zz, zzKey key)
+static void zzwOBnoise(struct zzfile *zz, zzKey key, size_t size)
 {
 	char *buf;
-	size_t size;
 
-	size = rand() % 9999;
 	buf = malloc(size);
 	memset(buf, rand(), size);
 	if (!explicit(zz) && key == DCM_PixelData)
@@ -142,6 +140,11 @@ int main(int argc, char **argv)
 
 	if (rand() % 10 > 5) garbfill(zz);
 
+	// TODO, fix private tags namespace
+
+	// try to confuse parsers that rely on arbitrary characters in the data stream - pretend to be an explicit VR
+	if (!explicit(zz) && rand() % 10 > 8) zzwOBnoise(zz, ZZ_KEY(0x0029, 0x0009), 'S' + ('S' << 8));
+
 	if (explicit(zz) && rand() % 10 > 2)	// add UN block
 	{
 		zzwUN(zz, ZZ_KEY(0x0029, 0x0010), UNLIMITED);
@@ -157,8 +160,8 @@ int main(int argc, char **argv)
 		zz->ladderidx--;
 	}
 
-	if (rand() % 10 > 2) zzwOBnoise(zz, DCM_PixelData);
-	if (rand() % 10 > 7) zzwOBnoise(zz, DCM_DataSetTrailingPadding);
+	if (rand() % 10 > 2) zzwOBnoise(zz, DCM_PixelData, rand() % 9999);
+	if (rand() % 10 > 7) zzwOBnoise(zz, DCM_DataSetTrailingPadding, rand() % 9999);
 
 	fclose(zz->fp);
 
