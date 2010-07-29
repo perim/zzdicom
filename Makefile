@@ -2,8 +2,9 @@ CFLAGS = -Wall -Wextra -DPOSIX -Werror -Wshadow -Wformat-security
 COMMON = zz.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
+PART6 = part6.o
 PROGRAMS = zzanon zzdump zzverify zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom
-HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h
+HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h
 
 all: CFLAGS += -Os
 all: sqlinit.h $(PROGRAMS)
@@ -19,11 +20,11 @@ sqlinit.h: SQL
 	cat SQL | sed s/^/\"/ | sed s/$$/\"/ >> sqlinit.h
 	echo ";" >> sqlinit.h
 
-zzanon: zzanon.c $(HEADERS) $(COMMON)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
+zzanon: zzanon.c $(HEADERS) $(COMMON) $(PART6)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6)
 
-zzdump: zzdump.c $(HEADERS) $(COMMON)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
+zzdump: zzdump.c $(HEADERS) $(COMMON) $(PART6)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6)
 
 zzverify: zzverify.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
@@ -40,8 +41,8 @@ zzstudies: zzstudies.c $(HEADERS) $(COMMON) $(COMMONSQL)
 zzprune: zzprune.c $(HEADERS) $(COMMON) $(COMMONSQL)
 	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
 
-zztojpegls: zztojpegls.c $(HEADERS) $(COMMON) $(COMMONWRITE)
-	$(CC) -o $@ $< $(COMMON) $(COMMONWRITE) $(CFLAGS) -lCharLS
+zztojpegls: zztojpegls.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(PART6)
+	$(CC) -o $@ $< $(COMMON) $(COMMONWRITE) $(CFLAGS) -lCharLS $(PART6)
 
 zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON) $(COMMONWRITE)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE)

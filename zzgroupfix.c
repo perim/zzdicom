@@ -13,7 +13,6 @@ void fix(char *filename)
 	uint16_t group, element, lastgroup = 0xffff;
 	uint32_t len;
 	long groupsize = 0, grouppos = 0;
-	const struct part6 *tag;
 
 	zz = zzopen(filename, "r", &szz);
 
@@ -45,7 +44,6 @@ void fix(char *filename)
 			grouppos = ftell(zz->fp);
 			lastgroup = group;
 		}
-		tag = zztag(group, element);
 
 		// Abort early, skip loading pixel data into memory if possible
 		if ((uint32_t)ftell(zz->fp) + len == zz->fileSize)
