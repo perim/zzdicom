@@ -99,7 +99,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 			break;
 		}
 		// Skip ahead - also if read something, because read might be truncated
-		if (!feof(zz->fp) && len != 0xFFFFFFFF && len > 0)
+		if (!feof(zz->fp) && len != UNLIMITED && len > 0)
 		{
 			fseek(zz->fp, pos + len, SEEK_SET);
 		}

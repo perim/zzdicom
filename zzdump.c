@@ -86,7 +86,7 @@ void dump(char *filename)
 		if (!tag)
 		{
 			printf("(%04x,%04x) %s -- unknown tag\n", group, element, zz->current.vr != NO ? vr2str(zz->current.vr) : "");
-			if (!feof(zz->fp) && len != 0xFFFFFFFF && len > 0)
+			if (!feof(zz->fp) && len != UNLIMITED && len > 0)
 			{
 				fseek(zz->fp, len, SEEK_CUR);
 			}

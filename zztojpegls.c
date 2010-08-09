@@ -250,7 +250,7 @@ static bool jpegtols(char *filename)
 		}
 
 		// Skip ahead
-		if (!feof(zz->fp) && len != 0xFFFFFFFF && len > 0)
+		if (!feof(zz->fp) && len != UNLIMITED && len > 0)
 		{
 			fseek(zz->fp, pos + len, SEEK_SET);
 		}

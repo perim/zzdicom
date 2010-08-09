@@ -45,13 +45,13 @@ void fix(char *filename)
 		}
 
 		// Abort early, skip loading pixel data into memory if possible
-		if ((uint32_t)ftell(zz->fp) + len == zz->fileSize)
+		if (ftell(zz->fp) + len == zz->fileSize)
 		{
 			break;
 		}
 
 		// Skip ahead
-		if (!feof(zz->fp) && len != 0xFFFFFFFF && len > 0)
+		if (!feof(zz->fp) && len != UNLIMITED && len > 0)
 		{
 			fseek(zz->fp, len, SEEK_CUR);
 		}

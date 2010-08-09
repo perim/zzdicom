@@ -53,7 +53,7 @@ void dump(char *filename)
 		}
 
 		pos = ftell(zz->fp);
-		if ((len > 0 && len != 0xFFFFFFFF) || pos == zz->fileSize)
+		if ((len > 0 && len != UNLIMITED) || pos == zz->fileSize)
 		{
 			if (pos + len > zz->fileSize)
 			{

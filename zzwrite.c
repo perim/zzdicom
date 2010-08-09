@@ -88,7 +88,7 @@ void zzwUI(struct zzfile *zz, zzKey key, const char *string)
 {
 	const uint16_t group = ZZ_GROUP(key);
 	const uint16_t element = ZZ_ELEMENT(key);
-	int length = MIN(strlen(string), 64);
+	int length = MIN(strlen(string), (size_t)64);
 	int wlen = length;
 
 	if (length % 2 != 0) wlen++;			// padding

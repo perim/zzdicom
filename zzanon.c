@@ -55,7 +55,7 @@ void anonymize(char *filename)
 		}
 
 		// Skip ahead
-		if (len != 0xFFFFFFFF && len > 0)
+		if (len != UNLIMITED && len > 0)
 		{
 			fseek(zz->fp, len, SEEK_CUR);
 		}
