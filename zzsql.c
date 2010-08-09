@@ -59,12 +59,11 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 {
 	char modified[MAX_LEN_DATETIME];
 	uint16_t group, element;
-	uint32_t len;
 	char studyInstanceUid[MAX_LEN_UID];
 	char seriesInstanceUid[MAX_LEN_UID];
 	char patientsName[MAX_LEN_PN];
 	char modality[MAX_LEN_CS];
-	uint64_t pos;
+	long pos, len;
 
 	fseek(zz->fp, zz->ladder[0].pos, SEEK_SET);	// start position of base group is start of DICOM data
 
@@ -85,16 +84,16 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 		switch (ZZ_KEY(group, element))
 		{
 		case DCM_StudyInstanceUID:
-			fread(studyInstanceUid, 1, MIN(sizeof(studyInstanceUid) - 1, len), zz->fp);
+			fread(studyInstanceUid, 1, MIN((long)sizeof(studyInstanceUid) - 1, len), zz->fp);
 			break;
 		case DCM_SeriesInstanceUID:
-			fread(seriesInstanceUid, 1, MIN(sizeof(seriesInstanceUid) - 1, len), zz->fp);
+			fread(seriesInstanceUid, 1, MIN((long)sizeof(seriesInstanceUid) - 1, len), zz->fp);
 			break;
 		case DCM_PatientsName:
-			fread(patientsName, 1, MIN(sizeof(patientsName) - 1, len), zz->fp);
+			fread(patientsName, 1, MIN((long)sizeof(patientsName) - 1, len), zz->fp);
 			break;
 		case DCM_Modality:
-			fread(modality, 1, MIN(sizeof(modality) - 1, len), zz->fp);
+			fread(modality, 1, MIN((long)sizeof(modality) - 1, len), zz->fp);
 			break;
 		default:
 			break;

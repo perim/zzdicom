@@ -11,8 +11,7 @@ void fix(char *filename)
 {
 	struct zzfile szz, *zz;
 	uint16_t group, element, lastgroup = 0xffff;
-	uint32_t len;
-	long groupsize = 0, grouppos = 0;
+	long len, groupsize = 0, grouppos = 0;
 
 	zz = zzopen(filename, "r", &szz);
 

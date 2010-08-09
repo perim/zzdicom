@@ -31,7 +31,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	struct zzfile *zz;
 	char dicm[4], endianbuf[6];
 	uint16_t group, element;
-	uint32_t len, cur;
+	long len, cur;
 	bool done = false;
 	struct stat st;
 
@@ -102,7 +102,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	zz->ladder[0].pos = ftell(zz->fp);
 	while (zzread(zz, &group, &element, &len) && !done && !feof(zz->fp) && !ferror(zz->fp))
 	{
-		int result = len;
+		long result = len;
 
 		cur = ftell(zz->fp);
 		switch (ZZ_KEY(group, element))
@@ -115,13 +115,13 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 			zz->ladder[1].group = 0x0002;
 			break;
 		case DCM_MediaStorageSOPClassUID:
-			result = fread(zz->sopClassUid, 1, MIN(sizeof(zz->sopClassUid) - 1, len), zz->fp);
+			result = fread(zz->sopClassUid, 1, MIN((long)sizeof(zz->sopClassUid) - 1, len), zz->fp);
 			break;
 		case DCM_MediaStorageSOPInstanceUID:
-			result = fread(zz->sopInstanceUid, 1, MIN(sizeof(zz->sopInstanceUid) - 1, len), zz->fp);
+			result = fread(zz->sopInstanceUid, 1, MIN((long)sizeof(zz->sopInstanceUid) - 1, len), zz->fp);
 			break;
 		case DCM_TransferSyntaxUID:
-			result = fread(transferSyntaxUid, 1, MIN(sizeof(transferSyntaxUid) - 1, len), zz->fp);
+			result = fread(transferSyntaxUid, 1, MIN((long)sizeof(transferSyntaxUid) - 1, len), zz->fp);
 			done = true;	// not ACR-NEMA, last interesting tag, so stop scanning
 			zz->acrNema = false;
 			if (strcmp(transferSyntaxUid, UID_LittleEndianImplicitTransferSyntax) == 0)
@@ -144,9 +144,9 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 		default:
 			break;
 		}
-		if (result != (int)len)
+		if (result != len)
 		{
-			fprintf(stderr, "%s failed to read data value (read %d, wanted %d)\n", filename, result, (int)len);
+			fprintf(stderr, "%s failed to read data value (read %ld, wanted %ld)\n", filename, result, len);
 			return zzclose(zz);
 		}
 		if (!feof(zz->fp) && !ferror(zz->fp))
@@ -206,7 +206,7 @@ int16_t zzgetint16(struct zzfile *zz)
 	return LE_16(val);
 }
 
-bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len)
+bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 {
 	enum zztxsyn syntax = zz->ladder[zz->ladderidx].txsyn;
 	const uint32_t ladderpos = zz->ladder[zz->ladderidx].pos;

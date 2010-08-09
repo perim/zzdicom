@@ -90,7 +90,7 @@ static bool jpegtols(char *filename)
 	size_t result;
 	uint16_t group, element;
 	char *src, *dst;
-	uint32_t len, pos, size;
+	long len, pos, size;
 	char newname[PATH_MAX], *cptr;
 	void *addr;
 	const struct part6 *tag;
@@ -214,11 +214,6 @@ static bool jpegtols(char *filename)
 		case DCM_PixelData:
 			src = addr + pos; // malloc(len);
 			dst = malloc(len);	// assume that we will not compress worse
-			//result = fread(src, len, 1, zz->fp);
-/*			if (result != 1)
-			{
-				fprintf(stderr, "%s - bad image length (len %d != result %d)\n", filename, len, (int)result);
-			}*/
 			//params.colorTransform = 1;
 			//params.allowedlossyerror = 3;
 			params.bytesperline = 0;
@@ -244,7 +239,6 @@ static bool jpegtols(char *filename)
 			fwrite(dst, result, 1, zw->fp);
 			implicit(zw->fp, 0xfffe, 0xe0dd, 0);		// seq delim
 			// just plain ignore the padding requirement, who cares about that anymore in this day and age?
-			//free(src);
 			free(dst);
 			munmap(addr, zz->fileSize);
 			zz = zzclose(zz);

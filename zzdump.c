@@ -49,7 +49,7 @@ void dump(char *filename)
 {
 	struct zzfile szz, *zz;
 	uint16_t group, element;
-	uint32_t len, pos;
+	long len, pos;
 	const struct part6 *tag;
 	char value[MAX_LEN_VALUE];
 	char tmp[MAX_LEN_VALUE];
@@ -130,7 +130,7 @@ void dump(char *filename)
 		}
 
 		// Presenting in DCMTK's syntax
-		printf("(%04x,%04x) %s %-42s # %4d, %s %s\n", tag->group, tag->element, zz->current.vr != NO ? vr2str(zz->current.vr) : tag->VR, 
+		printf("(%04x,%04x) %s %-42s # %4ld, %s %s\n", tag->group, tag->element, zz->current.vr != NO ? vr2str(zz->current.vr) : tag->VR, 
 		       value, len, tag->VM, tag->description);
 
 		// Abort early, skip loading pixel data into memory if possible

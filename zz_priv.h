@@ -120,8 +120,19 @@ struct zzfile
 };
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+// inspired by linux kernel sources
+#define MIN(x, y) ({                                \
+            typeof(x) _min1 = (x);                  \
+            typeof(y) _min2 = (y);                  \
+            (void) (&_min1 == &_min2);              \
+            _min1 < _min2 ? _min1 : _min2; })
+ 
+#define MAX(x, y) ({                                \
+            typeof(x) _max1 = (x);                  \
+            typeof(y) _max2 = (y);                  \
+            (void) (&_max1 == &_max2);              \
+            _max1 > _max2 ? _max1 : _max2; })
 
 uint32_t zzgetuint32(struct zzfile *zz);
 uint16_t zzgetuint16(struct zzfile *zz);
@@ -130,7 +141,7 @@ int16_t zzgetint16(struct zzfile *zz);
 bool zzgetstring(struct	zzfile *zz, char *input, size_t size);
 
 struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile);
-bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, uint32_t *len);
+bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len);
 const struct part6 *zztag(uint16_t group, uint16_t element);
 static inline struct zzfile *zzclose(struct zzfile *zz) { if (zz) { fclose(zz->fp); } return NULL; }
 

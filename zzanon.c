@@ -16,7 +16,8 @@ void anonymize(char *filename)
 {
 	struct zzfile szz, *zz;
 	uint16_t group, element, nexttag = 0;
-	uint32_t len, i;
+	long len;
+	int i;
 
 	zz = zzopen(filename, "r+", &szz);
 
@@ -31,7 +32,7 @@ void anonymize(char *filename)
 		else if (group % 2 == 0 && element % 2 == 0)	// disregard private tags
 		{
 			// Match against our list of tags
-			for (i = 0; i < ARRAY_SIZE(taglist); i++)
+			for (i = 0; i < (long)ARRAY_SIZE(taglist); i++)
 			{
 				if (group == ZZ_GROUP(taglist[i]) && element == ZZ_ELEMENT(taglist[i]))
 				{
@@ -41,7 +42,7 @@ void anonymize(char *filename)
 					{
 						const char *dstr = "19000101";
 
-						fwrite(dstr, MIN(len, strlen(dstr)), 1, zz->fp);
+						fwrite(dstr, MIN(len, (long)strlen(dstr)), 1, zz->fp);
 					}
 					else
 					{
