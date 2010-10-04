@@ -1,6 +1,10 @@
 #ifndef ZZ_DICOM_H
 #define ZZ_DICOM_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -24,5 +28,9 @@ struct zzstudy
 // struct zzseries *zzseries(const char *seriesInstanceUid);
 // struct zzstudy *zzfreestudy(struct zzstudy *study);
 // struct zzseries *zzfreeseries(struct zzseries *series);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

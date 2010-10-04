@@ -3,6 +3,10 @@
 
 #include "zz.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
@@ -147,5 +151,9 @@ static inline struct zzfile *zzclose(struct zzfile *zz) { if (zz) { fclose(zz->f
 
 /// Utility function to process some common command-line arguments. Returns the number of initial arguments to ignore.
 int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -7,6 +7,10 @@
 
 #include "zz_priv.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define DATETIME_FORMAT "%Y-%m-%d %H:%M:%S"
 
 struct zzdb
@@ -23,5 +27,9 @@ bool zzquery(struct zzdb *zdb, const char *statement, int (*callback)(void*,int,
 // TODO move
 time_t zzundatetime(const char *datetime);
 const char *zzdatetime(time_t value);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

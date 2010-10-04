@@ -3,6 +3,10 @@
 
 #include "zz_priv.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void zzwAE(struct zzfile *zz, zzKey key, const char *string);
 void zzwAS(struct zzfile *zz, zzKey key, const char *string);
 void zzwCS(struct zzfile *zz, zzKey key, const char *string);
@@ -17,5 +21,9 @@ void zzwUN(struct zzfile *zz, zzKey key, uint32_t size);
 void zzwHeader(struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer);
 void zzwEmpty(struct zzfile *zz, zzKey key, const char *vr);
 struct zzfile *zzcreate(const char *filename, struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
