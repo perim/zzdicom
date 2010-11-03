@@ -209,8 +209,8 @@ int16_t zzgetint16(struct zzfile *zz)
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 {
 	enum zztxsyn syntax = zz->ladder[zz->ladderidx].txsyn;
-	const uint32_t ladderpos = zz->ladder[zz->ladderidx].pos;
-	const uint32_t laddersize = zz->ladder[zz->ladderidx].size;
+	uint32_t ladderpos = zz->ladder[zz->ladderidx].pos;
+	uint32_t laddersize = zz->ladder[zz->ladderidx].size;
 	// Represent the three different variants of tag headers in one union
 	struct
 	{
@@ -227,7 +227,16 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	key = ZZ_KEY(header.group, header.element);
 
 	// Did we leave a group, sequence or item?
-	if (zz->ladderidx > 0 && ((laddersize != 0xffff && (uint32_t)ftell(zz->fp) - ladderpos > laddersize) || key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem))
+	// First, handle explicit item to denote this.
+	if (key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem)
+	{
+		zz->currNesting--;
+		zz->nextNesting--;
+		zz->ladderidx--;
+		syntax = zz->ladder[zz->ladderidx].txsyn;
+	}
+	// Second, handle dropping out of scope. This can happen recursively.
+	while (zz->ladderidx > 0 && laddersize != 0xffff && (uint32_t)ftell(zz->fp) - ladderpos > laddersize)
 	{
 		if (zz->ladder[zz->ladderidx].group == 0xffff)	// leaving a sequence or item, ie not a group
 		{
@@ -236,6 +245,8 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		}
 		zz->ladderidx--;
 		syntax = zz->ladder[zz->ladderidx].txsyn;
+		ladderpos = zz->ladder[zz->ladderidx].pos;
+		laddersize = zz->ladder[zz->ladderidx].size;
 	}
 
 	// Try explicit VR
