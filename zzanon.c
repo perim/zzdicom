@@ -8,7 +8,8 @@
 #define MAX_FILL 256
 
 // List the below tags in sequential order, since we optimize the search this way.
-static zzKey taglist[] = { ZZ_KEY(0x0010, 0x0010), ZZ_KEY(0x0010, 0x0020), ZZ_KEY(0x0010, 0x0030) };
+static zzKey taglist[] = { ZZ_KEY(0x0010, 0x0010), ZZ_KEY(0x0010, 0x0020), ZZ_KEY(0x0010, 0x0030), ZZ_KEY(0x0010, 0x0032), ZZ_KEY(0x0010, 0x1000), ZZ_KEY(0x0010, 0x1001), ZZ_KEY(0x0010, 0x1005), ZZ_KEY(0x0010, 0x1040) };
+static const char *tagvrs[] = { "PN", "LO", "DA", "TM", "LO", "PN", "PN", "LO" };
 
 static char fill[MAX_FILL];
 
@@ -36,9 +37,7 @@ void anonymize(char *filename)
 			{
 				if (group == ZZ_GROUP(taglist[i]) && element == ZZ_ELEMENT(taglist[i]))
 				{
-					const struct part6 *tag = zztag(group, element);
-
-					if (tag->VR[0] == 'D' && tag->VR[1] == 'A')
+					if (tagvrs[i][0] == 'D' && tagvrs[i][1] == 'A')
 					{
 						const char *dstr = "19000101";
 

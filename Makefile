@@ -20,8 +20,8 @@ sqlinit.h: SQL
 	cat SQL | sed s/^/\"/ | sed s/$$/\"/ >> sqlinit.h
 	echo ";" >> sqlinit.h
 
-zzanon: zzanon.c $(HEADERS) $(COMMON) $(PART6)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6)
+zzanon: zzanon.c $(HEADERS) $(COMMON)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
 
 zzdump: zzdump.c $(HEADERS) $(COMMON) $(PART6)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6)
