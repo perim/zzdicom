@@ -241,6 +241,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	// Try explicit VR
 	if (syntax == ZZ_EXPLICIT && key != DCM_Item && key != DCM_ItemDelimitationItem && key != DCM_SequenceDelimitationItem)
 	{
+		uint32_t rlen;
 		zz->current.vr = ZZ_VR(header.buffer.evr.vr[0], header.buffer.evr.vr[1]);
 
 		switch (zz->current.vr)
@@ -253,8 +254,8 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		case OW:
 		case OF:
 		case UT:
-			fread(len, 4, 1, zz->fp);		// the 32 bit variant
-			*len = LE_32(*len);
+			fread(&rlen, 4, 1, zz->fp);		// the 32 bit variant
+			*len = LE_32(rlen);
 			break;
 		default:
 			*len = LE_16(header.buffer.evr.len);	// the insane 16 bit size variant

@@ -134,7 +134,7 @@ void dump(char *filename)
 		       value, len, tag->VM, tag->description);
 
 		// Abort early, skip loading pixel data into memory if possible
-		if (pos + len >= zz->fileSize)
+		if (len != UNLIMITED && pos + len >= zz->fileSize)
 		{
 			break;
 		}
