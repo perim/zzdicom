@@ -49,7 +49,7 @@ void dump(char *filename)
 {
 	struct zzfile szz, *zz;
 	uint16_t group, element;
-	long len, pos;
+	long len;
 	const struct part6 *tag;
 	char value[MAX_LEN_VALUE];
 	char tmp[MAX_LEN_VALUE];
@@ -68,11 +68,9 @@ void dump(char *filename)
 		}
 	}
 
-	while (zz && !feof(zz->fp) && !ferror(zz->fp))
+	zziterinit(zz);
+	while (zziternext(zz, &group, &element, &len))
 	{
-		zzread(zz, &group, &element, &len);
-
-		pos = ftell(zz->fp);
 		tag = zztag(group, element);
 
 		if (zz->ladderidx == 0 && !header)
@@ -132,19 +130,6 @@ void dump(char *filename)
 		// Presenting in DCMTK's syntax
 		printf("(%04x,%04x) %s %-42s # %4ld, %s %s\n", tag->group, tag->element, zz->current.vr != NO ? vr2str(zz->current.vr) : tag->VR, 
 		       value, len, tag->VM, tag->description);
-
-		// Abort early, skip loading pixel data into memory if possible
-		if (len != UNLIMITED && pos + len >= zz->fileSize)
-		{
-			break;
-		}
-
-		// Skip ahead
-		if (!feof(zz->fp) && len != UNLIMITED && len > 0 && !(group == 0xfffe && element == 0xe000 && zz->pxstate != ZZ_PIXELITEM) 
-		    && zz->current.vr != SQ)
-		{
-			fseek(zz->fp, pos + len, SEEK_SET);
-		}
 	}
 	zz = zzclose(zz);
 }

@@ -15,10 +15,9 @@ void fix(char *filename)
 
 	zz = zzopen(filename, "r", &szz);
 
-	while (zz && !feof(zz->fp) && !ferror(zz->fp))
+	zziterinit(zz);
+	while (zziternext(zz, &group, &element, &len))
 	{
-		zzread(zz, &group, &element, &len);
-
 		if (group != lastgroup)
 		{
 			if (groupsize != 0)
@@ -42,18 +41,6 @@ void fix(char *filename)
 			groupsize = 0;
 			grouppos = ftell(zz->fp);
 			lastgroup = group;
-		}
-
-		// Abort early, skip loading pixel data into memory if possible
-		if (ftell(zz->fp) + len == zz->fileSize)
-		{
-			break;
-		}
-
-		// Skip ahead
-		if (!feof(zz->fp) && len != UNLIMITED && len > 0)
-		{
-			fseek(zz->fp, len, SEEK_CUR);
 		}
 	}
 	zz = zzclose(zz);

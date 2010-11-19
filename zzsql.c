@@ -72,7 +72,8 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	memset(patientsName, 0, sizeof(patientsName));
 	memset(modality, 0, sizeof(modality));
 
-	while (zzread(zz, &group, &element, &len))
+	zziterinit(zz);
+	while (zziternext(zz, &group, &element, &len))
 	{
 		// Abort early, skip loading pixel data into memory if possible
 		if (ftell(zz->fp) + len == zz->fileSize)
@@ -97,11 +98,6 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 			break;
 		default:
 			break;
-		}
-		// Skip ahead - also if read something, because read might be truncated
-		if (!feof(zz->fp) && len != UNLIMITED && len > 0)
-		{
-			fseek(zz->fp, pos + len, SEEK_SET);
 		}
 	}
 

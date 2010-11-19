@@ -19,10 +19,9 @@ void dump(char *filename)
 
 	zz = zzopen(filename, "r", &szz);
 
-	while (zz && !feof(zz->fp) && !ferror(zz->fp))
+	zziterinit(zz);
+	while (zziternext(zz, &group, &element, &len))
 	{
-		zzread(zz, &group, &element, &len);
-
 		if (group != lastgroup)
 		{
 			if (groupsize != 0)
@@ -58,18 +57,6 @@ void dump(char *filename)
 			if (pos + len > zz->fileSize)
 			{
 				fprintf(stderr, "(%04x,%04x) -- size %u exceeds file end\n", group, element, (unsigned int)len);
-			}
-
-			// Abort early, skip loading pixel data into memory if possible
-			if (pos + len >= zz->fileSize)
-			{
-				break;
-			}
-
-			// Skip ahead
-			if (!feof(zz->fp))
-			{
-				fseek(zz->fp, len, SEEK_CUR);
 			}
 		}
 	}

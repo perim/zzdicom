@@ -159,10 +159,10 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	return zz;
 }
 
-bool zzgetstring(struct zzfile *zz, char *input, size_t strsize)
+bool zzgetstring(struct zzfile *zz, char *input, long strsize)
 {
-	const size_t desired = MIN(zz->current.length, strsize - 1);
-	size_t result;
+	const long desired = MIN(zz->current.length, strsize - 1);
+	long result;
 	char *last;
 
 	result = fread(input, 1, desired, zz->fp);
@@ -221,8 +221,8 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	zzKey key;
 
 	fread(&header, 8, 1, zz->fp);		// group+element then either VR + 0, VR+VL, or just VL
-	*group = header.group;
-	*element = header.element;
+	zz->current.group = *group = header.group;
+	zz->current.element = *element = header.element;
 	zz->currNesting = zz->nextNesting;
 	key = ZZ_KEY(header.group, header.element);
 
@@ -389,6 +389,37 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 		exit(!usageReq);
 	}
 	return ignparams;
+}
+
+void zziterinit(struct zzfile *zz)
+{
+	if (zz)
+	{
+		zz->current.group = 0;
+		zz->current.element = 0;
+		zz->current.length = 0;
+		zz->current.pos = -1;
+	}
+}
+
+bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
+{
+	if (zz && !feof(zz->fp) && !ferror(zz->fp) && (zz->current.length == UNLIMITED || (zz->current.pos + zz->current.length < zz->fileSize)))
+	{
+		if (zz->current.pos > 0 && zz->current.length > 0 && zz->current.length != UNLIMITED
+		    && !(zz->current.group == 0xfffe && zz->current.element == 0xe000 && zz->pxstate != ZZ_PIXELITEM)
+		    && zz->current.vr != SQ)
+		{
+			fseek(zz->fp, zz->current.pos + zz->current.length, SEEK_SET);	// go to start of next tag
+		}
+		if (zzread(zz, group, element, len))
+		{
+			zz->current.pos = ftell(zz->fp);
+			return true;
+		}
+	}
+	*len = 0;
+	return false;	// do NOT use any other returned data in this case!
 }
 
 void zz_c_test()

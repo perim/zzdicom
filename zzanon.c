@@ -22,10 +22,9 @@ void anonymize(char *filename)
 
 	zz = zzopen(filename, "r+", &szz);
 
-	while (zz && !feof(zz->fp) && nexttag < ARRAY_SIZE(taglist))
+	zziterinit(zz);
+	while (zziternext(zz, &group, &element, &len) && nexttag < ARRAY_SIZE(taglist))
 	{
-		zzread(zz, &group, &element, &len);
-
 		if (group > 0x0040 && group != 0xfffe)
 		{
 			break;	// no reason to look into groups we do not change
@@ -51,12 +50,6 @@ void anonymize(char *filename)
 					nexttag++;			// abort early when all items found
 				}
 			}
-		}
-
-		// Skip ahead
-		if (len != UNLIMITED && len > 0)
-		{
-			fseek(zz->fp, len, SEEK_CUR);
 		}
 	}
 	zz = zzclose(zz);

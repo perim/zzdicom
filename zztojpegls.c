@@ -90,7 +90,7 @@ static bool jpegtols(char *filename)
 	size_t result;
 	uint16_t group, element;
 	char *src, *dst;
-	long len, pos, size;
+	long len, size;
 	char newname[PATH_MAX], *cptr;
 	void *addr;
 	const struct part6 *tag;
@@ -128,15 +128,11 @@ static bool jpegtols(char *filename)
 	}
 
 	memset(&params, 0, sizeof(params));
-	
-	while (!feof(zz->fp) && !ferror(zz->fp))
+
+	zziterinit(zz);
+	while (zziternext(zz, &group, &element, &len))
 	{
-		zzKey key;
-
-		zzread(zz, &group, &element, &len);
-		key = ZZ_KEY(group, element);
-
-		pos = ftell(zz->fp);
+		zzKey key = ZZ_KEY(group, element);
 
 		if (group > 0x0002 && key != DCM_PixelData && element != 0)
 		{
@@ -166,7 +162,7 @@ static bool jpegtols(char *filename)
 				explicit1(zw->fp, group, element, vr, len);
 				break;
 			}
-			fwrite(addr + pos, len, 1, zw->fp);	// write from mmap backing
+			fwrite(addr + zz->current.pos, len, 1, zw->fp);	// write from mmap backing
 		}
 		else if (element == 0)
 		{
@@ -212,7 +208,7 @@ static bool jpegtols(char *filename)
 			}
 			break;
 		case DCM_PixelData:
-			src = addr + pos; // malloc(len);
+			src = addr + zz->current.pos; // malloc(len);
 			dst = malloc(len);	// assume that we will not compress worse
 			//params.colorTransform = 1;
 			//params.allowedlossyerror = 3;
@@ -247,12 +243,6 @@ static bool jpegtols(char *filename)
 			break;
 		default:
 			break;
-		}
-
-		// Skip ahead
-		if (!feof(zz->fp) && len != UNLIMITED && len > 0)
-		{
-			fseek(zz->fp, pos + len, SEEK_SET);
 		}
 	}
 

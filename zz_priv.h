@@ -110,8 +110,11 @@ struct zzfile
 
 	struct
 	{
-		enum VR	vr;
-		size_t	length;
+		enum VR		vr;
+		long		length;
+		uint16_t	group;
+		uint16_t	element;
+		long		pos;
 	} current;
 
 	struct
@@ -142,7 +145,7 @@ uint32_t zzgetuint32(struct zzfile *zz);
 uint16_t zzgetuint16(struct zzfile *zz);
 int32_t zzgetint32(struct zzfile *zz);
 int16_t zzgetint16(struct zzfile *zz);
-bool zzgetstring(struct	zzfile *zz, char *input, size_t size);
+bool zzgetstring(struct zzfile *zz, char *input, long size);
 
 struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile);
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len);
@@ -151,6 +154,10 @@ static inline struct zzfile *zzclose(struct zzfile *zz) { if (zz) { fclose(zz->f
 
 /// Utility function to process some common command-line arguments. Returns the number of initial arguments to ignore.
 int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help);
+
+/// Utility iterator that wraps zzread. Passing in a NULL pointer for zz makes it a no-op.
+void zziterinit(struct zzfile *zz);
+bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len);
 
 #ifdef __cplusplus
 }
