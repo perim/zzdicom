@@ -407,7 +407,7 @@ bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len
 	if (zz && !feof(zz->fp) && !ferror(zz->fp) && (zz->current.length == UNLIMITED || (zz->current.pos + zz->current.length < zz->fileSize)))
 	{
 		if (zz->current.pos > 0 && zz->current.length > 0 && zz->current.length != UNLIMITED
-		    && !(zz->current.group == 0xfffe && zz->current.element == 0xe000 && zz->pxstate != ZZ_PIXELITEM)
+		    && !(zz->current.group == 0xfffe && zz->current.element == 0xe000 && zz->pxstate == ZZ_NOT_PIXEL)
 		    && zz->current.vr != SQ)
 		{
 			fseek(zz->fp, zz->current.pos + zz->current.length, SEEK_SET);	// go to start of next tag

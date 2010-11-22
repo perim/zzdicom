@@ -147,8 +147,10 @@ int32_t zzgetint32(struct zzfile *zz);
 int16_t zzgetint16(struct zzfile *zz);
 bool zzgetstring(struct zzfile *zz, char *input, long size);
 
-struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile);
+/// From the current file position, start reading DICOM tag information.
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len);
+
+struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile);
 const struct part6 *zztag(uint16_t group, uint16_t element);
 static inline struct zzfile *zzclose(struct zzfile *zz) { if (zz) { fclose(zz->fp); } return NULL; }
 
