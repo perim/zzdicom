@@ -277,6 +277,10 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	{
 		zz->current.vr = NO;	// no info
 		*len = LE_32(header.buffer.len);
+		if (*len == UNLIMITED && key != DCM_PixelData && key != DCM_Item && key != DCM_SequenceDelimitationItem && key != DCM_ItemDelimitationItem)
+		{
+			zz->nextNesting++;
+		}
 	}
 
 	switch (key)
