@@ -432,10 +432,15 @@ void zziterinit(struct zzfile *zz)
 {
 	if (zz)
 	{
+		fseek(zz->fp, zz->ladder[0].pos, SEEK_SET);
+		zz->currNesting = 0;
+		zz->nextNesting = 0;
+		zz->ladderidx = 0;
 		zz->current.group = 0;
 		zz->current.element = 0;
 		zz->current.length = 0;
 		zz->current.pos = -1;
+		zz->pxstate = ZZ_NOT_PIXEL;
 	}
 }
 
