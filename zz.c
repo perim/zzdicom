@@ -248,7 +248,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		syntax = zz->ladder[zz->ladderidx].txsyn;
 	}
 	// Second, handle dropping out of scope. This can happen recursively.
-	while (zz->ladderidx > 0 && laddersize != 0xffff && laddersize > 0 && (uint32_t)ftell(zz->fp) - ladderpos > laddersize)
+	while (zz->ladderidx > 0 && laddersize != 0xffff && (uint32_t)ftell(zz->fp) - ladderpos > laddersize)
 	{
 		if (zz->ladder[zz->ladderidx].group == 0xffff)	// leaving a sequence or item, ie not a group
 		{
