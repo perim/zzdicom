@@ -71,6 +71,7 @@ void dump(char *filename)
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len))
 	{
+		enum VR vr = zz->current.vr;
 		tag = zztag(group, element);
 
 		if (zz->ladderidx == 0 && !header)
@@ -81,43 +82,55 @@ void dump(char *filename)
 		}
 
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
-		if (!tag)
+		if (group > 0x0002 && element == 0x0000)	// generic group length
 		{
-			printf("(%04x,%04x) %s -- unknown tag\n", group, element, zz->current.vr != NO ? vr2str(zz->current.vr) : "");
-			if (!feof(zz->fp) && len != UNLIMITED && len > 0)
-			{
-				fseek(zz->fp, len, SEEK_CUR);
-			}
+			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint32(zz));
+			printf("(%04x,%04x) UL %-42s # %4ld, 1 Generic Group Length\n", group, element, value, len);
 			continue;
 		}
-		memset(value, 0, sizeof(value));
+		else if (group % 2 > 0 && element < 0x1000 && len != UNLIMITED)
+		{
+			zzgetstring(zz, tmp, sizeof(tmp));
+			snprintf(value, sizeof(value) - 1, "[%s]", tmp);
+			printf("(%04x,%04x) LO %-42s # %4ld, 1 Private Creator\n", group, element, value, len);
+			continue;
+		}
+		else if (tag && zz->current.vr == NO && group != 0xfffe)
+		{
+			vr = ZZ_VR(tag->VR[0], tag->VR[1]);
+		}
+		memset(value, 0, sizeof(value));		// need to zero all first
+		strcpy(value, "(unknown value format)");	// for implicit and no dictionary entry
 		if (len == 0)
 		{
 			strcpy(value, "(no value available)");
 		}
-		else if (tag->VR[0] == 'U' && tag->VR[1] == 'L')
+		else if (group == 0xfffe)
+		{
+			memset(value, 0, sizeof(value));	// looks prettier empty
+		}
+		else if (vr == UL)
 		{
 			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint32(zz));
 		}
-		else if (tag->VR[0] == 'U' && tag->VR[1] == 'S')
+		else if (vr == US)
 		{
 			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint16(zz));
 		}
-		else if (tag->VR[0] == 'S' && tag->VR[1] == 'S')
+		else if (vr == SS)
 		{
 			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint16(zz));
 		}
-		else if (tag->VR[0] == 'S' && tag->VR[1] == 'L')
+		else if (vr == SL) 
 		{
 			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint32(zz));
 		}
-		else if ((tag->VR[0] == 'L' && tag->VR[1] == 'O') || (tag->VR[0] == 'S' && tag->VR[1] == 'H')
-		         || (tag->VR[0] == 'C' && tag->VR[1] == 'S') || (tag->VR[0] == 'D' && tag->VR[1] == 'S')
-		         || (tag->VR[0] == 'A' && tag->VR[1] == 'E') || (tag->VR[0] == 'P' && tag->VR[1] == 'N')
-		         || (tag->VR[0] == 'U' && tag->VR[1] == 'I') || (tag->VR[0] == 'L' && tag->VR[1] == 'T')
-		         || (tag->VR[0] == 'A' && tag->VR[1] == 'S') || (tag->VR[0] == 'D' && tag->VR[1] == 'T')
-		         || (tag->VR[0] == 'I' && tag->VR[1] == 'S') || (tag->VR[0] == 'U' && tag->VR[1] == 'T')
-		         || (tag->VR[0] == 'T' && tag->VR[1] == 'M') || (tag->VR[0] == 'D' && tag->VR[1] == 'A'))
+		else if (vr == UN || vr == SQ)
+		{
+			strcpy(value, "(Sequence)");
+		}
+		else if (vr == LO || vr == SH || vr == CS || vr == DS || vr == AE || vr == PN || vr == UI
+		         || vr == LT || vr == AS || vr == DT || vr == IS || vr == UT || vr == TM || vr == DA)
 		{
 			zzgetstring(zz, tmp, sizeof(tmp));
 			tmp[sizeof(tmp) - 4] = '\0';  // add trailing dots if cut off
@@ -128,8 +141,7 @@ void dump(char *filename)
 		}
 
 		// Presenting in DCMTK's syntax
-		printf("(%04x,%04x) %s %-42s # %4ld, %s %s\n", tag->group, tag->element, zz->current.vr != NO ? vr2str(zz->current.vr) : tag->VR, 
-		       value, len, tag->VM, tag->description);
+		printf("(%04x,%04x) %s %-42s # %4ld, %s %s\n", group, element, vr2str(vr), value, len, tag ? tag->VM : "?", tag ? tag->description : "?");
 	}
 	zz = zzclose(zz);
 }
