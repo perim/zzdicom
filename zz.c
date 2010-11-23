@@ -131,7 +131,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 			}
 			else if (strcmp(transferSyntaxUid, UID_BigEndianExplicitTransferSyntax) == 0)
 			{
-				fprintf(stderr, "%s - big endian transfer syntax found - not supported", filename);
+				fprintf(stderr, "%s - big endian transfer syntax found - not supported\n", filename);
 				fclose(zz->fp);
 				return NULL;
 			}
@@ -172,6 +172,28 @@ bool zzgetstring(struct zzfile *zz, char *input, long strsize)
 		*last = '\0';
 	}
 	return result == desired;
+}
+
+float zzgetfloat(struct zzfile *zz)
+{
+	float val = 0;
+
+	if (zz->current.length == 4)
+	{
+		fread(&val, 4, 1, zz->fp);
+	}
+	return val;	// FIXME - endian handling
+}
+
+double zzgetdouble(struct zzfile *zz)
+{
+	double val = 0;
+
+	if (zz->current.length == 8)
+	{
+		fread(&val, 8, 1, zz->fp);
+	}
+	return val;	// FIXME - endian handling
 }
 
 uint32_t zzgetuint32(struct zzfile *zz)

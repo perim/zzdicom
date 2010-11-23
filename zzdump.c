@@ -123,9 +123,17 @@ void dump(char *filename)
 		{
 			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint16(zz));
 		}
-		else if (vr == SL) 
+		else if (vr == SL)
 		{
 			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint32(zz));
+		}
+		else if (vr == FD)
+		{
+			snprintf(value, sizeof(value) - 1, "[%g]", zzgetdouble(zz));
+		}
+		else if (vr == FL)
+		{
+			snprintf(value, sizeof(value) - 1, "[%f]", zzgetfloat(zz));
 		}
 		else if ((vr == UN && len == UNLIMITED) || vr == SQ)
 		{

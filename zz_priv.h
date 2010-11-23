@@ -141,6 +141,8 @@ struct zzfile
             (void) (&_max1 == &_max2);              \
             _max1 > _max2 ? _max1 : _max2; })
 
+float zzgetfloat(struct zzfile *zz);
+double zzgetdouble(struct zzfile *zz);
 uint32_t zzgetuint32(struct zzfile *zz);
 uint16_t zzgetuint16(struct zzfile *zz);
 int32_t zzgetint32(struct zzfile *zz);
