@@ -74,7 +74,7 @@ void dump(char *filename)
 		enum VR vr = zz->current.vr;
 		tag = zztag(group, element);
 
-		if (zz->ladderidx == 0 && !header)
+		if (zz->current.group > 0x0002 && !header)
 		{
 			printf("\n# Dicom-Data-Set\n");
 			printf("# Used TransferSyntax: %s\n", zz->ladder[0].txsyn == ZZ_EXPLICIT ? "Little Endian Explicit" : "Little Endian Implicit");
