@@ -186,9 +186,6 @@ int16_t zzgetint16(struct zzfile *zz)
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 {
 	char transferSyntaxUid[MAX_LEN_UID];
-	enum zztxsyn syntax = zz->ladder[zz->ladderidx].txsyn;
-	uint32_t ladderpos = zz->ladder[zz->ladderidx].pos;
-	uint32_t laddersize = zz->ladder[zz->ladderidx].size;
 	// Represent the three different variants of tag headers in one union
 	struct
 	{
@@ -209,20 +206,21 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	key = ZZ_KEY(header.group, header.element);
 
 	// Did we leave a group, sequence or item?
-	// First, handle explicit item to denote this.
-	if (zz->ladderidx > 0 && (key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem
-	                          || (zz->ladder[zz->ladderidx].group != 0xffff && *group != zz->ladder[zz->ladderidx].group)))
+	// First, handle groups separately (may leave group and sequence simultaneously)
+	if (zz->ladderidx > 0 && zz->ladder[zz->ladderidx].group != 0xffff && *group != zz->ladder[zz->ladderidx].group)
 	{
-		if (zz->ladder[zz->ladderidx].group == 0xffff)	// leaving a sequence or item, ie not a group
-		{
-			zz->currNesting--;
-			zz->nextNesting--;
-		}
 		zz->ladderidx--;
-		syntax = zz->ladder[zz->ladderidx].txsyn;
 	}
-	// Second, handle dropping out of scope. This can happen recursively.
-	while (zz->ladderidx > 0 && laddersize != 0xffff && (uint32_t)ftell(zz->fp) - ladderpos > laddersize)
+	// Second, handle explicit item to denote this.
+	if (zz->ladderidx > 0 && (key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem))
+	{
+		zz->currNesting--;
+		zz->nextNesting--;
+		zz->ladderidx--;
+	}
+	// Third, handle dropping out of scope. This can happen recursively.
+	while (zz->ladderidx > 0 && zz->ladder[zz->ladderidx].size != 0xffff
+	       && (uint32_t)ftell(zz->fp) - zz->ladder[zz->ladderidx].pos > zz->ladder[zz->ladderidx].size)
 	{
 		if (zz->ladder[zz->ladderidx].group == 0xffff)	// leaving a sequence or item, ie not a group
 		{
@@ -230,13 +228,10 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			zz->nextNesting--;
 		}
 		zz->ladderidx--;
-		syntax = zz->ladder[zz->ladderidx].txsyn;
-		ladderpos = zz->ladder[zz->ladderidx].pos;
-		laddersize = zz->ladder[zz->ladderidx].size;
 	}
 
 	// Try explicit VR
-	if (syntax == ZZ_EXPLICIT && key != DCM_Item && key != DCM_ItemDelimitationItem && key != DCM_SequenceDelimitationItem)
+	if (zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT && key != DCM_Item && key != DCM_ItemDelimitationItem && key != DCM_SequenceDelimitationItem)
 	{
 		uint32_t rlen;
 		zz->current.vr = ZZ_VR(header.buffer.evr.vr[0], header.buffer.evr.vr[1]);

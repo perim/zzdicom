@@ -138,7 +138,7 @@ void dump(char *filename)
 		}
 		else if ((vr == UN && len == UNLIMITED) || vr == SQ)
 		{
-			if (zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT)
+			if (zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT || len == UNLIMITED)
 			{
 				strcpy(value, "(Sequence)");
 			}
