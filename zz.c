@@ -232,7 +232,10 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	} header;
 	zzKey key;
 
-	fread(&header, 8, 1, zz->fp);		// group+element then either VR + 0, VR+VL, or just VL
+	if (fread(&header, 8, 1, zz->fp) != 1)		// group+element then either VR + 0, VR+VL, or just VL
+	{
+		return false;
+	}
 	zz->current.group = *group = header.group;
 	zz->current.element = *element = header.element;
 	zz->currNesting = zz->nextNesting;
@@ -277,7 +280,10 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		case OW:
 		case OF:
 		case UT:
-			fread(&rlen, 4, 1, zz->fp);		// the 32 bit variant
+			if (fread(&rlen, 4, 1, zz->fp) != 1)		// the 32 bit variant
+			{
+				return false;
+			}
 			*len = LE_32(rlen);
 			break;
 		default:
@@ -420,7 +426,9 @@ void zziterinit(struct zzfile *zz)
 
 bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 {
-	if (zz && !feof(zz->fp) && !ferror(zz->fp) && (zz->current.length == UNLIMITED || (zz->current.pos + zz->current.length < zz->fileSize)))
+	// Check if we should read the next tag -- try to iterate over as many tags as possible, even if data is totally fubar
+	if (zz && !feof(zz->fp) && !ferror(zz->fp)
+	    && (zz->current.length == UNLIMITED || (zz->current.pos + zz->current.length < zz->fileSize) || zz->current.vr == SQ || zz->current.group == 0xfffe))
 	{
 		if (zz->current.pos > 0 && zz->current.length > 0 && zz->current.length != UNLIMITED
 		    && !(zz->current.group == 0xfffe && zz->current.element == 0xe000 && zz->pxstate == ZZ_NOT_PIXEL)
