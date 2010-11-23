@@ -81,6 +81,9 @@ void dump(char *filename)
 			header = true;
 		}
 
+		memset(value, 0, sizeof(value));		// need to zero all first
+		strcpy(value, "(unknown value format)");	// for implicit and no dictionary entry
+
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
 		if (group > 0x0002 && element == 0x0000)	// generic group length
 		{
@@ -99,8 +102,7 @@ void dump(char *filename)
 		{
 			vr = ZZ_VR(tag->VR[0], tag->VR[1]);
 		}
-		memset(value, 0, sizeof(value));		// need to zero all first
-		strcpy(value, "(unknown value format)");	// for implicit and no dictionary entry
+
 		if (len == 0)
 		{
 			strcpy(value, "(no value available)");

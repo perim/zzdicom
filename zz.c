@@ -176,33 +176,45 @@ bool zzgetstring(struct zzfile *zz, char *input, long strsize)
 
 uint32_t zzgetuint32(struct zzfile *zz)
 {
-	uint32_t val;
+	uint32_t val = 0;
 
-	fread(&val, 4, 1, zz->fp);
+	if (zz->current.length == 4)
+	{
+		fread(&val, 4, 1, zz->fp);
+	}
 	return LE_32(val);
 }
 
 uint16_t zzgetuint16(struct zzfile *zz)
 {
-	uint16_t val;
+	uint16_t val = 0;
 
-	fread(&val, 2, 1, zz->fp);
+	if (zz->current.length == 2)
+	{
+		fread(&val, 2, 1, zz->fp);
+	}
 	return LE_16(val);
 }
 
 int32_t zzgetint32(struct zzfile *zz)
 {
-	int32_t val;
+	int32_t val = 0;
 
-	fread(&val, 4, 1, zz->fp);
+	if (zz->current.length == 4)
+	{
+		fread(&val, 4, 1, zz->fp);
+	}
 	return LE_32(val);
 }
 
 int16_t zzgetint16(struct zzfile *zz)
 {
-	int16_t val;
+	int16_t val = 0;
 
-	fread(&val, 2, 1, zz->fp);
+	if (zz->current.length == 2)
+	{
+		fread(&val, 2, 1, zz->fp);
+	}
 	return LE_16(val);
 }
 
@@ -236,7 +248,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		syntax = zz->ladder[zz->ladderidx].txsyn;
 	}
 	// Second, handle dropping out of scope. This can happen recursively.
-	while (zz->ladderidx > 0 && laddersize != 0xffff && (uint32_t)ftell(zz->fp) - ladderpos > laddersize)
+	while (zz->ladderidx > 0 && laddersize != 0xffff && laddersize > 0 && (uint32_t)ftell(zz->fp) - ladderpos > laddersize)
 	{
 		if (zz->ladder[zz->ladderidx].group == 0xffff)	// leaving a sequence or item, ie not a group
 		{
