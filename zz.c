@@ -274,8 +274,6 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		{
 		case SQ:
 		case UN:
-			zz->nextNesting++;
-			// fall through
 		case OB:
 		case OW:
 		case OF:
@@ -289,6 +287,10 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		default:
 			*len = LE_16(header.buffer.evr.len);	// the insane 16 bit size variant
 			break;
+		}
+		if (zz->current.vr == SQ || (*len == UNLIMITED && zz->current.vr == UN))
+		{
+			zz->nextNesting++;
 		}
 	}
 	else	// the sad legacy implicit variant

@@ -127,7 +127,7 @@ void dump(char *filename)
 		{
 			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint32(zz));
 		}
-		else if (vr == UN || vr == SQ)
+		else if ((vr == UN && len == UNLIMITED) || vr == SQ)
 		{
 			strcpy(value, "(Sequence)");
 		}
