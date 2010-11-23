@@ -103,7 +103,7 @@ struct zzfile
 	char		fullPath[PATH_MAX];
 	char		sopClassUid[MAX_LEN_UID];	// TODO convert to enum
 	char		sopInstanceUid[MAX_LEN_UID];
-	bool		acrNema;
+	bool		acrNema, part6;
 	time_t		modifiedTime;
 	int		currNesting, nextNesting, ladderidx;
 	enum zzpxstate	pxstate;

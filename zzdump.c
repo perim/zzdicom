@@ -54,18 +54,13 @@ void dump(char *filename)
 	char value[MAX_LEN_VALUE];
 	char tmp[MAX_LEN_VALUE];
 	int i;
-	bool header = false;	// written header?
+	int header = 0;		// 0 - started, 1 - writing header, 2 - written header
 
 	zz = zzopen(filename, "r", &szz);
 
 	if (zz)
 	{
 		printf("\n# Dicom-File-Format\n");
-		if (zz->ladderidx > 0)
-		{
-			printf("\n# Dicom-Meta-Information-Header\n");
-			printf("# Used TransferSyntax: %s\n", zz->ladder[1].txsyn == ZZ_EXPLICIT ? "Little Endian Explicit" : "Little Endian Implicit");
-		}
 	}
 
 	zziterinit(zz);
@@ -74,11 +69,17 @@ void dump(char *filename)
 		enum VR vr = zz->current.vr;
 		tag = zztag(group, element);
 
-		if (zz->current.group > 0x0002 && !header)
+		if (zz->part6 && header == 0)
+		{
+			printf("\n# Dicom-Meta-Information-Header\n");
+			printf("# Used TransferSyntax: %s\n", zz->ladder[1].txsyn == ZZ_EXPLICIT ? "Little Endian Explicit" : "Little Endian Implicit");
+			header = 1;
+		}
+		else if (zz->current.group > 0x0002 && header < 2)
 		{
 			printf("\n# Dicom-Data-Set\n");
 			printf("# Used TransferSyntax: %s\n", zz->ladder[0].txsyn == ZZ_EXPLICIT ? "Little Endian Explicit" : "Little Endian Implicit");
-			header = true;
+			header = 2;
 		}
 
 		memset(value, 0, sizeof(value));		// need to zero all first
@@ -137,7 +138,14 @@ void dump(char *filename)
 		}
 		else if ((vr == UN && len == UNLIMITED) || vr == SQ)
 		{
-			strcpy(value, "(Sequence)");
+			if (zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT)
+			{
+				strcpy(value, "(Sequence)");
+			}
+			else
+			{
+				strcpy(value, "(Sequence in limited UN - not parsed)");
+			}
 		}
 		else if (vr == LO || vr == SH || vr == CS || vr == DS || vr == AE || vr == PN || vr == UI
 		         || vr == LT || vr == AS || vr == DT || vr == IS || vr == UT || vr == TM || vr == DA)

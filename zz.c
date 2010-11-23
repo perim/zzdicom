@@ -27,12 +27,8 @@ static bool testOnly = false;
 
 struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile)
 {
-	char transferSyntaxUid[MAX_LEN_UID];
 	struct zzfile *zz;
 	char dicm[4], endianbuf[6];
-	uint16_t group, element;
-	long len, cur;
-	bool done = false;
 	struct stat st;
 
 	if (!infile || !mode || !filename)
@@ -60,10 +56,12 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 #endif
 
 	// Check for valid Part 10 header
+	zz->part6 = true;	// ever the optimist
 	if (fseek(zz->fp, 128, SEEK_SET) != 0 || fread(dicm, 4, 1, zz->fp) != 1 || strncmp(dicm, "DICM", 4) != 0)
 	{
 		fprintf(stderr, "%s does not have a valid part 10 DICOM header\n", filename);
 		rewind(zz->fp);	// try anyway
+		zz->part6 = false;
 	}
 
 	if (fread(&endianbuf, 1, 6, zz->fp) != 6 || fseek(zz->fp, -6, SEEK_CUR) != 0)
@@ -77,6 +75,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 		rewind(zz->fp);				// rewind and try over without the part10
 		fread(&endianbuf, 1, 6, zz->fp);
 		fseek(zz->fp, -6, SEEK_CUR);
+		zz->part6 = false;
 	}
 
 	// Check for big-endian syntax - not supported
@@ -98,63 +97,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 		zz->ladder[0].txsyn = ZZ_IMPLICIT;
 	}
 
-	// Grab some useful data before handing back control
 	zz->ladder[0].pos = ftell(zz->fp);
-	while (zzread(zz, &group, &element, &len) && !done && !feof(zz->fp) && !ferror(zz->fp))
-	{
-		long result = len;
-
-		cur = ftell(zz->fp);
-		switch (ZZ_KEY(group, element))
-		{
-		case DCM_FileMetaInformationGroupLength:
-			zz->ladderidx = 1;
-			zz->ladder[1].pos = ftell(zz->fp);
-			zz->ladder[1].size = zzgetuint32(zz);
-			zz->ladder[1].txsyn = zz->ladder[0].txsyn;
-			zz->ladder[1].group = 0x0002;
-			break;
-		case DCM_MediaStorageSOPClassUID:
-			result = fread(zz->sopClassUid, 1, MIN((long)sizeof(zz->sopClassUid) - 1, len), zz->fp);
-			break;
-		case DCM_MediaStorageSOPInstanceUID:
-			result = fread(zz->sopInstanceUid, 1, MIN((long)sizeof(zz->sopInstanceUid) - 1, len), zz->fp);
-			break;
-		case DCM_TransferSyntaxUID:
-			result = fread(transferSyntaxUid, 1, MIN((long)sizeof(transferSyntaxUid) - 1, len), zz->fp);
-			done = true;	// not ACR-NEMA, last interesting tag, so stop scanning
-			zz->acrNema = false;
-			if (strcmp(transferSyntaxUid, UID_LittleEndianImplicitTransferSyntax) == 0)
-			{
-				// once over the header, start parsing implicit
-				zz->ladder[0].txsyn = ZZ_IMPLICIT;
-			}
-			else if (strcmp(transferSyntaxUid, UID_BigEndianExplicitTransferSyntax) == 0)
-			{
-				fprintf(stderr, "%s - big endian transfer syntax found - not supported\n", filename);
-				fclose(zz->fp);
-				return NULL;
-			}
-			// else continue to believe it is explicit little-endian, which really is the only sane thing to use
-			break;
-		case DCM_ACR_NEMA_RecognitionCode:
-			done = true;
-			zz->acrNema = true;
-			break;
-		default:
-			break;
-		}
-		if (result != len)
-		{
-			fprintf(stderr, "%s failed to read data value (read %ld, wanted %ld)\n", filename, result, len);
-			return zzclose(zz);
-		}
-		if (!feof(zz->fp) && !ferror(zz->fp))
-		{
-			fseek(zz->fp, cur + len, SEEK_SET);	// skip data
-		}
-	}
-	fseek(zz->fp, zz->ladder[0].pos, SEEK_SET);
 
 	return zz;
 }
@@ -242,6 +185,7 @@ int16_t zzgetint16(struct zzfile *zz)
 
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 {
+	char transferSyntaxUid[MAX_LEN_UID];
 	enum zztxsyn syntax = zz->ladder[zz->ladderidx].txsyn;
 	uint32_t ladderpos = zz->ladder[zz->ladderidx].pos;
 	uint32_t laddersize = zz->ladder[zz->ladderidx].size;
@@ -253,6 +197,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		union { uint32_t len; struct { char vr[2]; uint16_t len; } evr; } buffer;
 	} header;
 	zzKey key;
+	long pos;
 
 	if (fread(&header, 8, 1, zz->fp) != 1)		// group+element then either VR + 0, VR+VL, or just VL
 	{
@@ -265,10 +210,14 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 
 	// Did we leave a group, sequence or item?
 	// First, handle explicit item to denote this.
-	if (key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem)
+	if (zz->ladderidx > 0 && (key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem
+	                          || (zz->ladder[zz->ladderidx].group != 0xffff && *group != zz->ladder[zz->ladderidx].group)))
 	{
-		zz->currNesting--;
-		zz->nextNesting--;
+		if (zz->ladder[zz->ladderidx].group == 0xffff)	// leaving a sequence or item, ie not a group
+		{
+			zz->currNesting--;
+			zz->nextNesting--;
+		}
 		zz->ladderidx--;
 		syntax = zz->ladder[zz->ladderidx].txsyn;
 	}
@@ -324,6 +273,8 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			zz->nextNesting++;
 		}
 	}
+	zz->current.length = *len;
+	pos = ftell(zz->fp);	// anything we read after this, we roll back the position for
 
 	switch (key)
 	{
@@ -354,21 +305,62 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			zz->nextNesting--;
 		}
 		break;
+	case DCM_MediaStorageSOPClassUID:
+		zzgetstring(zz, zz->sopClassUid, sizeof(zz->sopClassUid) - 1);
+		break;
+	case DCM_MediaStorageSOPInstanceUID:
+		zzgetstring(zz, zz->sopInstanceUid, sizeof(zz->sopInstanceUid) - 1);
+		break;
+	case DCM_TransferSyntaxUID:
+		zzgetstring(zz, transferSyntaxUid, sizeof(transferSyntaxUid) - 1);
+		if (strcmp(transferSyntaxUid, UID_LittleEndianImplicitTransferSyntax) == 0)
+		{
+			// once over the header, start parsing implicit
+			zz->ladder[0].txsyn = ZZ_IMPLICIT;
+		}
+		else if (strcmp(transferSyntaxUid, UID_BigEndianExplicitTransferSyntax) == 0)
+		{
+			fprintf(stderr, "Big endian transfer syntax found - not supported\n");
+			return false;
+		}
+		// else continue to believe it is explicit little-endian, which really is the only sane thing to use
+		break;
+	case DCM_ACR_NEMA_RecognitionCode:
+		zz->acrNema = true;
+		break;
 	case DCM_ItemDelimitationItem:
 	default:
 		break;
 	}
 
-	if ((header.element == 0x0000 && header.group != 0x0002) || (key != DCM_PixelData && *len == UNLIMITED) || zz->current.vr == SQ || key == DCM_Item)
+	if (key == DCM_FileMetaInformationGroupLength)
+	{
+		zz->ladderidx = 1;
+		zz->ladder[1].pos = ftell(zz->fp);
+		zz->ladder[1].size = zzgetuint32(zz);
+		zz->ladder[1].txsyn = zz->ladder[0].txsyn;
+		zz->ladder[1].group = 0x0002;
+	}
+	else if (header.element == 0x0000 || (key != DCM_PixelData && *len == UNLIMITED) || zz->current.vr == SQ || key == DCM_Item)
 	{
 		// Entered into a group or sequence, copy parameters
 		if (zz->ladderidx >= MAX_LADDER)
 		{
+			fprintf(stderr, "Too deep group/sequence nesting - giving up\n");
 			return false;	// stop parsing and give up!
 		}
 		zz->ladderidx++;
+		if (header.element == 0x0000)
+		{
+			zz->ladder[zz->ladderidx].size = zzgetuint32(zz);
+			zz->ladder[zz->ladderidx].group = *group;
+		}
+		else
+		{
+			zz->ladder[zz->ladderidx].size = *len;
+			zz->ladder[zz->ladderidx].group = 0xffff;
+		}
 		zz->ladder[zz->ladderidx].pos = ftell(zz->fp);
-		zz->ladder[zz->ladderidx].size = *len;
 		if (zz->current.vr != UN)
 		{
 			zz->ladder[zz->ladderidx].txsyn = zz->ladder[zz->ladderidx - 1].txsyn;	// inherit transfer syntax
@@ -377,9 +369,8 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		{
 			zz->ladder[zz->ladderidx].txsyn = ZZ_IMPLICIT;	// UN is always implicit
 		}
-		zz->ladder[zz->ladderidx].group = header.element == 0x0000 ? header.group : 0xffff;	// mark as group or sequence
 	}
-	zz->current.length = *len;
+	fseek(zz->fp, pos, SEEK_SET);	// rollback data reading to allow user app to read too
 
 	return true;
 }
