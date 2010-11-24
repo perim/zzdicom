@@ -93,6 +93,14 @@ enum zzpxstate
 	ZZ_PIXELITEM
 };
 
+enum zzsteptype
+{
+	ZZ_BASELINE,
+	ZZ_GROUP,
+	ZZ_SEQUENCE,
+	ZZ_ITEM
+};
+
 /// Maximum amount of recursiveness in a DICOM file
 #define MAX_LADDER 16
 
@@ -122,7 +130,8 @@ struct zzfile
 		long		pos;		// file position where group begins, this - 4 is value position (except for group zero)
 		long		size;		// size of group/sequence
 		enum zztxsyn	txsyn;		// transfer syntax of this group
-		uint16_t	group;		// if group type, which group; 0xffff if not group
+		uint16_t	group;		// if group type, which group
+		enum zzsteptype	type;		// type of group
 	} ladder[MAX_LADDER];
 };
 

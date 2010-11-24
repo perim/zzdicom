@@ -208,30 +208,43 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	zz->currNesting = zz->nextNesting;
 	key = ZZ_KEY(header.group, header.element);
 
-	// Did we leave a group, sequence or item?
-	// First, handle groups separately (may leave group and sequence simultaneously)
-	if (zz->ladderidx > 0 && zz->ladder[zz->ladderidx].group != 0xffff && *group != zz->ladder[zz->ladderidx].group)
+	// Did we leave a group, sequence or item? We can drop out of multiple at the same time.
+	while (zz->ladderidx > 0)
 	{
-		zz->ladderidx--;
-	}
-	// Second, handle explicit item to denote this.
-	if (zz->ladderidx > 0 && (key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem))
-	{
-		zz->currNesting--;
-		zz->nextNesting--;
-		zz->ladderidx--;
-	}
-	// Third, handle dropping out of scope. This can happen recursively.
-	while (zz->ladderidx > 0 && zz->ladder[zz->ladderidx].size != 0xffff
-	       && (uint32_t)ftell(zz->fp) - zz->ladder[zz->ladderidx].pos > zz->ladder[zz->ladderidx].size)
-	{
-		if (zz->ladder[zz->ladderidx].group == 0xffff)	// leaving a sequence or item, ie not a group
+		long bytesread = ftell(zz->fp) - zz->ladder[zz->ladderidx].pos;
+
+		if (zz->ladder[zz->ladderidx].type == ZZ_GROUP
+		    && (zz->current.group != zz->ladder[zz->ladderidx].group
+		        || bytesread > zz->ladder[zz->ladderidx].size
+		        || key == DCM_SequenceDelimitationItem
+		        || key == DCM_ItemDelimitationItem))
+		{
+			zz->ladderidx--;	// end parsing this group now
+			continue;
+		}
+		else if (zz->ladder[zz->ladderidx].type == ZZ_ITEM
+		         && (bytesread > zz->ladder[zz->ladderidx].size
+		             || key == DCM_SequenceDelimitationItem
+		             || key == DCM_ItemDelimitationItem))
 		{
 			zz->currNesting--;
 			zz->nextNesting--;
+			zz->ladderidx--;	// end parsing this item now
+			continue;
 		}
-		zz->ladderidx--;
+		else if (zz->ladder[zz->ladderidx].type == ZZ_SEQUENCE
+		         && (bytesread > zz->ladder[zz->ladderidx].size
+		             || key == DCM_SequenceDelimitationItem))
+		{
+			zz->currNesting--;
+			zz->nextNesting--;
+			zz->ladderidx--;	// end parsing this sequence now
+			key = 0;		// do not react twice on the same sequence delimiter
+			continue;
+		}
+		break;		// no further cause for regress found
 	}
+	key = ZZ_KEY(header.group, header.element);	// restore key
 
 	// Try explicit VR
 	if (zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT && key != DCM_Item && key != DCM_ItemDelimitationItem && key != DCM_SequenceDelimitationItem)
@@ -338,6 +351,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		zz->ladder[1].size = zzgetuint32(zz);
 		zz->ladder[1].txsyn = zz->ladder[0].txsyn;
 		zz->ladder[1].group = 0x0002;
+		zz->ladder[1].type = ZZ_GROUP;
 	}
 	else if (header.element == 0x0000 || (key != DCM_PixelData && *len == UNLIMITED) || zz->current.vr == SQ || key == DCM_Item)
 	{
@@ -352,11 +366,13 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		{
 			zz->ladder[zz->ladderidx].size = zzgetuint32(zz);
 			zz->ladder[zz->ladderidx].group = *group;
+			zz->ladder[zz->ladderidx].type = ZZ_GROUP;
 		}
 		else
 		{
 			zz->ladder[zz->ladderidx].size = *len;
 			zz->ladder[zz->ladderidx].group = 0xffff;
+			zz->ladder[zz->ladderidx].type = (key == DCM_Item) ? ZZ_ITEM : ZZ_SEQUENCE;
 		}
 		zz->ladder[zz->ladderidx].pos = ftell(zz->fp);
 		if (zz->current.vr != UN)
