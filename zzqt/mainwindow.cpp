@@ -29,68 +29,49 @@ void MainWindow::openFile(QString filename)
 	struct zzfile szz, *zz;
 	uint16_t group, element;
 	long len, pos;
-	bool header = false;
 	char hexfield[12];
-	int numTags, nesting;
-	QList<QModelIndex> hierarchy;
+	int nesting;
+	QList<QStandardItem *> hierarchy;
 
 	nesting = 0;
-	numTags = 0;
+
 	zz = zzopen(filename.toAscii().constData(), "r", &szz);
-	hierarchy.append(QModelIndex());
-	while (zz && !feof(zz->fp) && !ferror(zz->fp))
+	zziterinit(zz);
+	while (zziternext(zz, &group, &element, &len))
 	{
-		zzread(zz, &group, &element, &len);
-		qWarning("Reading (%04x,%04x)", group, element);
 		pos = ftell(zz->fp);
 
-		if (zz->ladderidx == 0 && !header)
+		snprintf(hexfield, sizeof(hexfield) - 1, "%04x,%04x", group, element);
+		QStandardItem *item = new QStandardItem(hexfield);
+		QStandardItem *last = NULL;
+
+		if (!hierarchy.isEmpty())
 		{
-			header = true;
+			last = hierarchy.last();
 		}
 
-		snprintf(hexfield, sizeof(hexfield) - 1, "%04x,%04x", group, element);
-
-		numTags++;
-		tags->setRowCount(numTags);
-		QModelIndex idx(tags->index(numTags - 1, 0, hierarchy.last()));
-
-		if (zz->currNesting > nesting)
+		if (zz->nextNesting > nesting)
 		{
-			hierarchy.append(idx);	// increase nesting
+			hierarchy.append(item);	// increase nesting
 		}
 
 		// reduce nesting
 		while (zz->currNesting < nesting && !hierarchy.isEmpty())
 		{
 			hierarchy.removeLast();
-			qWarning("dropping index (%d, %d)", zz->currNesting, nesting);
 			nesting--;
 		}
 
-		nesting = zz->currNesting;
-		tags->setData(/*idx*/tags->index(numTags - 1, 0, QModelIndex()), QString(hexfield));
-
-		if (group == 2 && element == 0)
+		nesting = zz->nextNesting;
+		if (last)
 		{
-			//  TEST!
-			numTags++;
-			tags->setRowCount(numTags);
-			tags->setData(tags->index(numTags - 1, 0, tags->index(numTags - 2, 0, QModelIndex())), "TEST");
+			last->appendRow(item);
+		}
+		else
+		{
+			tags->appendRow(item);
 		}
 
-		// Abort early, skip loading pixel data into memory if possible
-		if (len != UNLIMITED && pos + len >= zz->fileSize)
-		{
-			break;
-		}
-
-		// Skip ahead
-		if (!feof(zz->fp) && len != UNLIMITED && len > 0 && !(group == 0xfffe && element == 0xe000 && zz->pxstate != ZZ_PIXELITEM)
-		    && zz->current.vr != SQ)
-		{
-			fseek(zz->fp, pos + len, SEEK_SET);
-		}
 	}
 	zz = zzclose(zz);
 }
