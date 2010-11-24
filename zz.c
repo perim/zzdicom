@@ -109,14 +109,13 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 bool zzgetstring(struct zzfile *zz, char *input, long strsize)
 {
 	const long desired = MIN(zz->current.length, strsize - 1);
-	long result;
-	char *last;
+	long result, last;
 
-	result = fread(input, 1, desired, zz->fp);
+	last = result = fread(input, 1, desired, zz->fp);
 	input[MIN(result, strsize - 1)] = '\0';	// make sure we zero terminate
-	while ((last = strrchr(input, ' ')))	// remove trailing whitespace
+	while (last > 0 && input[--last] == ' ')	// remove trailing whitespace
 	{
-		*last = '\0';
+		input[last] = '\0';
 	}
 	return result == desired;
 }

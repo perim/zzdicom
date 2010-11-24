@@ -158,8 +158,17 @@ void dump(char *filename)
 			snprintf(value, sizeof(value) - 1, "[%s]", tmp);
 		}
 
+		if (len == UNLIMITED)
+		{
+			strcpy(tmp, "u/l");
+		}
+		else
+		{
+			snprintf(tmp, sizeof(tmp) - 1, "%ld", len);
+		}
+
 		// Presenting in DCMTK's syntax
-		printf("(%04x,%04x) %s %-42s # %4ld, %s %s\n", group, element, vr2str(vr), value, len, tag ? tag->VM : "?", tag ? tag->description : "?");
+		printf("(%04x,%04x) %s %-42s # %4s, %s %s\n", group, element, vr2str(vr), value, tmp, tag ? tag->VM : "?", tag ? tag->description : "?");
 	}
 	zz = zzclose(zz);
 }
