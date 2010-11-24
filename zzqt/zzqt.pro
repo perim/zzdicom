@@ -12,6 +12,6 @@ TEMPLATE = app
 
 SOURCES += main.cpp mainwindow.cpp ../zz.c
 
-HEADERS  += mainwindow.h ../zzpriv.h ../zz.h
+HEADERS  += mainwindow.h ../zz_priv.h ../zz.h
 
 FORMS    += mainwindow.ui

@@ -50,7 +50,11 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	}
 	zz->fileSize = st.st_size;
 	zz->modifiedTime = st.st_mtime;
-	realpath(filename, zz->fullPath);
+	if (!realpath(filename, zz->fullPath))
+	{
+		fprintf(stderr, "Failed to get full path to file \"%s\": %s\n", filename, strerror(errno));
+		return NULL;
+	}
 #ifdef POSIX
 	posix_fadvise(fileno(zz->fp), 0, 4096 * 4, POSIX_FADV_SEQUENTIAL);	// request 4 pages right away
 #endif
@@ -141,46 +145,46 @@ double zzgetdouble(struct zzfile *zz)
 
 uint32_t zzgetuint32(struct zzfile *zz)
 {
-	uint32_t val = 0;
+	uint32_t val;
 
-	if (zz->current.length == 4)
+	if (zz->current.length >= 4 && fread(&val, 4, 1, zz->fp) == 1)
 	{
-		fread(&val, 4, 1, zz->fp);
+		return LE_32(val);
 	}
-	return LE_32(val);
+	return 0;
 }
 
 uint16_t zzgetuint16(struct zzfile *zz)
 {
-	uint16_t val = 0;
+	uint16_t val;
 
-	if (zz->current.length == 2)
+	if (zz->current.length >= 2 && fread(&val, 2, 1, zz->fp) == 1)
 	{
-		fread(&val, 2, 1, zz->fp);
+		return LE_16(val);
 	}
-	return LE_16(val);
+	return 0;
 }
 
 int32_t zzgetint32(struct zzfile *zz)
 {
-	int32_t val = 0;
+	int32_t val;
 
-	if (zz->current.length == 4)
+	if (zz->current.length >= 4 && fread(&val, 4, 1, zz->fp) == 1)
 	{
-		fread(&val, 4, 1, zz->fp);
+		return LE_32(val);
 	}
-	return LE_32(val);
+	return 0;
 }
 
 int16_t zzgetint16(struct zzfile *zz)
 {
-	int16_t val = 0;
+	int16_t val;
 
-	if (zz->current.length == 2)
+	if (zz->current.length == 2 && fread(&val, 2, 1, zz->fp) == 1)
 	{
-		fread(&val, 2, 1, zz->fp);
+		return LE_16(val);
 	}
-	return LE_16(val);
+	return 0;
 }
 
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
