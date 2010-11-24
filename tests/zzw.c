@@ -22,6 +22,8 @@ static bool checkContents(const char *testfile)
 			retval = true;
 		}
 	}
+	assert(zz->currNesting == 0);
+	zz = zzclose(zz);
 	return retval;
 }
 
