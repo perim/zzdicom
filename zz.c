@@ -60,12 +60,12 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 #endif
 
 	// Check for valid Part 10 header
-	zz->part6 = true;	// ever the optimist
+	zz->part10 = true;	// ever the optimist
 	if (fseek(zz->fp, 128, SEEK_SET) != 0 || fread(dicm, 4, 1, zz->fp) != 1 || strncmp(dicm, "DICM", 4) != 0)
 	{
 		fprintf(stderr, "%s does not have a valid part 10 DICOM header\n", filename);
 		rewind(zz->fp);	// try anyway
-		zz->part6 = false;
+		zz->part10 = false;
 	}
 
 	if (fread(&endianbuf, 1, 6, zz->fp) != 6 || fseek(zz->fp, -6, SEEK_CUR) != 0)
@@ -79,7 +79,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 		rewind(zz->fp);				// rewind and try over without the part10
 		fread(&endianbuf, 1, 6, zz->fp);
 		fseek(zz->fp, -6, SEEK_CUR);
-		zz->part6 = false;
+		zz->part10 = false;
 	}
 
 	// Check for big-endian syntax - not supported

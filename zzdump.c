@@ -69,7 +69,7 @@ void dump(char *filename)
 		enum VR vr = zz->current.vr;
 		tag = zztag(group, element);
 
-		if (zz->part6 && header == 0)
+		if (zz->part10 && header == 0)
 		{
 			printf("\n# Dicom-Meta-Information-Header\n");
 			printf("# Used TransferSyntax: %s\n", zz->ladder[1].txsyn == ZZ_EXPLICIT ? "Little Endian Explicit" : "Little Endian Implicit");
