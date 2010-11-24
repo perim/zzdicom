@@ -124,6 +124,10 @@ struct zzfile *zzcreate(const char *filename, struct zzfile *zz, const char *sop
 	zz->fp = fopen(filename, "w");
 	if (!zz->fp) return NULL;
 	zzwHeader(zz, sopclass, sopinstanceuid, transfer);
+	if (strcmp(transfer, UID_LittleEndianImplicitTransferSyntax) == 0)
+	{
+		zz->ladder[0].txsyn = ZZ_IMPLICIT;
+	}
 	return zz;
 }
 
