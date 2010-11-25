@@ -12,18 +12,19 @@ extern "C" {
 #include <limits.h>
 #include <time.h>
 
-// From dcmtk:
+#define UID_LittleEndianImplicitTransferSyntax			"1.2.840.10008.1.2"
+#define UID_LittleEndianExplicitTransferSyntax			"1.2.840.10008.1.2.1"
+#define UID_BigEndianExplicitTransferSyntax			"1.2.840.10008.1.2.2"
+#define UID_JPEGLSLosslessTransferSyntax			"1.2.840.10008.1.2.4.80"
 
-/// Implicit VR Little Endian: Default Transfer Syntax for DICOM
-#define UID_LittleEndianImplicitTransferSyntax  "1.2.840.10008.1.2"
-/// Explicit VR Little Endian
-#define UID_LittleEndianExplicitTransferSyntax  "1.2.840.10008.1.2.1"
-/// Explicit VR Big Endian
-#define UID_BigEndianExplicitTransferSyntax     "1.2.840.10008.1.2.2"
-/// JPEG-LS Lossless Image Compression
-#define UID_JPEGLSLosslessTransferSyntax        "1.2.840.10008.1.2.4.80"
-
-#define UID_SecondaryCaptureImageStorage "1.2.840.10008.5.1.4.1.1.7"
+#define UID_RawDataStorage					"1.2.840.10008.5.1.4.1.1.66"
+#define UID_SpatialRegistrationStorage				"1.2.840.10008.5.1.4.1.1.66.1"
+#define UID_SpatialFiducialsStorage				"1.2.840.10008.5.1.4.1.1.66.2"
+#define UID_SecondaryCaptureImageStorage			"1.2.840.10008.5.1.4.1.1.7"
+#define UID_MultiframeSingleBitSecondaryCaptureImageStorage	"1.2.840.10008.5.1.4.1.1.7.1"
+#define UID_MultiframeGrayscaleByteSecondaryCaptureImageStorage	"1.2.840.10008.5.1.4.1.1.7.2"
+#define UID_MultiframeGrayscaleWordSecondaryCaptureImageStorage	"1.2.840.10008.5.1.4.1.1.7.3"
+#define UID_MultiframeTrueColorSecondaryCaptureImageStorage	"1.2.840.10008.5.1.4.1.1.7.4"
 
 #define MAX_LEN_UID		(64 + 1)
 #define MAX_LEN_PN		(64 * 5 + 1)
