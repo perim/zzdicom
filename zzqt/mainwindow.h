@@ -21,6 +21,9 @@ public slots:
     void addFile(QString filename);
     void openFile(QString filename);
 
+protected slots:
+    void expanded(const QModelIndex &idx);
+
 private:
     Ui::MainWindow *ui;
     QStandardItemModel *files, *tags;

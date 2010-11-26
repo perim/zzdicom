@@ -7,44 +7,6 @@
 
 #define MAX_LEN_VALUE 42
 
-// Not implemented as reversing the bitshifting of the enum definition because this way it is reentrant
-static const char *vr2str(enum VR vr)
-{
-	switch (vr)
-	{
-	case AE: return "AE";
-	case AS: return "AS";
-	case AT: return "AT";
-	case CS: return "CS";
-	case DA: return "DA";
-	case DS: return "DS";
-	case DT: return "DT";
-	case FL: return "FL";
-	case FD: return "FD";
-	case IS: return "IS";
-	case LO: return "LO";
-	case LT: return "LT";
-	case OB: return "OB";
-	case OW: return "OW";
-	case OF: return "OF";
-	case PN: return "PN";
-	case SH: return "SH";
-	case SL: return "SL";
-	case SQ: return "SQ";
-	case SS: return "SS";
-	case ST: return "ST";
-	case TM: return "TM";
-	case UI: return "UI";
-	case UL: return "UL";
-	case US: return "US";
-	case UN: return "UN";
-	case UT: return "UT";
-	case OX: return "??";
-	case NO: return "--";
-	}
-	return "zz";	// to satisfy compiler
-}
-
 void dump(char *filename)
 {
 	struct zzfile szz, *zz;
@@ -52,7 +14,7 @@ void dump(char *filename)
 	long len;
 	const struct part6 *tag;
 	char value[MAX_LEN_VALUE];
-	char tmp[MAX_LEN_VALUE];
+	char tmp[MAX_LEN_VALUE], vrstr[MAX_LEN_VR];
 	int i;
 	int header = 0;		// 0 - started, 1 - writing header, 2 - written header
 
@@ -168,7 +130,7 @@ void dump(char *filename)
 		}
 
 		// Presenting in DCMTK's syntax
-		printf("(%04x,%04x) %s %-42s # %4s, %s %s\n", group, element, vr2str(vr), value, tmp, tag ? tag->VM : "?", tag ? tag->description : "?");
+		printf("(%04x,%04x) %s %-42s # %4s, %s %s\n", group, element, zzvr2str(vr, vrstr), value, tmp, tag ? tag->VM : "?", tag ? tag->description : "?");
 	}
 	zz = zzclose(zz);
 }

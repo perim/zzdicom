@@ -15,43 +15,6 @@
 #include "zzsql.h"
 #include "zzwrite.h"
 
-static const char *vr2str(enum VR vr)
-{
-        switch (vr)
-        {
-	case AE: return "AE";
-        case AS: return "AS";
-        case AT: return "AT";
-        case CS: return "CS";
-        case DA: return "DA";
-        case DS: return "DS";
-        case DT: return "DT";
-        case FL: return "FL";
-        case FD: return "FD";
-        case IS: return "IS";
-        case LO: return "LO";
-        case LT: return "LT";
-        case OB: return "OB";
-        case OW: return "OW";
-        case OF: return "OF";
-        case PN: return "PN";
-        case SH: return "SH";
-        case SL: return "SL";
-        case SQ: return "SQ";
-        case SS: return "SS";
-        case ST: return "ST";
-        case TM: return "TM";
-        case UI: return "UI";
-        case UL: return "UL";
-        case US: return "US";
-        case UN: return "UN";
-        case UT: return "UT";
-        case OX: return "??";
-        case NO: return "UN";
-        }
-	return "zz";    // to satisfy compiler
-}
-
 static void implicit(FILE *fp, uint16_t group, uint16_t element, uint32_t length)
 {
         fwrite(&group, 2, 1, fp);
@@ -91,7 +54,7 @@ static bool jpegtols(char *filename)
 	uint16_t group, element;
 	char *src, *dst;
 	long len, size;
-	char newname[PATH_MAX], *cptr;
+	char newname[PATH_MAX], *cptr, vrstr[MAX_LEN_VR];
 	void *addr;
 	const struct part6 *tag;
 
@@ -136,7 +99,7 @@ static bool jpegtols(char *filename)
 
 		if (group > 0x0002 && key != DCM_PixelData && element != 0)
 		{
-			const char *vr = vr2str(zz->current.vr);
+			const char *vr = zzvr2str(zz->current.vr, vrstr);
 
 			if (zz->current.vr == NO)
 			{

@@ -68,7 +68,17 @@ enum VR
 	NO = ('N'<<8)|'O',
 };
 
+#define MAX_LEN_VR 3	///< 2 chars for VR and one for terminating null
 #define ZZ_VR(_m1, _m2) ((_m1 << 8) | _m2)
+
+/// dest must be a string of at least 3 letters long
+static inline const char *zzvr2str(enum VR vr, char *dest)
+{
+	dest[0] = vr >> 8;
+	dest[1] = vr & 0xff;
+	dest[2] = '\0';
+	return dest;
+}
 
 struct part6
 {
