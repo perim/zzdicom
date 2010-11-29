@@ -23,7 +23,6 @@ const char *versionString =
 ;
 
 static bool verbose = false;
-static bool testOnly = false;
 
 struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile)
 {
@@ -43,18 +42,13 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 		return NULL;
 	}
 	zz->fp = fopen(filename, mode);
-	if (!zz->fp)
+	if (!zz->fp || !realpath(filename, zz->fullPath))
 	{
 		fprintf(stderr, "%s could not be opened: %s\n", filename, strerror(errno));
 		return NULL;
 	}
 	zz->fileSize = st.st_size;
 	zz->modifiedTime = st.st_mtime;
-	if (!realpath(filename, zz->fullPath))
-	{
-		fprintf(stderr, "Failed to get full path to file \"%s\": %s\n", filename, strerror(errno));
-		return NULL;
-	}
 #ifdef POSIX
 	posix_fadvise(fileno(zz->fp), 0, 4096 * 4, POSIX_FADV_SEQUENTIAL);	// request 4 pages right away
 #endif
@@ -406,7 +400,6 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 		{
 			fprintf(stdout, "%s\n", help);
 			fprintf(stdout, "  %-10s Verbose output\n", "-v");
-			//fprintf(stdout, "  %-10s Test only - apply no changes\n", "-t");
 			fprintf(stdout, "  %-10s This help\n", "-h|--help");
 			fprintf(stdout, "  %-10s Version of zzdicom package\n", "--version");
 			fprintf(stdout, "  %-10s Short help\n", "--usage");
@@ -427,11 +420,6 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 		{
 			ignparams++;
 			verbose = true;
-		}
-		else if (strcmp(argv[i], "-t") == 0)	// test only
-		{
-			ignparams++;
-			testOnly = true;
 		}
 	}
 	if (usageReq || argc < minArgs + ignparams - 1)

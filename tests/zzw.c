@@ -123,7 +123,7 @@ int main(int argc, char **argv)
 	zzwEmpty(zz, DCM_Laterality, "CS");
 	fclose(zz->fp);
 
-	result = checkContents("confuse.dcm");
+	result = checkContents("samples/confuse.dcm");
 	assert(result);
 
 	////
@@ -141,7 +141,7 @@ int main(int argc, char **argv)
 	zzwUN_end(zz, NULL);
 	zz = zzclose(zz);
 
-	result = checkContents("tw1.dcm");
+	result = checkContents("samples/tw1.dcm");
 	assert(result);
 
 	////
@@ -159,6 +159,14 @@ int main(int argc, char **argv)
 		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz, 2);
 		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		zzwSS(zz, ZZ_KEY(0x0021, 0x1010), 11);
+		zzwSL(zz, ZZ_KEY(0x0021, 0x1011), 12);
+		zzwUS(zz, ZZ_KEY(0x0021, 0x1012), 13);
+		zzwUL(zz, ZZ_KEY(0x0021, 0x1013), 14);
+		zzwFL(zz, ZZ_KEY(0x0021, 0x1014), 15.0f);
+		zzwFD(zz, ZZ_KEY(0x0021, 0x1015), 16.0);
+		implicit(zz->fp, 0xfffe, 0xe00d, 0);
 	zzwSQ_end(zz, NULL);
 	zzwLO(zz, ZZ_KEY(0x0029, 0x0010), "ZZDICOM TEST");
 	zzwUN_begin(zz, ZZ_KEY(0x0029, 0x1010), NULL);
@@ -173,7 +181,7 @@ int main(int argc, char **argv)
 	zzwOBnoise(zz, DCM_DataSetTrailingPadding, 256);
 	zz = zzclose(zz);
 
-	result = checkContents("tw2.dcm");
+	result = checkContents("samples/tw2.dcm");
 	assert(result);
 
 	return 0;

@@ -109,6 +109,56 @@ void zzwUL(struct zzfile *zz, zzKey key, uint32_t value)
 	fwrite(&value, sizeof(value), 1, zz->fp);
 }
 
+void zzwSL(struct zzfile *zz, zzKey key, int32_t value)
+{
+	const uint16_t group = ZZ_GROUP(key);
+	const uint16_t element = ZZ_ELEMENT(key);
+
+	if (explicit(zz)) explicit1(zz->fp, group, element, "SL", sizeof(value));
+	else implicit(zz->fp, group, element, sizeof(value));
+	fwrite(&value, sizeof(value), 1, zz->fp);
+}
+
+void zzwSS(struct zzfile *zz, zzKey key, int16_t value)
+{
+	const uint16_t group = ZZ_GROUP(key);
+	const uint16_t element = ZZ_ELEMENT(key);
+
+	if (explicit(zz)) explicit1(zz->fp, group, element, "SS", sizeof(value));
+	else implicit(zz->fp, group, element, sizeof(value));
+	fwrite(&value, sizeof(value), 1, zz->fp);
+}
+
+void zzwUS(struct zzfile *zz, zzKey key, uint16_t value)
+{
+	const uint16_t group = ZZ_GROUP(key);
+	const uint16_t element = ZZ_ELEMENT(key);
+
+	if (explicit(zz)) explicit1(zz->fp, group, element, "US", sizeof(value));
+	else implicit(zz->fp, group, element, sizeof(value));
+	fwrite(&value, sizeof(value), 1, zz->fp);
+}
+
+void zzwFL(struct zzfile *zz, zzKey key, float value)
+{
+	const uint16_t group = ZZ_GROUP(key);
+	const uint16_t element = ZZ_ELEMENT(key);
+
+	if (explicit(zz)) explicit1(zz->fp, group, element, "FL", sizeof(value));
+	else implicit(zz->fp, group, element, sizeof(value));
+	fwrite(&value, sizeof(value), 1, zz->fp);
+}
+
+void zzwFD(struct zzfile *zz, zzKey key, double value)
+{
+	const uint16_t group = ZZ_GROUP(key);
+	const uint16_t element = ZZ_ELEMENT(key);
+
+	if (explicit(zz)) explicit1(zz->fp, group, element, "FD", sizeof(value));
+	else implicit(zz->fp, group, element, sizeof(value));
+	fwrite(&value, sizeof(value), 1, zz->fp);
+}
+
 void zzwOB(struct zzfile *zz, zzKey key, const char *string, int length)
 {
 	const uint16_t group = ZZ_GROUP(key);

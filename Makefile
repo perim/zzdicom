@@ -53,7 +53,10 @@ clean:
 check: tests/zz1 tests/zzw
 	tests/zz1 2> /dev/null
 	tests/zzw
-	./zzdump samples/confuse.dcm > /dev/null
+	./zzdump --version > /dev/null
+	./zzdump --help > /dev/null
+	./zzdump --usage > /dev/null
+	./zzdump -v samples/confuse.dcm > /dev/null
 	./zzdump samples/tw1.dcm > /dev/null
 	./zzdump samples/tw2.dcm > /dev/null
 	./zzanon TEST samples/tw2.dcm
