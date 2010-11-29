@@ -2,8 +2,17 @@
 #include <string.h>
 #include <errno.h>
 
+#include "byteorder.h"
+
 #include "zz_priv.h"
 #include "zzwrite.h"
+
+// Magic values
+#define MAGIC1 0xfffee00d
+#define MAGIC2 BSWAP_32(0xfffee00d)
+#define MAGIC3 0xfffee0dd
+#define MAGIC4 BSWAP_32(0xfffee0dd)
+#define MAGIC5 ((0x0010 << 24) | (0x0001 << 16) | ('S' << 8) | ('S'))
 
 static bool checkContents(const char *testfile)
 {
@@ -27,6 +36,65 @@ static bool checkContents(const char *testfile)
 	return retval;
 }
 
+static inline bool explicit(struct zzfile *zz) { return zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT; }
+
+static void implicit(FILE *fp, uint16_t group, uint16_t element, uint32_t length)
+{
+	fwrite(&group, 2, 1, fp);
+	fwrite(&element, 2, 1, fp);
+	fwrite(&length, 4, 1, fp);
+}
+
+static void genericfile(struct zzfile *zz)
+{
+	zzwUI(zz, DCM_SOPClassUID, UID_SecondaryCaptureImageStorage);
+	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.0");
+	zzwEmpty(zz, DCM_StudyDate, "DA");
+	zzwEmpty(zz, DCM_StudyTime, "TM");
+	zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
+	zzwPN(zz, DCM_ReferringPhysiciansName, "Doctor^Johnson");
+	zzwPN(zz, DCM_PatientsName, "Sick^Jack");
+	zzwEmpty(zz, DCM_PatientID, "LO");
+	zzwEmpty(zz, DCM_PatientsBirthDate, "DA");
+	zzwEmpty(zz, DCM_PatientsSex, "CS");
+	zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.1");
+	zzwUI(zz, DCM_SeriesInstanceUID, "1.2.3.4.2");
+	zzwEmpty(zz, DCM_StudyID, "SH");
+	zzwEmpty(zz, DCM_SeriesNumber, "IS");
+	zzwEmpty(zz, DCM_InstanceNumber, "IS");
+	zzwEmpty(zz, DCM_Laterality, "CS");
+}
+
+static void garbfill(struct zzfile *zz, int variant)
+{
+	switch (variant)
+	{
+	case 0: zzwUL(zz, DCM_DataPointRows, MAGIC1); zzwUL(zz, DCM_DataPointColumns, MAGIC2); break;
+	case 1: zzwUL(zz, DCM_DataPointRows, MAGIC3); zzwUL(zz, DCM_DataPointColumns, MAGIC4); break;
+	case 2: zzwUL(zz, DCM_DataPointRows, MAGIC2); zzwUL(zz, DCM_DataPointColumns, MAGIC5); break;
+	case 3: zzwUL(zz, DCM_DataPointRows, MAGIC5); zzwUL(zz, DCM_DataPointColumns, MAGIC3); break;
+	default:
+	case 4: zzwUL(zz, DCM_DataPointRows, MAGIC4); zzwUL(zz, DCM_DataPointColumns, MAGIC1); break;
+	}
+}
+
+static void zzwOBnoise(struct zzfile *zz, zzKey key, size_t size)
+{
+	char *buf;
+
+	buf = malloc(size);
+	memset(buf, 0, size);
+	if (!explicit(zz) && key == DCM_PixelData)
+	{
+		zzwOW(zz, key, buf, size / 2);
+	}
+	else
+	{
+		zzwOB(zz, key, buf, size);
+	}
+	free(buf);
+}
+
 int main(int argc, char **argv)
 {
 	struct zzfile szz, *zz = &szz;
@@ -39,7 +107,7 @@ int main(int argc, char **argv)
 	// Set # 1 -- Deliberately confuse DICOM readers with this tiny, valid file with "DCM" in the wrong place
 
 	memset(zz, 0, sizeof(*zz));
-	zz->fp = fopen("confuse.dcm", "w");
+	zz->fp = fopen("samples/confuse.dcm", "w");
 	zz->ladder[0].txsyn = ZZ_IMPLICIT;	// no header, implicit
 	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.0");
 	zzwEmpty(zz, DCM_StudyDate, "DA");
@@ -59,24 +127,53 @@ int main(int argc, char **argv)
 	assert(result);
 
 	////
-	// Set # 2 -- Basic reading
+	// Set # 2 -- Basic reading of part10 implicit
 
-	zz = zzcreate("tw1.dcm", &szz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianImplicitTransferSyntax);
-	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.0");
-	zzwEmpty(zz, DCM_StudyDate, "DA");
-	zzwEmpty(zz, DCM_StudyTime, "TM");
-	zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
-	zzwEmpty(zz, DCM_ReferringPhysiciansName, "PN");
-	zzwEmpty(zz, DCM_PatientsName, "PN");
-	zzwEmpty(zz, DCM_PatientID, "LO");
-	zzwEmpty(zz, DCM_PatientsBirthDate, "DA");
-	zzwEmpty(zz, DCM_PatientsSex, "CS");
-	zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.1");
-	zzwSH(zz, DCM_StudyID, "TEST STUDY");
-	zzwEmpty(zz, DCM_Laterality, "CS");
+	zz = zzcreate("samples/tw1.dcm", &szz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianImplicitTransferSyntax);
+	genericfile(zz);
+	zzwUN_begin(zz, ZZ_KEY(0x0029, 0x1010), NULL);
+		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		garbfill(zz, 0);
+		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		garbfill(zz, 1);
+		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+	zzwUN_end(zz, NULL);
 	zz = zzclose(zz);
 
 	result = checkContents("tw1.dcm");
+	assert(result);
+
+	////
+	// Set # 3 -- Basic reading of part10 explicit
+
+	zz = zzcreate("samples/tw2.dcm", &szz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianExplicitTransferSyntax);
+	genericfile(zz);
+	zzwSQ_begin(zz, ZZ_KEY(0x0020, 0x1115), NULL);
+		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		garbfill(zz, 0);
+		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+		implicit(zz->fp, 0xfffe, 0xe000, 24);
+		garbfill(zz, 1);
+		//implicit(zz->fp, 0xfffe, 0xe00d, 0);	// this crashed dicom3tools; not really legal dicom; fun to do anyway
+		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		garbfill(zz, 2);
+		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+	zzwSQ_end(zz, NULL);
+	zzwLO(zz, ZZ_KEY(0x0029, 0x0010), "ZZDICOM TEST");
+	zzwUN_begin(zz, ZZ_KEY(0x0029, 0x1010), NULL);
+		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		garbfill(zz, 0);
+		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		garbfill(zz, 1);
+		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+	zzwUN_end(zz, NULL);
+	zzwOBnoise(zz, DCM_PixelData, 1024);
+	zzwOBnoise(zz, DCM_DataSetTrailingPadding, 256);
+	zz = zzclose(zz);
+
+	result = checkContents("tw2.dcm");
 	assert(result);
 
 	return 0;

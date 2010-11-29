@@ -40,7 +40,8 @@ void zzwSQ(struct zzfile *zz, zzKey key, uint32_t size)
 	const uint16_t group = ZZ_GROUP(key);
 	const uint16_t element = ZZ_ELEMENT(key);
 
-	explicit2(zz->fp, group, element, "SQ", size);
+	if (!explicit(zz)) implicit(zz->fp, group, element, size);
+	else explicit2(zz->fp, group, element, "SQ", size);
 }
 
 void zzwUN(struct zzfile *zz, zzKey key, uint32_t size)
@@ -48,7 +49,54 @@ void zzwUN(struct zzfile *zz, zzKey key, uint32_t size)
 	const uint16_t group = ZZ_GROUP(key);
 	const uint16_t element = ZZ_ELEMENT(key);
 
-	explicit2(zz->fp, group, element, "UN", size);
+	if (!explicit(zz)) implicit(zz->fp, group, element, size);
+	else explicit2(zz->fp, group, element, "UN", size);
+}
+
+void zzwUN_begin(struct zzfile *zz, zzKey key, long *pos)
+{
+	zzwUN(zz, key, UNLIMITED);
+	if (pos) *pos = ftell(zz->fp) - 4;	// position of length value
+	zz->ladderidx++;
+	zz->ladder[zz->ladderidx].txsyn = ZZ_IMPLICIT;
+	zz->ladder[zz->ladderidx].size = UNLIMITED;
+	zz->ladder[zz->ladderidx].group = ZZ_GROUP(key);
+	zz->ladder[zz->ladderidx].type = ZZ_SEQUENCE;
+}
+
+/// Pass in NULL to use UNLIMITED size
+void zzwUN_end(struct zzfile *zz, long *pos)
+{
+	if (pos)	// set exact size of data written
+	{
+		long curr = ftell(zz->fp);
+		uint32_t len = curr - *pos;
+
+		fseek(zz->fp, *pos, SEEK_SET);
+		fwrite(&len, 4, 1, zz->fp);
+		fseek(zz->fp, curr, SEEK_SET);
+	}
+	else
+	{
+		implicit(zz->fp, 0xfffe, 0xe0dd, 0);	// add end seq tag
+	}
+	zz->ladderidx--;
+}
+
+void zzwSQ_begin(struct zzfile *zz, zzKey key, long *pos)
+{
+	zzwSQ(zz, key, UNLIMITED);
+	if (pos) *pos = ftell(zz->fp) - 4;	// position of length value
+	zz->ladderidx++;
+	zz->ladder[zz->ladderidx].txsyn = ZZ_EXPLICIT;
+	zz->ladder[zz->ladderidx].size = UNLIMITED;
+	zz->ladder[zz->ladderidx].group = ZZ_GROUP(key);
+	zz->ladder[zz->ladderidx].type = ZZ_SEQUENCE;
+}
+
+void zzwSQ_end(struct zzfile *zz, long *pos)
+{
+	zzwUN_end(zz, pos);
 }
 
 void zzwUL(struct zzfile *zz, zzKey key, uint32_t value)
@@ -111,10 +159,13 @@ static void wstr(struct zzfile *zz, zzKey key, const char *string, const char *v
 	fwrite(string, 1, length, zz->fp);
 	if (length % 2 != 0) fwrite(" ", 1, 1, zz->fp);	// pad with spaces
 }
+void zzwPN(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, "PN", 64); }
 void zzwSH(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, "SH", 16); }
 void zzwAE(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, "AE", 16); }
 void zzwAS(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, "AS", 4); }
 void zzwCS(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, "CS", 16); }
+void zzwLO(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, "LO", 64); }
+void zzwLT(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, "LT", 10240); }
 
 struct zzfile *zzcreate(const char *filename, struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer)
 {
