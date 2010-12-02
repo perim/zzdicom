@@ -241,7 +241,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	key = ZZ_KEY(header.group, header.element);	// restore key
 
 	// Try explicit VR
-	if (zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT && key != DCM_Item && key != DCM_ItemDelimitationItem && key != DCM_SequenceDelimitationItem)
+	if (zz->ladder[zz->ladderidx].txsyn != ZZ_IMPLICIT && key != DCM_Item && key != DCM_ItemDelimitationItem && key != DCM_SequenceDelimitationItem)
 	{
 		uint32_t rlen;
 		zz->current.vr = ZZ_VR(header.buffer.evr.vr[0], header.buffer.evr.vr[1]);
@@ -322,6 +322,13 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		{
 			// once over the header, start parsing implicit
 			zz->ladder[0].txsyn = ZZ_IMPLICIT;
+		}
+		else if (strcmp(transferSyntaxUid, UID_DeflatedExplicitVRLittleEndianTransferSyntax) == 0)
+		{
+			// once over the header, start inflating
+			zz->ladder[0].txsyn = ZZ_EXPLICIT_COMPRESSED;
+			fprintf(stderr, "Deflate transfer syntax found - not supported yet\n");
+			return false;
 		}
 		else if (strcmp(transferSyntaxUid, UID_BigEndianExplicitTransferSyntax) == 0)
 		{

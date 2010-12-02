@@ -7,6 +7,17 @@
 
 #define MAX_LEN_VALUE 42
 
+static const char *txsyn2str(enum zztxsyn syn)
+{
+	switch (syn)
+	{
+	case ZZ_EXPLICIT: return "Little Endian Explicit";
+	case ZZ_IMPLICIT: return "Little Endian Implicit";
+	case ZZ_EXPLICIT_COMPRESSED: return "Deflated Explicit Little Endian";	// switched word order is in standard too
+	}
+	return "Internal Error";
+}
+
 void dump(char *filename)
 {
 	struct zzfile szz, *zz;
@@ -34,13 +45,13 @@ void dump(char *filename)
 		if (zz->part10 && header == 0)
 		{
 			printf("\n# Dicom-Meta-Information-Header\n");
-			printf("# Used TransferSyntax: %s\n", zz->ladder[1].txsyn == ZZ_EXPLICIT ? "Little Endian Explicit" : "Little Endian Implicit");
+			printf("# Used TransferSyntax: %s\n", txsyn2str(zz->ladder[1].txsyn));
 			header = 1;
 		}
 		else if (zz->current.group > 0x0002 && header < 2)
 		{
 			printf("\n# Dicom-Data-Set\n");
-			printf("# Used TransferSyntax: %s\n", zz->ladder[0].txsyn == ZZ_EXPLICIT ? "Little Endian Explicit" : "Little Endian Implicit");
+			printf("# Used TransferSyntax: %s\n", txsyn2str(zz->ladder[0].txsyn));
 			header = 2;
 		}
 
@@ -100,7 +111,7 @@ void dump(char *filename)
 		}
 		else if ((vr == UN && len == UNLIMITED) || vr == SQ)
 		{
-			if (zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT || len == UNLIMITED)
+			if (zz->ladder[zz->ladderidx].txsyn != ZZ_IMPLICIT || len == UNLIMITED)
 			{
 				strcpy(value, "(Sequence)");
 			}

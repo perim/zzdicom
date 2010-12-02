@@ -16,6 +16,7 @@ extern "C" {
 #define UID_LittleEndianExplicitTransferSyntax			"1.2.840.10008.1.2.1"
 #define UID_BigEndianExplicitTransferSyntax			"1.2.840.10008.1.2.2"
 #define UID_JPEGLSLosslessTransferSyntax			"1.2.840.10008.1.2.4.80"
+#define UID_DeflatedExplicitVRLittleEndianTransferSyntax	"1.2.840.10008.1.2.1.99"
 
 #define UID_RawDataStorage					"1.2.840.10008.5.1.4.1.1.66"
 #define UID_SpatialRegistrationStorage				"1.2.840.10008.5.1.4.1.1.66.1"
@@ -93,7 +94,8 @@ struct part6
 enum zztxsyn
 {
 	ZZ_IMPLICIT,
-	ZZ_EXPLICIT
+	ZZ_EXPLICIT,
+	ZZ_EXPLICIT_COMPRESSED
 };
 
 enum zzpxstate
