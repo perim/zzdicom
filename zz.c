@@ -114,66 +114,69 @@ bool zzgetstring(struct zzfile *zz, char *input, long strsize)
 	return result == desired;
 }
 
-float zzgetfloat(struct zzfile *zz)
-{
-	float val = 0;
+#define CHECK_SEEK_READ(zz, val, idx) \
+	zz->current.length >= (long)sizeof(val) * (idx + 1) && fseek(zz->fp, zz->current.pos + idx * sizeof(val), SEEK_SET) == 0 && fread(&val, sizeof(val), 1, zz->fp) == 1
 
-	if (zz->current.length == 4)
+float zzgetfloat(struct zzfile *zz, int idx)
+{
+	float val;
+
+	if (CHECK_SEEK_READ(zz, val, idx))
 	{
-		fread(&val, 4, 1, zz->fp);
+		return LE_32(val);
 	}
-	return val;	// FIXME - endian handling
+	return 0.0f;
 }
 
-double zzgetdouble(struct zzfile *zz)
+double zzgetdouble(struct zzfile *zz, int idx)
 {
-	double val = 0;
+	double val;
 
-	if (zz->current.length == 8)
+	if (CHECK_SEEK_READ(zz, val, idx))
 	{
-		fread(&val, 8, 1, zz->fp);
+		return LE_64(val);
 	}
-	return val;	// FIXME - endian handling
+	return 0.0;
 }
 
-uint32_t zzgetuint32(struct zzfile *zz)
+uint32_t zzgetuint32(struct zzfile *zz, int idx)
 {
 	uint32_t val;
 
-	if (zz->current.length >= 4 && fread(&val, 4, 1, zz->fp) == 1)
+	if (CHECK_SEEK_READ(zz, val, idx))
 	{
 		return LE_32(val);
 	}
 	return 0;
 }
 
-uint16_t zzgetuint16(struct zzfile *zz)
+uint16_t zzgetuint16(struct zzfile *zz, int idx)
 {
 	uint16_t val;
 
-	if (zz->current.length >= 2 && fread(&val, 2, 1, zz->fp) == 1)
+	if (CHECK_SEEK_READ(zz, val, idx))
 	{
 		return LE_16(val);
 	}
 	return 0;
 }
 
-int32_t zzgetint32(struct zzfile *zz)
+int32_t zzgetint32(struct zzfile *zz, int idx)
 {
 	int32_t val;
 
-	if (zz->current.length >= 4 && fread(&val, 4, 1, zz->fp) == 1)
+	if (CHECK_SEEK_READ(zz, val, idx))
 	{
 		return LE_32(val);
 	}
 	return 0;
 }
 
-int16_t zzgetint16(struct zzfile *zz)
+int16_t zzgetint16(struct zzfile *zz, int idx)
 {
 	int16_t val;
 
-	if (zz->current.length == 2 && fread(&val, 2, 1, zz->fp) == 1)
+	if (CHECK_SEEK_READ(zz, val, idx))
 	{
 		return LE_16(val);
 	}
@@ -279,7 +282,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		}
 	}
 	zz->current.length = *len;
-	pos = ftell(zz->fp);	// anything we read after this, we roll back the position for
+	pos = zz->current.pos = ftell(zz->fp);	// anything we read after this, we roll back the position for
 
 	switch (key)
 	{
@@ -349,7 +352,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	{
 		zz->ladderidx = 1;
 		zz->ladder[1].pos = ftell(zz->fp);
-		zz->ladder[1].size = zzgetuint32(zz);
+		zz->ladder[1].size = zzgetuint32(zz, 0);
 		zz->ladder[1].txsyn = zz->ladder[0].txsyn;
 		zz->ladder[1].group = 0x0002;
 		zz->ladder[1].type = ZZ_GROUP;
@@ -365,7 +368,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		zz->ladderidx++;
 		if (header.element == 0x0000)
 		{
-			zz->ladder[zz->ladderidx].size = zzgetuint32(zz);
+			zz->ladder[zz->ladderidx].size = zzgetuint32(zz, 0);
 			zz->ladder[zz->ladderidx].group = *group;
 			zz->ladder[zz->ladderidx].type = ZZ_GROUP;
 		}
@@ -467,7 +470,6 @@ bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len
 		}
 		if (zzread(zz, group, element, len))
 		{
-			zz->current.pos = ftell(zz->fp);
 			return true;
 		}
 	}

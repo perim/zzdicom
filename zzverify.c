@@ -35,7 +35,7 @@ void dump(char *filename)
 
 			if (element == 0x0000)
 			{
-				groupsize = zzgetuint32(zz);
+				groupsize = zzgetuint32(zz, 0);
 				fseek(zz->fp, -4, SEEK_CUR);
 			}
 			groupsize = 0;

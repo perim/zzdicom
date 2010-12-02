@@ -138,7 +138,7 @@ static bool jpegtols(char *filename)
 		case DCM_BitsStored:
 			break;
 		case DCM_BitsAllocated:
-			params.bitspersample = zzgetuint16(zz);
+			params.bitspersample = zzgetuint16(zz, 0);
 			break;
 		case DCM_PhotometricInterpretation:
 			// TODO, CS. need to be "MONOCHROME1", "MONOCHROME2" or "RGB" (or "PALETTE COLOR"?)
@@ -147,13 +147,13 @@ static bool jpegtols(char *filename)
 			// TODO, US; 0 - unsigned, 1 - signed
 			break;
 		case DCM_Rows:
-			params.height = zzgetuint16(zz);
+			params.height = zzgetuint16(zz, 0);
 			break;
 		case DCM_Columns:
-			params.width = zzgetuint16(zz);
+			params.width = zzgetuint16(zz, 0);
 			break;
 		case DCM_SamplesPerPixel:
-			params.components = zzgetuint16(zz);
+			params.components = zzgetuint16(zz, 0);
 			if (params.components == 3)
 			{
 				params.ilv = ILV_SAMPLE; // RGB
@@ -164,7 +164,7 @@ static bool jpegtols(char *filename)
 			}
 			break;
 		case DCM_PlanarConfiguration:
-			if (zzgetuint16(zz) != 0)
+			if (zzgetuint16(zz, 0) != 0)
 			{
 				fprintf(stderr, "%s unsupported planar configuration\n", filename);
 				return false;

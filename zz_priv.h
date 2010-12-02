@@ -163,12 +163,12 @@ struct zzfile
             (void) (&_max1 == &_max2);              \
             _max1 > _max2 ? _max1 : _max2; })
 
-float zzgetfloat(struct zzfile *zz);
-double zzgetdouble(struct zzfile *zz);
-uint32_t zzgetuint32(struct zzfile *zz);
-uint16_t zzgetuint16(struct zzfile *zz);
-int32_t zzgetint32(struct zzfile *zz);
-int16_t zzgetint16(struct zzfile *zz);
+float zzgetfloat(struct zzfile *zz, int index);
+double zzgetdouble(struct zzfile *zz, int index);
+uint32_t zzgetuint32(struct zzfile *zz, int index);
+uint16_t zzgetuint16(struct zzfile *zz, int index);
+int32_t zzgetint32(struct zzfile *zz, int index);
+int16_t zzgetint16(struct zzfile *zz, int index);
 bool zzgetstring(struct zzfile *zz, char *input, long size);
 
 /// From the current file position, start reading DICOM tag information.

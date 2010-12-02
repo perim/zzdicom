@@ -61,7 +61,7 @@ void dump(char *filename)
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
 		if (group > 0x0002 && element == 0x0000)	// generic group length
 		{
-			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint32(zz));
+			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint32(zz, 0));
 			printf("(%04x,%04x) UL %-42s # %4ld, 1 Generic Group Length\n", group, element, value, len);
 			continue;
 		}
@@ -87,27 +87,27 @@ void dump(char *filename)
 		}
 		else if (vr == UL)
 		{
-			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint32(zz));
+			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint32(zz, 0));
 		}
 		else if (vr == US)
 		{
-			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint16(zz));
+			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint16(zz, 0));
 		}
 		else if (vr == SS)
 		{
-			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint16(zz));
+			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint16(zz, 0));
 		}
 		else if (vr == SL)
 		{
-			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint32(zz));
+			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint32(zz, 0));
 		}
 		else if (vr == FD)
 		{
-			snprintf(value, sizeof(value) - 1, "[%g]", zzgetdouble(zz));
+			snprintf(value, sizeof(value) - 1, "[%g]", zzgetdouble(zz, 0));
 		}
 		else if (vr == FL)
 		{
-			snprintf(value, sizeof(value) - 1, "[%f]", zzgetfloat(zz));
+			snprintf(value, sizeof(value) - 1, "[%f]", zzgetfloat(zz, 0));
 		}
 		else if ((vr == UN && len == UNLIMITED) || vr == SQ)
 		{

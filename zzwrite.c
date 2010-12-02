@@ -109,6 +109,16 @@ void zzwUL(struct zzfile *zz, zzKey key, uint32_t value)
 	fwrite(&value, sizeof(value), 1, zz->fp);
 }
 
+void zzwULa(struct zzfile *zz, zzKey key, const uint32_t *value, int elems)
+{
+	const uint16_t group = ZZ_GROUP(key);
+	const uint16_t element = ZZ_ELEMENT(key);
+
+	if (explicit(zz)) explicit1(zz->fp, group, element, "UL", sizeof(*value) * elems);
+	else implicit(zz->fp, group, element, sizeof(*value) * elems);
+	fwrite(value, sizeof(*value), elems, zz->fp);
+}
+
 void zzwSL(struct zzfile *zz, zzKey key, int32_t value)
 {
 	const uint16_t group = ZZ_GROUP(key);

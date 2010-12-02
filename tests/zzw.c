@@ -14,6 +14,10 @@
 #define MAGIC4 BSWAP_32(0xfffee0dd)
 #define MAGIC5 ((0x0010 << 24) | (0x0001 << 16) | ('S' << 8) | ('S'))
 
+#define CHECK_GROUP 0x7001
+#define CHECK_ELEM 0x1000
+#define CHECK_VALUE 42
+
 static bool checkContents(const char *testfile)
 {
 	struct zzfile szz, *zz;
@@ -26,7 +30,7 @@ static bool checkContents(const char *testfile)
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len))
 	{
-		if (ZZ_KEY(group, element) == DCM_StudyID)
+		if (group == CHECK_GROUP && element == CHECK_ELEM && zzgetuint32(zz, 1) == CHECK_VALUE)
 		{
 			retval = true;
 		}
@@ -95,6 +99,12 @@ static void zzwOBnoise(struct zzfile *zz, zzKey key, size_t size)
 	free(buf);
 }
 
+static void addCheck(struct zzfile *zz)
+{
+	const uint32_t valList[3] = { 0, CHECK_VALUE, 0 };
+	zzwULa(zz, ZZ_KEY(CHECK_GROUP, CHECK_ELEM), valList, 3);
+}
+
 int main(int argc, char **argv)
 {
 	struct zzfile szz, *zz = &szz;
@@ -121,6 +131,7 @@ int main(int argc, char **argv)
 	zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.1");
 	zzwSH(zz, DCM_StudyID, "ANONDICMSTUDY");
 	zzwEmpty(zz, DCM_Laterality, "CS");
+	addCheck(zz);
 	fclose(zz->fp);
 
 	result = checkContents("samples/confuse.dcm");
@@ -139,6 +150,7 @@ int main(int argc, char **argv)
 		garbfill(zz, 1);
 		implicit(zz->fp, 0xfffe, 0xe00d, 0);
 	zzwUN_end(zz, NULL);
+	addCheck(zz);
 	zz = zzclose(zz);
 
 	result = checkContents("samples/tw1.dcm");
@@ -177,6 +189,7 @@ int main(int argc, char **argv)
 		garbfill(zz, 1);
 		implicit(zz->fp, 0xfffe, 0xe00d, 0);
 	zzwUN_end(zz, NULL);
+	addCheck(zz);
 	zzwOBnoise(zz, DCM_PixelData, 1024);
 	zzwOBnoise(zz, DCM_DataSetTrailingPadding, 256);
 	zz = zzclose(zz);

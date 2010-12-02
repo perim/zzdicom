@@ -22,6 +22,7 @@ void zzwSL(struct zzfile *zz, zzKey key, int32_t value);
 void zzwSS(struct zzfile *zz, zzKey key, int16_t value);
 void zzwUI(struct zzfile *zz, zzKey key, const char *string);
 void zzwUL(struct zzfile *zz, zzKey key, uint32_t value);
+void zzwULa(struct zzfile *zz, zzKey key, const uint32_t *value, int elems);
 void zzwUS(struct zzfile *zz, zzKey key, uint16_t value);
 void zzwSQ(struct zzfile *zz, zzKey key, uint32_t size);
 void zzwUN(struct zzfile *zz, zzKey key, uint32_t size);
