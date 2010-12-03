@@ -100,7 +100,80 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	return zz;
 }
 
-bool zzgetstring(struct zzfile *zz, char *input, long strsize)
+char *zztostring(struct zzfile *zz, char *input, long strsize)
+{
+	memset(input, 0, strsize);
+	if (zz->current.length == 0)
+	{
+		strncpy(input, "(no value available)", strsize);
+		input[strsize-1] = '\0';
+		return input;
+	}
+	switch (zz->current.vr)
+	{
+	case UN:
+	case SQ:
+		if ((zz->current.vr == UN && zz->current.length == UNLIMITED) || zz->current.vr == SQ)
+		{
+			strncpy(input, "(Sequence)", strsize);
+		}
+		else
+		{
+			strncpy(input, "(Sequence in limited UN - not parsed)", strsize);
+		}
+		break;
+	case OB: case OW: case OF: case UT:
+		strcpy(input, "...");
+		break;
+	case AE: case AS: case AT: case CS: case DA: case DS: case DT: case IS:
+	case LT: case PN: case SH: case ST: case TM: case UI: case LO:
+		if (!zzgetstring(zz, input + 1, strsize - 1))
+		{
+			strncpy(input, "(Error)", strsize);
+			break;
+		}
+		input[0] = '[';
+		input[strsize-1] = '\0';
+		if (zz->current.length > strsize - 4)
+		{
+			input[strsize - 2] = ']';
+			input[strsize - 3] = '.';
+			input[strsize - 4] = '.';
+			input[strsize - 5] = '.';
+		}
+		else
+		{
+			input[strlen(input) + 0] = ']';
+			input[strlen(input) + 1] = '\0';
+		}
+		break;
+	case UL:
+		snprintf(input, strsize - 1, "[%u]", zzgetuint32(zz, 0));
+		break;
+	case US:
+		snprintf(input, strsize - 1, "[%u]", zzgetuint16(zz, 0));
+		break;
+	case SS:
+		snprintf(input, strsize - 1, "[%d]", zzgetint16(zz, 0));
+		break;
+	case SL:
+		snprintf(input, strsize - 1, "[%d]", zzgetint32(zz, 0));
+		break;
+	case FL:
+		snprintf(input, strsize - 1, "[%f]", zzgetfloat(zz, 0));
+		break;
+	case FD:
+		snprintf(input, strsize - 1, "[%g]", zzgetdouble(zz, 0));
+		break;
+	case OX:
+	case NO:
+		break;
+	}
+	input[strsize-1] = '\0';
+	return input;
+}
+
+char *zzgetstring(struct zzfile *zz, char *input, long strsize)
 {
 	const long desired = MIN(zz->current.length, strsize - 1);
 	long result, last;
@@ -111,7 +184,7 @@ bool zzgetstring(struct zzfile *zz, char *input, long strsize)
 	{
 		input[last] = '\0';
 	}
-	return result == desired;
+	return (result == desired) ? input : NULL;
 }
 
 #define CHECK_SEEK_READ(zz, val, idx) \

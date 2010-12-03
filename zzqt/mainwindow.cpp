@@ -3,6 +3,8 @@
 
 #include "../zz_priv.h"
 
+#define MAX_LEN_VALUE 42
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -33,7 +35,7 @@ void MainWindow::openFile(QString filename)
 	struct zzfile szz, *zz;
 	uint16_t group, element;
 	long len, pos;
-	char hexfield[12], vrfield[MAX_LEN_VR];
+	char hexfield[12], vrfield[MAX_LEN_VR], contentfield[MAX_LEN_VALUE];
 	int nesting;
 	QList<int> itemCount;
 	QList<QStandardItem *> hierarchy;
@@ -54,7 +56,7 @@ void MainWindow::openFile(QString filename)
 		if (zz->current.vr != NO)
 		{
 			item2 = new QStandardItem(zzvr2str(zz->current.vr, vrfield));
-			item3 = new QStandardItem("Content");
+			item3 = new QStandardItem(zztostring(zz, contentfield, sizeof(contentfield)));
 			if (tag)
 			{
 				item4 = new QStandardItem(tag->description);

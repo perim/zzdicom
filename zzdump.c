@@ -59,76 +59,22 @@ void dump(char *filename)
 		strcpy(value, "(unknown value format)");	// for implicit and no dictionary entry
 
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
+
+		zztostring(zz, value, sizeof(value));
+
 		if (group > 0x0002 && element == 0x0000)	// generic group length
 		{
-			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint32(zz, 0));
 			printf("(%04x,%04x) UL %-42s # %4ld, 1 Generic Group Length\n", group, element, value, len);
 			continue;
 		}
 		else if (group % 2 > 0 && element < 0x1000 && len != UNLIMITED)
 		{
-			zzgetstring(zz, tmp, sizeof(tmp));
-			snprintf(value, sizeof(value) - 1, "[%s]", tmp);
 			printf("(%04x,%04x) LO %-42s # %4ld, 1 Private Creator\n", group, element, value, len);
 			continue;
 		}
 		else if (tag && zz->current.vr == NO && group != 0xfffe)
 		{
 			vr = ZZ_VR(tag->VR[0], tag->VR[1]);
-		}
-
-		if (len == 0)
-		{
-			strcpy(value, "(no value available)");
-		}
-		else if (group == 0xfffe)
-		{
-			memset(value, 0, sizeof(value));	// looks prettier empty
-		}
-		else if (vr == UL)
-		{
-			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint32(zz, 0));
-		}
-		else if (vr == US)
-		{
-			snprintf(value, sizeof(value) - 1, "[%u]", zzgetuint16(zz, 0));
-		}
-		else if (vr == SS)
-		{
-			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint16(zz, 0));
-		}
-		else if (vr == SL)
-		{
-			snprintf(value, sizeof(value) - 1, "[%u]", zzgetint32(zz, 0));
-		}
-		else if (vr == FD)
-		{
-			snprintf(value, sizeof(value) - 1, "[%g]", zzgetdouble(zz, 0));
-		}
-		else if (vr == FL)
-		{
-			snprintf(value, sizeof(value) - 1, "[%f]", zzgetfloat(zz, 0));
-		}
-		else if ((vr == UN && len == UNLIMITED) || vr == SQ)
-		{
-			if (zz->ladder[zz->ladderidx].txsyn != ZZ_IMPLICIT || len == UNLIMITED)
-			{
-				strcpy(value, "(Sequence)");
-			}
-			else
-			{
-				strcpy(value, "(Sequence in limited UN - not parsed)");
-			}
-		}
-		else if (vr == LO || vr == SH || vr == CS || vr == DS || vr == AE || vr == PN || vr == UI
-		         || vr == LT || vr == AS || vr == DT || vr == IS || vr == UT || vr == TM || vr == DA)
-		{
-			zzgetstring(zz, tmp, sizeof(tmp));
-			tmp[sizeof(tmp) - 4] = '\0';  // add trailing dots if cut off
-			tmp[sizeof(tmp) - 5] = '.';
-			tmp[sizeof(tmp) - 6] = '.';
-			tmp[sizeof(tmp) - 7] = '.';
-			snprintf(value, sizeof(value) - 1, "[%s]", tmp);
 		}
 
 		if (len == UNLIMITED)
