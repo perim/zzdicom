@@ -4,30 +4,31 @@
 #include <QMainWindow>
 #include <QStandardItemModel>
 
-namespace Ui {
-    class MainWindow;
+namespace Ui
+{
+	class MainWindow;
 }
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT
+	Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+	explicit MainWindow(QWidget *parent = 0);
+	~MainWindow();
 
 public slots:
-    void quit();
-    void addFile(QString filename);
-    void openFile(QString filename);
+	void quit();
+	void addFile(QString filename);
+	void openFile(QString filename);
 
 protected slots:
-    void expanded(const QModelIndex &idx);
+	void expanded(const QModelIndex &idx);
 
 private:
-    Ui::MainWindow *ui;
-    QStandardItemModel *files, *tags;
-    int numFiles;
+	Ui::MainWindow *ui;
+	QStandardItemModel *files, *tags;
+	int numFiles;
 };
 
 #endif // MAINWINDOW_H

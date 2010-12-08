@@ -3,31 +3,30 @@
 
 #include "../zz_priv.h"
 
-#define MAX_LEN_VALUE 42
+#define MAX_LEN_VALUE 200
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
-    ui->setupUi(this);
-    connect(ui->treeViewTags, SIGNAL(expanded(const QModelIndex&)), this, SLOT(expanded(const QModelIndex&)));
-    connect(ui->treeViewTags, SIGNAL(collapsed(const QModelIndex&)), this, SLOT(expanded(const QModelIndex&)));
-    numFiles = 0;
+	ui->setupUi(this);
+	connect(ui->treeViewTags, SIGNAL(expanded(const QModelIndex&)), this, SLOT(expanded(const QModelIndex&)));
+	connect(ui->treeViewTags, SIGNAL(collapsed(const QModelIndex&)), this, SLOT(expanded(const QModelIndex&)));
+	numFiles = 0;
 
-    files = new QStandardItemModel(0, 1, this);
-    files->setHeaderData(0, Qt::Horizontal, QString("Files"));
-    ui->listView->setModel(files);
-    ui->listView->setSelectionBehavior(QAbstractItemView::SelectRows);
+	files = new QStandardItemModel(0, 1, this);
+	files->setHeaderData(0, Qt::Horizontal, QString("Files"));
+	ui->listView->setModel(files);
 
-    tags = new QStandardItemModel(0, 4, this);
-    tags->setHeaderData(0, Qt::Horizontal, QString("Tag"));
-    tags->setHeaderData(1, Qt::Horizontal, QString("VR"));
-    tags->setHeaderData(2, Qt::Horizontal, QString("Content"));
-    tags->setHeaderData(3, Qt::Horizontal, QString("Tag name"));
-    ui->treeViewTags->setModel(tags);
-    ui->treeViewTags->resizeColumnToContents(1);
+	tags = new QStandardItemModel(0, 4, this);
+	tags->setHeaderData(0, Qt::Horizontal, QString("Tag"));
+	tags->setHeaderData(1, Qt::Horizontal, QString("VR"));
+	tags->setHeaderData(2, Qt::Horizontal, QString("Content"));
+	tags->setHeaderData(3, Qt::Horizontal, QString("Tag name"));
+	ui->treeViewTags->setModel(tags);
+	ui->treeViewTags->resizeColumnToContents(1);
 
-    connect(ui->actionQuit, SIGNAL(triggered()), this, SLOT(quit()));
+	connect(ui->actionQuit, SIGNAL(triggered()), this, SLOT(quit()));
 }
 
 void MainWindow::openFile(QString filename)
@@ -56,15 +55,15 @@ void MainWindow::openFile(QString filename)
 		if (zz->current.vr != NO)
 		{
 			item2 = new QStandardItem(zzvr2str(zz->current.vr, vrfield));
-			item3 = new QStandardItem(zztostring(zz, contentfield, sizeof(contentfield)));
 			if (tag)
 			{
-				item4 = new QStandardItem(tag->description);
+				item3 = new QStandardItem(tag->description);
 			}
 			else
 			{
-				item4 = new QStandardItem("(Unknown tag)");
+				item3 = new QStandardItem("(Unknown tag)");
 			}
+			item4 = new QStandardItem(zztostring(zz, contentfield, sizeof(contentfield)));
 		}
 		else if (ZZ_KEY(zz->current.group, zz->current.element) == DCM_Item && itemCount.count() >= nesting)
 		{
@@ -116,6 +115,7 @@ void MainWindow::openFile(QString filename)
 	}
 	zz = zzclose(zz);
 	ui->treeViewTags->resizeColumnToContents(0);
+	ui->treeViewTags->resizeColumnToContents(2);
 }
 
 void MainWindow::addFile(QString filename)
@@ -140,5 +140,5 @@ void MainWindow::quit()
 
 MainWindow::~MainWindow()
 {
-    delete ui;
+	delete ui;
 }

@@ -1,9 +1,10 @@
 				zzdicom -- quick and dirty DICOM tools
 				======================================
 
-The zzdicom package consists of a few fast and lightweight tools for reading, writing, verifying 
-and anonymizing DICOM data. They were written for practical use when and where I had need of them,
-not for correctness or completeness.
+The zzdicom package consists of a few fast and lightweight tools for reading, writing, verifying
+and anonymizing DICOM data. They were written for practical use when and where I had  need of them,
+not for correctness or completeness. It is was written for easier debugging of DICOM issues, and 
+this work was in part sponsored by SONOWAND AS.
 
 Limitations
 -----------
@@ -42,3 +43,9 @@ zzprune - checks and updates all entries in the local DICOM database, removing e
 longer refer to an existing file.
 
 zzmkrandom - generates a pseudo-random DICOM file for use in manual testing or a unit testing framework
+
+Credits
+-------
+This project would not have been possible without reusing some content from the DCMTK and GDCM toolkits.
+Headers were adapted from DCMTK, and data definitions XML files were copied from GDCM. Inspiration was
+drawn from both, as well as from the dicom3tools toolkit. 

@@ -1,17 +1,6 @@
-#-------------------------------------------------
-#
-# Project created by QtCreator 2010-11-04T09:57:40
-#
-#-------------------------------------------------
-
-QT       += core gui
-
+QT += core gui xml
 TARGET = zzqt
 TEMPLATE = app
-
-
 SOURCES += main.cpp mainwindow.cpp ../zz.c ../part6.c
-
-HEADERS  += mainwindow.h ../zz_priv.h ../zz.h
-
-FORMS    += mainwindow.ui
+HEADERS += mainwindow.h ../zz_priv.h ../zz.h
+FORMS += mainwindow.ui
