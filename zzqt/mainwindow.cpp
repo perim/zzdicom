@@ -36,7 +36,6 @@ void MainWindow::openFile(QString filename)
 	long len, pos;
 	char hexfield[12], vrfield[MAX_LEN_VR], contentfield[MAX_LEN_VALUE];
 	int nesting;
-	QList<int> itemCount;
 	QList<QStandardItem *> hierarchy;
 	const struct part6 *tag;
 
@@ -46,11 +45,26 @@ void MainWindow::openFile(QString filename)
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len))
 	{
+		QStandardItem *last = NULL;
+
 		pos = ftell(zz->fp);
 		tag = zztag(group, element);
 
+		// reduce nesting
+		while (zz->currNesting < nesting && !hierarchy.isEmpty())
+		{
+			hierarchy.removeLast();
+			nesting--;
+		}
+
+		if (!hierarchy.isEmpty())
+		{
+			last = hierarchy.last();
+		}
+
 		snprintf(hexfield, sizeof(hexfield) - 1, "%04x,%04x", group, element);
 		QStandardItem *item = new QStandardItem(hexfield);
+		item->setData(QVariant(1));	// for enumerating sequence items
 		QStandardItem *item2 = NULL, *item3 = NULL, *item4 = NULL;
 		if (zz->current.vr != NO)
 		{
@@ -65,32 +79,24 @@ void MainWindow::openFile(QString filename)
 			}
 			item4 = new QStandardItem(zztostring(zz, contentfield, sizeof(contentfield)));
 		}
-		else if (ZZ_KEY(zz->current.group, zz->current.element) == DCM_Item && itemCount.count() >= nesting)
+		else if (ZZ_KEY(zz->current.group, zz->current.element) == DCM_Item && !hierarchy.isEmpty())
 		{
+			int count = last->data().toInt();
 			item2 = new QStandardItem("-");
-			item3 = new QStandardItem(QString("Item #") + QString::number(itemCount.at(nesting - 1)));
-			itemCount[nesting - 1]++;
+			item3 = new QStandardItem(QString("Item #") + QString::number(count));
+			item4 = new QStandardItem("");
+			last->setData(QVariant(count + 1));
 		}
-
-		QStandardItem *last = NULL;
-
-		if (!hierarchy.isEmpty())
+		else	// ??
 		{
-			last = hierarchy.last();
+			item2 = new QStandardItem("?");
+			item3 = new QStandardItem("");
+			item4 = new QStandardItem("");
 		}
 
 		if (zz->nextNesting > nesting)
 		{
 			hierarchy.append(item);	// increase nesting
-			itemCount.append(0);
-		}
-
-		// reduce nesting
-		while (zz->currNesting < nesting && !hierarchy.isEmpty())
-		{
-			hierarchy.removeLast();
-			itemCount.removeLast();
-			nesting--;
 		}
 
 		nesting = zz->nextNesting;
