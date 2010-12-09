@@ -39,7 +39,6 @@ void dump(char *filename)
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len))
 	{
-		enum VR vr = zz->current.vr;
 		tag = zztag(group, element);
 
 		if (zz->part10 && header == 0)
@@ -58,6 +57,10 @@ void dump(char *filename)
 		memset(value, 0, sizeof(value));		// need to zero all first
 		strcpy(value, "(unknown value format)");	// for implicit and no dictionary entry
 
+		if (zz->ladder[zz->ladderidx].txsyn == ZZ_IMPLICIT && tag && group != 0xfffe)
+		{
+			zz->current.vr = ZZ_VR(tag->VR[0], tag->VR[1]);
+		}
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
 
 		zztostring(zz, value, sizeof(value));
@@ -72,10 +75,6 @@ void dump(char *filename)
 			printf("(%04x,%04x) LO %-42s # %4ld, 1 Private Creator\n", group, element, value, len);
 			continue;
 		}
-		else if (tag && zz->current.vr == NO && group != 0xfffe)
-		{
-			vr = ZZ_VR(tag->VR[0], tag->VR[1]);
-		}
 
 		if (len == UNLIMITED)
 		{
@@ -87,7 +86,7 @@ void dump(char *filename)
 		}
 
 		// Presenting in DCMTK's syntax
-		printf("(%04x,%04x) %s %-42s # %4s, %s %s\n", group, element, zzvr2str(vr, vrstr), value, tmp, tag ? tag->VM : "?", tag ? tag->description : "?");
+		printf("(%04x,%04x) %s %-42s # %4s, %s %s\n", group, element, zzvr2str(zz->current.vr, vrstr), value, tmp, tag ? tag->VM : "?", tag ? tag->description : "?");
 	}
 	zz = zzclose(zz);
 }
