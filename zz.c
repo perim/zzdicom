@@ -297,7 +297,10 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		             || key == DCM_SequenceDelimitationItem
 		             || key == DCM_ItemDelimitationItem))
 		{
-			zz->currNesting--;
+			if (bytesread > zz->ladder[zz->ladderidx].size)
+			{
+				zz->currNesting--;
+			}
 			zz->nextNesting--;
 			zz->ladderidx--;	// end parsing this item now
 			continue;
@@ -306,7 +309,10 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		         && (bytesread > zz->ladder[zz->ladderidx].size
 		             || key == DCM_SequenceDelimitationItem))
 		{
-			zz->currNesting--;
+			if (bytesread > zz->ladder[zz->ladderidx].size)
+			{
+				zz->currNesting--;
+			}
 			zz->nextNesting--;
 			zz->ladderidx--;	// end parsing this sequence now
 			key = 0;		// do not react twice on the same sequence delimiter

@@ -34,7 +34,7 @@ void MainWindow::openFile(QString filename)
 	struct zzfile szz, *zz;
 	uint16_t group, element;
 	long len, pos;
-	char hexfield[12], vrfield[MAX_LEN_VR], contentfield[MAX_LEN_VALUE];
+	char hexfield[20], vrfield[MAX_LEN_VR], contentfield[MAX_LEN_VALUE];
 	int nesting;
 	QList<QStandardItem *> hierarchy;
 	const struct part6 *tag;
@@ -62,12 +62,13 @@ void MainWindow::openFile(QString filename)
 			last = hierarchy.last();
 		}
 
-		snprintf(hexfield, sizeof(hexfield) - 1, "%04x,%04x", group, element);
-		QStandardItem *item = new QStandardItem(hexfield);
-		item->setData(QVariant(1));	// for enumerating sequence items
+		QStandardItem *item = NULL;
 		QStandardItem *item2 = NULL, *item3 = NULL, *item4 = NULL;
 		if (zz->current.vr != NO)
 		{
+			snprintf(hexfield, sizeof(hexfield) - 1, "%04x,%04x", group, element);
+			item = new QStandardItem(hexfield);
+			item->setData(QVariant(1));	// for enumerating sequence items
 			item2 = new QStandardItem(zzvr2str(zz->current.vr, vrfield));
 			if (tag)
 			{
@@ -82,14 +83,20 @@ void MainWindow::openFile(QString filename)
 		else if (ZZ_KEY(zz->current.group, zz->current.element) == DCM_Item && !hierarchy.isEmpty())
 		{
 			int count = last->data().toInt();
+			snprintf(hexfield, sizeof(hexfield) - 1, "%04x,%04x (%d)", group, element, count);
+			item = new QStandardItem(hexfield);
+			item->setData(QVariant(1));	// for enumerating sequence items
 			item2 = new QStandardItem("-");
-			item3 = new QStandardItem(QString("Item #") + QString::number(count));
+			item3 = new QStandardItem("");
 			item4 = new QStandardItem("");
 			last->setData(QVariant(count + 1));
 		}
 		else	// ??
 		{
-			item2 = new QStandardItem("?");
+			snprintf(hexfield, sizeof(hexfield) - 1, "%04x,%04x", group, element);
+			item = new QStandardItem(hexfield);
+			item->setData(QVariant(1));	// for enumerating sequence items
+			item2 = new QStandardItem("-");
 			item3 = new QStandardItem("");
 			item4 = new QStandardItem("");
 		}
@@ -97,6 +104,11 @@ void MainWindow::openFile(QString filename)
 		if (zz->nextNesting > nesting)
 		{
 			hierarchy.append(item);	// increase nesting
+		}
+		else if (zz->nextNesting < zz->currNesting && !hierarchy.isEmpty())
+		{
+			hierarchy.removeLast();
+			nesting--;
 		}
 
 		nesting = zz->nextNesting;
