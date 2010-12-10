@@ -163,12 +163,12 @@ struct zzfile
             (void) (&_max1 == &_max2);              \
             _max1 > _max2 ? _max1 : _max2; })
 
-float zzgetfloat(struct zzfile *zz, int index);
-double zzgetdouble(struct zzfile *zz, int index);
-uint32_t zzgetuint32(struct zzfile *zz, int index);
-uint16_t zzgetuint16(struct zzfile *zz, int index);
-int32_t zzgetint32(struct zzfile *zz, int index);
-int16_t zzgetint16(struct zzfile *zz, int index);
+float zzgetfloat(struct zzfile *zz, int idx);
+double zzgetdouble(struct zzfile *zz, int idx);
+uint32_t zzgetuint32(struct zzfile *zz, int idx);
+uint16_t zzgetuint16(struct zzfile *zz, int idx);
+int32_t zzgetint32(struct zzfile *zz, int idx);
+int16_t zzgetint16(struct zzfile *zz, int idx);
 char *zzgetstring(struct zzfile *zz, char *input, long strsize);
 char *zztostring(struct zzfile *zz, char *input, long strsize);
 
