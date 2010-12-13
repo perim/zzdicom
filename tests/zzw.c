@@ -204,5 +204,34 @@ int main(int argc, char **argv)
 	result = checkContents("samples/tw2.dcm");
 	assert(result);
 
+	////
+	// Set # 4 -- Reading of broken part10 explicit
+
+	zz = zzcreate("samples/brokensq.dcm", &szz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianExplicitTransferSyntax);
+	genericfile(zz);
+	zzwSQ_begin(zz, ZZ_KEY(0x0020, 0x1115), NULL);
+		implicit(zz->fp, 0xfffe, 0xe000, 200);	// bad size item...
+		zzwSS(zz, ZZ_KEY(0x0021, 0x1010), 11);
+		zzwSL(zz, ZZ_KEY(0x0021, 0x1011), 12);
+		zzwUS(zz, ZZ_KEY(0x0021, 0x1012), 13);
+		zzwUL(zz, ZZ_KEY(0x0021, 0x1013), 14);
+		zzwFL(zz, ZZ_KEY(0x0021, 0x1014), 15.0f);
+		zzwFD(zz, ZZ_KEY(0x0021, 0x1015), 16.0);
+		implicit(zz->fp, 0xfffe, 0xe00d, 0);	// ...really ends here
+		implicit(zz->fp, 0xfffe, 0xe000, 24);
+		garbfill(zz, 1);
+		implicit(zz->fp, 0xfffe, 0xe00d, 0);	// extra item end; this crashed dicom3tools, confuses dcmtk; not legal dicom; fun to do anyway
+		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		garbfill(zz, 2);
+		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+	zzwSQ_end(zz, NULL);
+	addCheck(zz);
+	zzwOBnoise(zz, DCM_PixelData, 255);
+	zzwOBnoise(zz, DCM_DataSetTrailingPadding, 0);
+	zz = zzclose(zz);
+
+	result = checkContents("samples/brokensq.dcm");
+	assert(result);
+
 	return 0;
 }

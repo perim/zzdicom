@@ -546,6 +546,7 @@ bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len
 		    && zz->current.vr != SQ)
 		{
 			fseek(zz->fp, zz->current.pos + zz->current.length, SEEK_SET);	// go to start of next tag
+			// note if this conditional is not entered, we will try to parse the contents of the tag
 		}
 		if (zzread(zz, group, element, len))
 		{

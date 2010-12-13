@@ -59,6 +59,8 @@ check: tests/zz1 tests/zzw
 	./zzdump -v samples/confuse.dcm > /dev/null
 	./zzdump samples/tw1.dcm > /dev/null
 	./zzdump samples/tw2.dcm > /dev/null
+	./zzdump samples/brokensq.dcm > /dev/null
+	./zzverify samples/tw1.dcm
 	./zzanon TEST samples/tw2.dcm
 
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
