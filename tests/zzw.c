@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include "byteorder.h"
 
@@ -117,7 +119,12 @@ int main(int argc, char **argv)
 	// Set # 1 -- Deliberately confuse DICOM readers with this tiny, valid file with "DCM" in the wrong place
 
 	memset(zz, 0, sizeof(*zz));
+	mkdir("samples", 0754);
 	zz->fp = fopen("samples/confuse.dcm", "w");
+	if (!zz->fp)
+	{
+		fprintf(stderr, "Could not open output file: %s\n", strerror(errno));
+	}
 	zz->ladder[0].txsyn = ZZ_IMPLICIT;	// no header, implicit
 	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.0");
 	zzwEmpty(zz, DCM_StudyDate, "DA");
