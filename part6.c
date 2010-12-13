@@ -12,18 +12,29 @@ static const struct part6 part6_table[] =
 #include "part6_c.h"
 };
 
-const struct privatedic *zzprivtag(uint16_t group, uint16_t element, const char *label)
+const struct privatedic *zzprivtag(uint16_t group, uint16_t element, const char *label, uint16_t domain)
 {
-	unsigned int i;
+	// Since we read DICOM files sequentially by ascending group/element tags, assuming the same for 
+	// tag lookups much improves lookup speed. Hence the lastidx hack.
+	static int lastidx = 0;
+	const int max = ARRAY_SIZE(private_table);
+	int i;
 
+	// TODO check the label
 	(void)label;
-	// Ok, now the difficult and slow case -- we did not find it in our normal dictionary. Try our
-	// privat dictionary instead?
-	// TODO handle private group offsets
-	for (i = 0; i < ARRAY_SIZE(private_table); i++)
+	for (i = lastidx; i < max; i++)
 	{
-		if (group == private_table[i].group && element == 0x1000 + private_table[i].element)
+		if (group == private_table[i].group && element == domain + private_table[i].element)
 		{
+			lastidx = i;
+			return &private_table[i];
+		}
+	}
+	for (i = 0; i < lastidx; i++)
+	{
+		if (group == private_table[i].group && element == domain + private_table[i].element)
+		{
+			lastidx = i;
 			return &private_table[i];
 		}
 	}

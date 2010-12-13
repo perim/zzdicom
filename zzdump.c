@@ -61,7 +61,7 @@ void dump(char *filename)
 		}
 		else
 		{
-			privtag = zzprivtag(group, element, NULL);
+			privtag = zzprivtag(group, element, NULL, 0x1000);	// FIXME, handle private creator groups properly
 			if (privtag && zz->ladder[zz->ladderidx].txsyn == ZZ_IMPLICIT && group != 0xfffe)
 			{
 				zz->current.vr = ZZ_VR(privtag->VR[0], privtag->VR[1]);

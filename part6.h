@@ -19,15 +19,15 @@ struct privatedic
 
 struct part6
 {
-	uint16_t group;		// private
-	uint16_t element;	// private
+	uint16_t group;
+	uint16_t element;
 	const char *VR;
 	const char *VM;
 	bool retired;
 	const char *description;
 };
 
-const struct privatedic *zzprivtag(uint16_t group, uint16_t element, const char *label);
+const struct privatedic *zzprivtag(uint16_t group, uint16_t element, const char *label, uint16_t domain);
 const struct part6 *zztag(uint16_t group, uint16_t element);
 
 #ifdef __cplusplus
