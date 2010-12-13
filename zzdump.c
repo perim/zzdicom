@@ -5,6 +5,8 @@
 #include <string.h>
 #include <ctype.h>
 
+#include "part6.h"
+
 #define MAX_LEN_VALUE 42
 
 static const char *txsyn2str(enum zztxsyn syn)
@@ -23,7 +25,9 @@ void dump(char *filename)
 	struct zzfile szz, *zz;
 	uint16_t group, element;
 	long len;
+	const char *vm, *description;
 	const struct part6 *tag;
+	const struct privatedic *privtag;
 	char value[MAX_LEN_VALUE];
 	char tmp[MAX_LEN_VALUE], vrstr[MAX_LEN_VR];
 	int i;
@@ -39,8 +43,37 @@ void dump(char *filename)
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len))
 	{
-		tag = zztag(group, element);
+		// Dictionary magic
+		vm = "?";
+		description = "?";
+		if (group % 2 == 0)
+		{
+			tag = zztag(group, element);
+			if (tag && zz->ladder[zz->ladderidx].txsyn == ZZ_IMPLICIT && group != 0xfffe)
+			{
+				zz->current.vr = ZZ_VR(tag->VR[0], tag->VR[1]);
+			}
+			if (tag)
+			{
+				vm = tag->VM;
+				description = tag->description;
+			}
+		}
+		else
+		{
+			privtag = zzprivtag(group, element, NULL);
+			if (privtag && zz->ladder[zz->ladderidx].txsyn == ZZ_IMPLICIT && group != 0xfffe)
+			{
+				zz->current.vr = ZZ_VR(privtag->VR[0], privtag->VR[1]);
+			}
+			if (privtag)
+			{
+				vm = privtag->VM;
+				description = privtag->description;
+			}
+		}
 
+		// Pretty print headers
 		if (zz->part10 && header == 0)
 		{
 			printf("\n# Dicom-Meta-Information-Header\n");
@@ -57,10 +90,6 @@ void dump(char *filename)
 		memset(value, 0, sizeof(value));		// need to zero all first
 		strcpy(value, "(unknown value format)");	// for implicit and no dictionary entry
 
-		if (zz->ladder[zz->ladderidx].txsyn == ZZ_IMPLICIT && tag && group != 0xfffe)
-		{
-			zz->current.vr = ZZ_VR(tag->VR[0], tag->VR[1]);
-		}
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
 
 		zztostring(zz, value, sizeof(value));
@@ -86,7 +115,7 @@ void dump(char *filename)
 		}
 
 		// Presenting in DCMTK's syntax
-		printf("(%04x,%04x) %s %-42s # %4s, %s %s\n", group, element, zzvr2str(zz->current.vr, vrstr), value, tmp, tag ? tag->VM : "?", tag ? tag->description : "?");
+		printf("(%04x,%04x) %s %-42s # %4s, %s %s\n", group, element, zzvr2str(zz->current.vr, vrstr), value, tmp, vm, description);
 	}
 	zz = zzclose(zz);
 }

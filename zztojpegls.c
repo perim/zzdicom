@@ -14,6 +14,7 @@
 #include "zz_priv.h"
 #include "zzsql.h"
 #include "zzwrite.h"
+#include "part6.h"
 
 static void implicit(FILE *fp, uint16_t group, uint16_t element, uint32_t length)
 {

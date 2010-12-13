@@ -1,10 +1,34 @@
 #include "zz.h"
 #include "zz_priv.h"
+#include "part6.h"
+
+static const struct privatedic private_table[] =
+{
+#include "private_c.h"
+};
 
 static const struct part6 part6_table[] = 
 {
-#include "part6.h"
+#include "part6_c.h"
 };
+
+const struct privatedic *zzprivtag(uint16_t group, uint16_t element, const char *label)
+{
+	unsigned int i;
+
+	(void)label;
+	// Ok, now the difficult and slow case -- we did not find it in our normal dictionary. Try our
+	// privat dictionary instead?
+	// TODO handle private group offsets
+	for (i = 0; i < ARRAY_SIZE(private_table); i++)
+	{
+		if (group == private_table[i].group && element == 0x1000 + private_table[i].element)
+		{
+			return &private_table[i];
+		}
+	}
+	return NULL;
+}
 
 const struct part6 *zztag(uint16_t group, uint16_t element)
 {
@@ -30,6 +54,7 @@ const struct part6 *zztag(uint16_t group, uint16_t element)
 			return &part6_table[i];
 		}
 	}
+
 	return NULL;
 }
 

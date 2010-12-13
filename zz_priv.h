@@ -81,16 +81,6 @@ static inline const char *zzvr2str(enum VR vr, char *dest)
 	return dest;
 }
 
-struct part6
-{
-	uint16_t group;		// private
-	uint16_t element;	// private
-	const char *VR;
-	const char *VM;
-	bool retired;
-	const char *description;
-};
-
 enum zztxsyn
 {
 	ZZ_IMPLICIT,
@@ -176,7 +166,6 @@ char *zztostring(struct zzfile *zz, char *input, long strsize);
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len);
 
 struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile);
-const struct part6 *zztag(uint16_t group, uint16_t element);
 static inline struct zzfile *zzclose(struct zzfile *zz) { if (zz) { fclose(zz->fp); } return NULL; }
 
 /// Utility function to process some common command-line arguments. Returns the number of initial arguments to ignore.
