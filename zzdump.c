@@ -29,8 +29,9 @@ void dump(char *filename)
 	const struct part6 *tag;
 	const struct privatedic *privtag;
 	char value[MAX_LEN_VALUE];
+	char privcreator[MAX_LEN_VALUE];
 	char tmp[MAX_LEN_VALUE], vrstr[MAX_LEN_VR];
-	int i;
+	int i, privoffset = 0;
 	int header = 0;		// 0 - started, 1 - writing header, 2 - written header
 
 	zz = zzopen(filename, "r", &szz);
@@ -40,6 +41,7 @@ void dump(char *filename)
 		printf("\n# Dicom-File-Format\n");
 	}
 
+	memset(privcreator, 0, sizeof(privcreator));
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len))
 	{
@@ -61,7 +63,7 @@ void dump(char *filename)
 		}
 		else
 		{
-			privtag = zzprivtag(group, element, NULL, 0x1000);	// FIXME, handle private creator groups properly
+			privtag = zzprivtag(group, element, privcreator, privoffset);
 			if (privtag && zz->ladder[zz->ladderidx].txsyn == ZZ_IMPLICIT && group != 0xfffe)
 			{
 				zz->current.vr = ZZ_VR(privtag->VR[0], privtag->VR[1]);
@@ -101,7 +103,12 @@ void dump(char *filename)
 		}
 		else if (group % 2 > 0 && element < 0x1000 && len != UNLIMITED)
 		{
+			// TODO: Handle multiple private creator groups somehow
 			printf("(%04x,%04x) LO %-42s # %4ld, 1 Private Creator\n", group, element, value, len);
+			zz->current.vr = LO;
+			privoffset = element * 0x100;
+			fseek(zz->fp, zz->current.pos, SEEK_SET);
+			zzgetstring(zz, privcreator, sizeof(privcreator) - 1);
 			continue;
 		}
 

@@ -1348,6 +1348,10 @@
 { 0x7001, "Picker NM Private Group", 0x01, "UI", "Unknown", "1" },
 { 0x7001, "Picker NM Private Group", 0x02, "OB", "Unknown", "1" },
 
+{ 0x0009, "SECTRA_Ident_01", 0x01, "LO", "RequestNumber", "1" },
+{ 0x0009, "SECTRA_Ident_01", 0x02, "LO", "ExaminationNumber", "1" },
+{ 0x0029, "SECTRA_ImageInfo_01", 0x01, "OB", "ImageInfo", "1" },
+
 { 0x0019, "SIEMENS CM VA0  ACQU", 0x10, "LT", "ParameterFileName", "1" },
 { 0x0019, "SIEMENS CM VA0  ACQU", 0x11, "LO", "SequenceFileName", "1" },
 { 0x0019, "SIEMENS CM VA0  ACQU", 0x12, "LT", "SequenceFileOwner", "1" },
