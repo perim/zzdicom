@@ -50,7 +50,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	zz->fileSize = st.st_size;
 	zz->modifiedTime = st.st_mtime;
 #ifdef POSIX
-	posix_fadvise(fileno(zz->fp), 0, 4096 * 4, POSIX_FADV_SEQUENTIAL);	// request 4 pages right away
+	posix_fadvise(fileno(zz->fp), 0, 4096 * 4, POSIX_FADV_WILLNEED);	// request 4 pages right away
 #endif
 
 	// Check for valid Part 10 header
@@ -178,6 +178,7 @@ char *zzgetstring(struct zzfile *zz, char *input, long strsize)
 	const long desired = MIN(zz->current.length, strsize - 1);
 	long result, last;
 
+	fseek(zz->fp, zz->current.pos, SEEK_SET);
 	last = result = fread(input, 1, desired, zz->fp);
 	input[MIN(result, strsize - 1)] = '\0';	// make sure we zero terminate
 	while (last > 0 && input[--last] == ' ')	// remove trailing whitespace
@@ -457,6 +458,13 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			zz->ladder[zz->ladderidx].group = 0xffff;
 			zz->ladder[zz->ladderidx].type = (key == DCM_Item) ? ZZ_ITEM : ZZ_SEQUENCE;
 		}
+		if ((header.element == 0x0000 || zz->current.vr == SQ) && zz->ladder[zz->ladderidx].size > 0 && zz->ladder[zz->ladderidx].size != UNLIMITED)
+		{
+#ifdef POSIX
+			posix_fadvise(fileno(zz->fp), 0, pos - 1, POSIX_FADV_DONTNEED);
+			posix_fadvise(fileno(zz->fp), pos, zz->ladder[zz->ladderidx].size, POSIX_FADV_WILLNEED);
+#endif
+		}
 		zz->ladder[zz->ladderidx].pos = ftell(zz->fp);
 		if (zz->current.vr != UN)
 		{
@@ -467,7 +475,6 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			zz->ladder[zz->ladderidx].txsyn = ZZ_IMPLICIT;	// UN is always implicit
 		}
 	}
-	fseek(zz->fp, pos, SEEK_SET);	// rollback data reading to allow user app to read too
 
 	return true;
 }
