@@ -20,6 +20,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 	size_t length;
 	GLuint textures[3]; // 0 - volume, 1 - positions, 2 - LUT
 	GLenum type, size;
+	char value[MAX_LEN_IS];
 
 	if (!zz || !zzt)
 	{
@@ -38,8 +39,19 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 		// Read out valuable info
 		switch (key)
 		{
+		case DCM_ImagePositionPatient:
+		case DCM_ImageOrientationPatient:
+			break; // TODO
+		case DCM_FrameOfReferenceUID:
+			zzgetstring(zz, zzt->frameOfReferenceUid, sizeof(zzt->frameOfReferenceUid) - 1));
+			break;
+		case DCM_RescaleIntercept:	// DS, the b in m*SV + b
+		case DCM_RescaleSlope:		// DS, the m in m*SV + b
+		case DCM_RescaleType:		// LO, but only two chars used; US -- unspecified, OD -- optical density, HU -- hounsfield units
+			break;	// TODO
 		case DCM_NumberOfFrames:
-			//zzt->pixelsize.z =  is VR IS
+			zzgetstring(zz, value, sizeof(value) - 1));
+			zzt->pixelsize.z =  atoi(value);
 			break;
 		case DCM_BitsStored:
 			break;
@@ -105,14 +117,14 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 	return zzt;
 }
 
-bool zztextureslicing(struct zztexture *zzt)
-{
-	(void)zzt;
-	return true;
-}
-
 bool zztexturefree(struct zztexture *zzt)
 {
-	(void)zzt;
+	GLuint textures[3];
+
+	textures[0] = zzt->volume;
+	textures[1] = zzt->positions;
+	textures[2] = zzt->luts;
+
+	glDeleteTextures(textures, 3);
 	return true;
 }

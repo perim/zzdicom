@@ -31,6 +31,7 @@ extern "C" {
 #define MAX_LEN_PN		(64 * 5 + 1)
 #define MAX_LEN_DATETIME	(26 + 1)
 #define MAX_LEN_CS		(16 + 1)
+#define MAX_LEN_IS		(12 + 1)
 #define UNLIMITED		(long)0xffffffff
 
 /// Enumerant for Value Representations. Approach taken from XMedCon.
