@@ -18,7 +18,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 	void *addr;
 	off_t offset;
 	size_t length;
-	GLuint textures[3]; // 0 - volume, 1 - positions, 2 - LUT
+	GLuint textures[2]; // 0 - volume, 1 - volumeinfo
 	GLenum type, size;
 	char value[MAX_LEN_IS];
 
@@ -26,11 +26,12 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 	{
 		return NULL;
 	}
+	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_TEXTURE_3D);
-	glGenTextures(3, textures);
+	glGenTextures(2, textures);
+	glBindTexture(GL_TEXTURE_2D, textures[1]);
 	zzt->volume = textures[0];
-	zzt->positions = textures[1];
-	zzt->luts = textures[2];
+	zzt->volumeinfo = textures[1];
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len))
 	{
@@ -39,19 +40,32 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 		// Read out valuable info
 		switch (key)
 		{
-		case DCM_ImagePositionPatient:
-		case DCM_ImageOrientationPatient:
+		case DCM_ImagePositionPatient:		// DS, 3 values
+		case DCM_ImageOrientationPatient:	// DS, 6 values
+			// Require multi-frame type DICOM here
+			if (zzt->pixelsize.z == 0)
+			{
+				fprintf(stderr, "Number of frames not found before positions -- old style DICOM file?\n");
+				return NULL;
+			}
 			break; // TODO
 		case DCM_FrameOfReferenceUID:
-			zzgetstring(zz, zzt->frameOfReferenceUid, sizeof(zzt->frameOfReferenceUid) - 1));
+			zzgetstring(zz, zzt->frameOfReferenceUid, sizeof(zzt->frameOfReferenceUid) - 1);
 			break;
 		case DCM_RescaleIntercept:	// DS, the b in m*SV + b
+			zzgetstring(zz, value, sizeof(value) - 1);
+			zzt->rescale.intercept = atof(value);
+			break;
 		case DCM_RescaleSlope:		// DS, the m in m*SV + b
+			zzgetstring(zz, value, sizeof(value) - 1);
+			zzt->rescale.slope = atof(value);
+			break;
 		case DCM_RescaleType:		// LO, but only two chars used; US -- unspecified, OD -- optical density, HU -- hounsfield units
 			break;	// TODO
 		case DCM_NumberOfFrames:
-			zzgetstring(zz, value, sizeof(value) - 1));
-			zzt->pixelsize.z =  atoi(value);
+			zzgetstring(zz, value, sizeof(value) - 1);
+			zzt->pixelsize.z = atoi(value);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, zzt->pixelsize.z, 64, 0, GL_LUMINANCE, GL_FLOAT, NULL);
 			break;
 		case DCM_BitsStored:
 			break;
@@ -119,12 +133,11 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 
 bool zztexturefree(struct zztexture *zzt)
 {
-	GLuint textures[3];
+	GLuint textures[2];
 
 	textures[0] = zzt->volume;
-	textures[1] = zzt->positions;
-	textures[2] = zzt->luts;
+	textures[1] = zzt->volumeinfo;
 
-	glDeleteTextures(textures, 3);
+	glDeleteTextures(2, textures);
 	return true;
 }

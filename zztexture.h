@@ -14,15 +14,15 @@ struct zztexture
 	/// The pixels are not transformed through the modality LUT.
 	GLint volume;
 
-	/// Positions are stored as a 3D texture of grayscale floating point values,
-	/// with length of each slice exactly 12 points (9 orientation, 3 position)
-	GLint positions;
-
-	/// Each slice has a LUT. Each LUT is stored as a sequence of floating point
-	/// interval values. A simple linear LUT for example can be stored as two
-	/// values. They are stored in a 3D grayscale texture. The LUT index values
-	/// must be reverse transformed through the modality LUT before uploading.
-	GLint luts;
+	/// Positions are stored as a 2D texture of grayscale floating point values,
+	/// with each slice having a width of 256, height equal to number of rames.
+	/// The data in each row contains: 9 values of orientation, 3 position, 3 
+	/// voxel size, 3 reserved, and the remaining are LUT values. Each LUT is 
+	/// stored as a sequence of floating point interval values. A simple linear
+	/// LUT for example can be stored as two values. The LUT index values must
+	/// be reverse transformed through the modality LUT before uploading. The
+	/// LUT stream is ended on a zero value.
+	GLint volumeinfo;
 
 	/// Frame of reference UID for coordinate space
 	char frameOfReferenceUid[MAX_LEN_UID];
@@ -42,7 +42,7 @@ struct zztexture
 	/// Modality LUT transform (an actual LUT is not supported though)
 	struct
 	{
-		int intercept, slope;
+		GLfloat intercept, slope;
 	} rescale;
 };
 
