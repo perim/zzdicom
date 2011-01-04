@@ -1,45 +1,35 @@
 #include <assert.h>
+#include <GL/glew.h>
+#include <GL/freeglut.h>
 #include "zztexture.h"
-
-#define X11	// FIXME
-#ifdef X11
-#include <GL/glx.h>
-#include <X11/Xlib.h>
-#endif
 
 int main(int argc, char **argv)
 {
 	struct zzfile szz, *zz;
 	struct zztexture stx, *tx;
-#ifdef X11
-	GLXFBConfig *fbc;
-	XVisualInfo *vi;
-	int nelements;
-	GLXContext cx;
-	Display *dpy;
-#endif
 
-	(void)argc;
-	(void)argv;
-
-#ifdef X11
-	dpy = XOpenDisplay(0);
-	fbc = glXChooseFBConfig(dpy, DefaultScreen(dpy), 0, &nelements);
-	vi = glXGetVisualFromFBConfig(dpy, fbc[0]);
-	cx = glXCreateNewContext(dpy, fbc[0], GLX_RGBA_TYPE, 0, GL_FALSE);
-#endif
+	if (argc != 2)
+	{
+		fprintf(stderr, "Usage: %s <volume>\n", argv[0]);
+		return -1;
+	}
+	glutInit(&argc, argv);
+	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
+	glutInitWindowPosition(0, 0);
+	glutInitWindowSize(640, 480);
+	glutCreateWindow("DICOM texture test");
+	GLenum err = glewInit();
+	assert(GLEW_OK == err);
+	glutReportErrors();
 
 	tx = zzcopytotexture(NULL, NULL);
 	assert(tx == NULL);
-	zz = zzopen("samples/tw2.dcm", "r", &szz);
+	zz = zzopen(argv[1], "r", &szz);
 	assert(zz != NULL);
 	zzcopytotexture(zz, NULL);
 	assert(tx == NULL);
 	tx = zzcopytotexture(zz, &stx);
-
-#ifdef X11
-	// TODO cleanup
-#endif
+	glutReportErrors();
 
 	return 0;
 }

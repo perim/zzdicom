@@ -2,15 +2,22 @@
 				======================================
 
 The zzdicom package consists of a few fast and lightweight tools for reading, writing, verifying
-and anonymizing DICOM data. They were written for practical use when and where I had  need of them,
-not for correctness or completeness. It is was written for easier debugging of DICOM issues, and 
+and anonymizing DICOM data. They were written for practical use when and where I had need of them,
+not for correctness or completeness. It is was written for easier debugging of DICOM issues, and
 this work was in part sponsored by SONOWAND AS.
 
 Limitations
 -----------
 zzdicom currently only works with little-endian DICOM data. I have never encountered big-endian 
 DICOM data in the real world (ie hospital settings), so I never saw a need for adding support for 
-this. It compiles out of the box on Linux, but it should also work on other POSIX-y architectures.
+this. It compiles out of the box on Linux, but it should also work on other POSIX-y architectures
+like MacOSX and FreeBSD.
+
+Dependencies
+------------
+The core parser has no dependencies than the system C library. The DICOM database functions require
+SQLite. The experimental JPEG-LS code requires CharLS. The OpenGL utility code requires GLEW and
+FreeGLUT (will probably work with the original GLUT as well).
 
 Features
 --------
@@ -42,10 +49,33 @@ zzstudies - pretty prints a list of all studies in the local DICOM database to s
 zzprune - checks and updates all entries in the local DICOM database, removing entries that no
 longer refer to an existing file.
 
-zzmkrandom - generates a pseudo-random DICOM file for use in manual testing or a unit testing framework
+zzmkrandom - generates a pseudo-random DICOM file for use in manual testing or a unit testing 
+framework
 
 Credits
 -------
-This project would not have been possible without reusing some content from the DCMTK and GDCM toolkits.
-Headers were adapted from DCMTK, and data definitions XML files were copied from GDCM. Inspiration was
-drawn from both, as well as from the dicom3tools toolkit. 
+This project would not have been possible without reusing some content from the DCMTK and GDCM
+toolkits. Headers were adapted from DCMTK, and data definitions XML files were copied from GDCM.
+Inspiration was drawn from both, as well as from the dicom3tools toolkit. 
+
+Copyright
+---------
+The software and data included are, unless otherwise specified, copyright (C) Per Inge Mathisen.
+
+Copyright - software
+--------------------
+Permission is hereby granted, free of charge, to any person or organization obtaining a copy of
+the software and accompanying documentation covered by this license to use, reproduce, display,
+distribute, execute, and transmit the Software, and to prepare derivative works of the software, 
+and to permit third-parties to whom the Software is furnished to do so.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE
+AND NON-INFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE 
+SOFTWARE BE LIABLE FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+Copyright - data
+----------------
+spine.dcm -- CC BY-ND 3.0, see http://creativecommons.org/licenses/by-nd/3.0/

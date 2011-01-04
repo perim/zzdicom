@@ -2,9 +2,10 @@ CFLAGS = -Wall -Wextra -DPOSIX -Werror -Wshadow -Wformat-security
 COMMON = zz.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
+COMMONTEXTURE = zztexture.o
 PART6 = part6.o
 PROGRAMS = zzanon zzdump zzverify zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom
-HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h
+HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h
 
 all: CFLAGS += -Os
 all: sqlinit.h $(PROGRAMS)
@@ -50,9 +51,10 @@ zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON) $(COMMONWRITE)
 clean:
 	rm -f *.o sqlinit.h $(PROGRAMS) *.gcno *.gcda random.dcm
 
-check: tests/zz1 tests/zzw
+check: tests/zz1 tests/zzw tests/zzt
 	tests/zz1 2> /dev/null
 	tests/zzw
+	tests/zzt samples/spine.dcm
 	./zzdump --version > /dev/null
 	./zzdump --help > /dev/null
 	./zzdump --usage > /dev/null
@@ -61,6 +63,7 @@ check: tests/zz1 tests/zzw
 	./zzdump samples/tw2.dcm > /dev/null
 	./zzdump samples/brokensq.dcm > /dev/null
 	./zzverify samples/tw1.dcm
+	./zzanon TEST samples/tw1.dcm
 	./zzanon TEST samples/tw2.dcm
 
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
@@ -68,6 +71,9 @@ tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 
 tests/zzw: tests/zzw.c $(HEADERS) $(COMMON) $(COMMONWRITE)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE)
+
+tests/zzt: tests/zzt.c $(HEADERS) $(COMMON) $(COMMONTEXTURE)
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONTEXTURE) -lGLEW -lglut
 
 install:
 	install -t /usr/local/bin $(PROGRAMS)
