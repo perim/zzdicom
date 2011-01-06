@@ -452,12 +452,23 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			zz->ladder[zz->ladderidx].size = zzgetuint32(zz, 0);
 			zz->ladder[zz->ladderidx].group = *group;
 			zz->ladder[zz->ladderidx].type = ZZ_GROUP;
+			zz->ladder[zz->ladderidx].item = -1;
 		}
 		else
 		{
 			zz->ladder[zz->ladderidx].size = *len;
 			zz->ladder[zz->ladderidx].group = 0xffff;
-			zz->ladder[zz->ladderidx].type = (key == DCM_Item) ? ZZ_ITEM : ZZ_SEQUENCE;
+			if (key == DCM_Item)
+			{
+				zz->ladder[zz->ladderidx].type = ZZ_ITEM;
+				zz->ladder[zz->ladderidx].item++;
+			}
+			else
+			{
+				zz->ladder[zz->ladderidx].type = ZZ_SEQUENCE;
+				zz->ladder[zz->ladderidx + 0].item = -1;
+				zz->ladder[zz->ladderidx + 1].item = -1;	// first item brings it to zero
+			}
 		}
 		if ((header.element == 0x0000 || zz->current.vr == SQ) && zz->ladder[zz->ladderidx].size > 0 && zz->ladder[zz->ladderidx].size != UNLIMITED)
 		{

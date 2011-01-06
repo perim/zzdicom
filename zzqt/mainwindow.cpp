@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 
 #include "../zz_priv.h"
+#include "../part6.h"
 
 #define MAX_LEN_VALUE 200
 
@@ -68,7 +69,6 @@ void MainWindow::openFile(QString filename)
 		{
 			snprintf(hexfield, sizeof(hexfield) - 1, "%04x,%04x", group, element);
 			item = new QStandardItem(hexfield);
-			item->setData(QVariant(1));	// for enumerating sequence items
 			item2 = new QStandardItem(zzvr2str(zz->current.vr, vrfield));
 			if (tag)
 			{
@@ -82,20 +82,16 @@ void MainWindow::openFile(QString filename)
 		}
 		else if (ZZ_KEY(zz->current.group, zz->current.element) == DCM_Item && !hierarchy.isEmpty())
 		{
-			int count = last->data().toInt();
-			snprintf(hexfield, sizeof(hexfield) - 1, "%04x,%04x (%d)", group, element, count);
+			snprintf(hexfield, sizeof(hexfield) - 1, "%04x,%04x (%d)", group, element, zz->ladder[zz->ladderidx].item + 1);
 			item = new QStandardItem(hexfield);
-			item->setData(QVariant(1));	// for enumerating sequence items
 			item2 = new QStandardItem("-");
 			item3 = new QStandardItem("");
 			item4 = new QStandardItem("");
-			last->setData(QVariant(count + 1));
 		}
 		else	// ??
 		{
 			snprintf(hexfield, sizeof(hexfield) - 1, "%04x,%04x", group, element);
 			item = new QStandardItem(hexfield);
-			item->setData(QVariant(1));	// for enumerating sequence items
 			item2 = new QStandardItem("-");
 			item3 = new QStandardItem("");
 			item4 = new QStandardItem("");

@@ -33,6 +33,7 @@ void dump(char *filename)
 	char tmp[MAX_LEN_VALUE], vrstr[MAX_LEN_VR];
 	int i, privoffset = 0;
 	int header = 0;		// 0 - started, 1 - writing header, 2 - written header
+	char extra[10];
 
 	zz = zzopen(filename, "r", &szz);
 
@@ -91,6 +92,7 @@ void dump(char *filename)
 
 		memset(value, 0, sizeof(value));		// need to zero all first
 		strcpy(value, "(unknown value format)");	// for implicit and no dictionary entry
+		memset(extra, 0, sizeof(extra));
 
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
 
@@ -121,8 +123,13 @@ void dump(char *filename)
 			snprintf(tmp, sizeof(tmp) - 1, "%ld", len);
 		}
 
+		if (ZZ_KEY(group, element) == DCM_Item)
+		{
+			sprintf(extra, " %d", zz->ladder[zz->ladderidx].item + 1);
+		}
+
 		// Presenting in DCMTK's syntax
-		printf("(%04x,%04x) %s %-42s # %4s, %s %s\n", group, element, zzvr2str(zz->current.vr, vrstr), value, tmp, vm, description);
+		printf("(%04x,%04x) %s %-42s # %4s, %s %s%s\n", group, element, zzvr2str(zz->current.vr, vrstr), value, tmp, vm, description, extra);
 	}
 	zz = zzclose(zz);
 }
