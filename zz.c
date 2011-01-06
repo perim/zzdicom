@@ -285,7 +285,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	while (zz->ladderidx > 0)
 	{
 		long bytesread = ftell(zz->fp) - zz->ladder[zz->ladderidx].pos;
-		long size = zz->ladder[zz->ladderidx].size > 0 ? zz->ladder[zz->ladderidx].size : INT32_MAX;	// for 32bit systems where UNLIMITED is -1
+		long size = (zz->ladder[zz->ladderidx].size >= 0) ? zz->ladder[zz->ladderidx].size : INT32_MAX;	// for 32bit systems where UNLIMITED is -1
 
 		if (zz->ladder[zz->ladderidx].type == ZZ_GROUP
 		    && (zz->current.group != zz->ladder[zz->ladderidx].group
