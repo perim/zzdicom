@@ -90,6 +90,7 @@ void dump(char *filename)
 			header = 2;
 		}
 
+		memset(extra, 0, sizeof(extra));
 		memset(value, 0, sizeof(value));		// need to zero all first
 		strcpy(value, "(unknown value format)");	// for implicit and no dictionary entry
 		memset(extra, 0, sizeof(extra));
@@ -125,7 +126,7 @@ void dump(char *filename)
 
 		if (ZZ_KEY(group, element) == DCM_Item)
 		{
-			sprintf(extra, " %d", zz->ladder[zz->ladderidx].item + 1);
+			snprintf(extra, sizeof(extra) - 1, " %d %d", zz->ladder[zz->ladderidx].item + 1, zz->ladderidx);
 		}
 
 		// Presenting in DCMTK's syntax

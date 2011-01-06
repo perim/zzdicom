@@ -96,6 +96,8 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	}
 
 	zz->ladder[0].pos = ftell(zz->fp);
+	zz->ladder[0].item = -1;
+	zz->current.frame = -1;
 
 	return zz;
 }
@@ -315,6 +317,10 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			{
 				zz->currNesting--;
 			}
+			if (ZZ_KEY(zz->ladder[zz->ladderidx].group, zz->ladder[zz->ladderidx].element) == DCM_PerFrameFunctionalGroupsSequence)
+			{
+				zz->current.frame = -1;	// out of frames scope
+			}
 			zz->nextNesting--;
 			zz->ladderidx--;	// end parsing this sequence now
 			key = 0;		// do not react twice on the same sequence delimiter
@@ -435,8 +441,10 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		zz->ladder[1].pos = ftell(zz->fp);
 		zz->ladder[1].size = zzgetuint32(zz, 0);
 		zz->ladder[1].txsyn = zz->ladder[0].txsyn;
-		zz->ladder[1].group = 0x0002;
+		zz->ladder[1].group = header.group;
+		zz->ladder[1].element = header.element;
 		zz->ladder[1].type = ZZ_GROUP;
+		zz->ladder[1].item = -1;
 	}
 	else if (header.element == 0x0000 || (key != DCM_PixelData && *len == UNLIMITED) || zz->current.vr == SQ || key == DCM_Item)
 	{
@@ -447,21 +455,35 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			return false;	// stop parsing and give up!
 		}
 		zz->ladderidx++;
+		zz->ladder[zz->ladderidx].group = header.group;
+		zz->ladder[zz->ladderidx].element = header.element;
 		if (header.element == 0x0000)
 		{
 			zz->ladder[zz->ladderidx].size = zzgetuint32(zz, 0);
-			zz->ladder[zz->ladderidx].group = *group;
 			zz->ladder[zz->ladderidx].type = ZZ_GROUP;
 			zz->ladder[zz->ladderidx].item = -1;
 		}
 		else
 		{
 			zz->ladder[zz->ladderidx].size = *len;
-			zz->ladder[zz->ladderidx].group = 0xffff;
 			if (key == DCM_Item)
 			{
+				int i;
+
 				zz->ladder[zz->ladderidx].type = ZZ_ITEM;
 				zz->ladder[zz->ladderidx].item++;
+				for (i = zz->ladderidx - 1; i >= 0; i--)
+				{
+					if (ZZ_KEY(zz->ladder[i].group, zz->ladder[i].element) == DCM_PerFrameFunctionalGroupsSequence)
+					{
+						zz->current.frame++;	// if parent is advanced to the next frame
+						break;
+					}
+					else if (zz->ladder[i].type == ZZ_SEQUENCE)
+					{
+						break;			// not direct parent, so stop checking here
+					}
+				}
 			}
 			else
 			{

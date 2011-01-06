@@ -127,6 +127,7 @@ struct zzfile
 		uint16_t	group;
 		uint16_t	element;
 		long		pos;
+		int		frame;		// current frame number, or -1, zero indexed
 	} current;
 
 	struct
@@ -134,8 +135,10 @@ struct zzfile
 		long		pos;		// file position where group begins, this - 4 is value position (except for group zero)
 		long		size;		// size of group/sequence
 		enum zztxsyn	txsyn;		// transfer syntax of this group
-		uint16_t	group;		// if group type, which group
+		uint16_t	group;		// which group we are in
+		uint16_t	element;	// which element we are in
 		enum zzsteptype	type;		// type of group
+		int		item;		// item number in sequence, or -1 if not in a sequence, zero indexed
 	} ladder[MAX_LADDER];
 };
 
