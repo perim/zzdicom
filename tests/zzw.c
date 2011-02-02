@@ -92,11 +92,11 @@ static void zzwOBnoise(struct zzfile *zz, zzKey key, size_t size)
 	memset(buf, 0, size);
 	if (!explicit(zz) && key == DCM_PixelData)
 	{
-		zzwOW(zz, key, buf, size / 2);
+		zzwOW(zz, key, size / 2, (uint16_t *)buf);
 	}
 	else
 	{
-		zzwOB(zz, key, buf, size);
+		zzwOB(zz, key, size, buf);
 	}
 	free(buf);
 }
@@ -104,7 +104,7 @@ static void zzwOBnoise(struct zzfile *zz, zzKey key, size_t size)
 static void addCheck(struct zzfile *zz)
 {
 	const uint32_t valList[3] = { 0, CHECK_VALUE, 0 };
-	zzwULa(zz, ZZ_KEY(CHECK_GROUP, CHECK_ELEM), valList, 3);
+	zzwULv(zz, ZZ_KEY(CHECK_GROUP, CHECK_ELEM), 3, valList);
 }
 
 int main(int argc, char **argv)

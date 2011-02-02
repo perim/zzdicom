@@ -62,11 +62,11 @@ static void zzwOBnoise(struct zzfile *zz, zzKey key, size_t size)
 	memset(buf, rand(), size);
 	if (!explicit(zz) && key == DCM_PixelData)
 	{
-		zzwOW(zz, key, buf, size / 2);
+		zzwOW(zz, key, size / 2, (uint16_t *)buf);
 	}
 	else
 	{
-		zzwOB(zz, key, buf, size);
+		zzwOB(zz, key, size, buf);
 	}
 	free(buf);
 }
