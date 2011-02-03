@@ -126,7 +126,7 @@ void dump(char *filename)
 
 		if (ZZ_KEY(group, element) == DCM_Item)
 		{
-			snprintf(extra, sizeof(extra) - 1, " %d %d", zz->ladder[zz->ladderidx].item + 1, zz->ladderidx);
+			snprintf(extra, sizeof(extra) - 1, " %d", zz->ladder[zz->ladderidx].item + 1);
 		}
 
 		// Presenting in DCMTK's syntax

@@ -90,7 +90,7 @@ void zzwUN_end(struct zzfile *zz, long *pos)
 	if (pos)	// set exact size of data written
 	{
 		long curr = ftell(zz->fp);
-		uint32_t len = curr - *pos;
+		uint32_t len = curr - *pos - 4;
 
 		fseek(zz->fp, *pos, SEEK_SET);
 		fwrite(&len, 4, 1, zz->fp);
@@ -114,7 +114,7 @@ void zzwItem_end(struct zzfile *zz, long *pos)
 	if (pos)	// set exact size of data written
 	{
 		long curr = ftell(zz->fp);
-		uint32_t len = curr - *pos;
+		uint32_t len = curr - *pos - 4;
 
 		fseek(zz->fp, *pos, SEEK_SET);
 		fwrite(&len, 4, 1, zz->fp);
@@ -242,9 +242,20 @@ bool zzwUI(struct zzfile *zz, zzKey key, const char *string)
 	return ret;
 }
 
+static inline int countdelims(const char *str, const char delim)
+{
+	unsigned i, c = 0;
+	for (i = 0; i < strlen(str); i++)
+	{
+		if (str[i] == delim) c++;
+	}
+	return c;
+}
+
 static bool wstr(struct zzfile *zz, zzKey key, const char *string, const char *vr, size_t maxlen)
 {
-	size_t length = MIN(strlen(string), maxlen);
+	const size_t multiplen = maxlen * (countdelims(string, '\\') + 1);	// max length times value multiplicity
+	const size_t length = MIN(strlen(string), multiplen);
 	size_t wlen = length;
 	bool ret;
 

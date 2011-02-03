@@ -70,6 +70,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 		sopclassuid = UID_MultiframeGrayscaleByteSecondaryCaptureImageStorage;
 		size = hdr.dim[1] * hdr.dim[2] * hdr.dim[3];
 		break;
+	case DT_SIGNED_SHORT:
 	case DT_UINT16:
 		sopclassuid = UID_MultiframeGrayscaleWordSecondaryCaptureImageStorage;
 		size = hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * 2;
@@ -95,7 +96,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	// just memory map all the data
 	offset = (unsigned)hdr.vox_offset & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
 	msize = size + zw->current.pos - offset;
-	addr = mmap(NULL, msize, PROT_READ, MAP_SHARED, fileno(zw->fp), offset);
+	addr = mmap(NULL, msize, PROT_READ, MAP_SHARED, fileno(fp), offset);
 	if (addr == MAP_FAILED)
 	{
 		fprintf(stderr, "%s - could not mmap file: %s\n", hdr_file, strerror(errno));
@@ -143,12 +144,12 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 			zzwSQ_begin(zw, DCM_PlaneOrientationSequence, &sq2);
 				zzwItem_begin(zw, &item2);
 				// TODO
-				zzwItem_begin(zw, &item2);
+				zzwItem_end(zw, &item2);
 			zzwSQ_end(zw, &sq2);
 			zzwSQ_begin(zw, DCM_PixelMeasuresSequence, &sq2);
 				zzwItem_begin(zw, &item2);
 				// TODO
-				zzwItem_begin(zw, &item2);
+				zzwItem_end(zw, &item2);
 			zzwSQ_end(zw, &sq2);
 		zzwItem_end(zw, &item1);
 	zzwSQ_end(zw, &sq1);
@@ -166,6 +167,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 			// TODO
 		}
 		break;
+	case DT_SIGNED_SHORT:
 	case DT_UINT16:
 		for (i = 0; i < size; i++)
 		{
