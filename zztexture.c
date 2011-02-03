@@ -16,6 +16,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 	long len;
 	int bitspersample = 0, components = 0;
 	void *addr;
+	char *bytes;
 	off_t offset;
 	size_t length;
 	GLuint textures[2]; // 0 - volume, 1 - volumeinfo
@@ -120,10 +121,11 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 				fprintf(stderr, "Could not memory map file: %s\n", strerror(errno));
 				return NULL;
 			}
-			madvise(addr, length, MADV_SEQUENTIAL | MADV_WILLNEED);
+			bytes = addr + zz->current.pos - offset;	// increment by page alignment shift
+			madvise(bytes, length, MADV_SEQUENTIAL | MADV_WILLNEED);
 			glBindTexture(GL_TEXTURE_3D, textures[0]);
-			glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, addr);
-			madvise(addr, length, MADV_DONTNEED);
+			glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, bytes);
+			madvise(bytes, length, MADV_DONTNEED);
 			munmap(addr, length);
 		}
 	}

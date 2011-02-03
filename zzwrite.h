@@ -27,14 +27,14 @@ bool zzwOW(struct zzfile *zz, zzKey key, int len, const uint16_t *string);
 bool zzwPN(struct zzfile *zz, zzKey key, const char *string);
 bool zzwSH(struct zzfile *zz, zzKey key, const char *string);
 bool zzwSL(struct zzfile *zz, zzKey key, int32_t value);
-bool zzwSQ(struct zzfile *zz, zzKey key, uint32_t size);
+bool zzwSQ(struct zzfile *zz, zzKey key, uint32_t size);	// deprecated
 bool zzwSS(struct zzfile *zz, zzKey key, int16_t value);
 bool zzwST(struct zzfile *zz, zzKey key, const char *string);
 bool zzwTM(struct zzfile *zz, zzKey key, struct timeval datetimestamp);
 bool zzwUI(struct zzfile *zz, zzKey key, const char *string);
 bool zzwUL(struct zzfile *zz, zzKey key, uint32_t value);
 bool zzwULv(struct zzfile *zz, zzKey key, int len, const uint32_t *value);
-bool zzwUN(struct zzfile *zz, zzKey key, uint32_t size);
+bool zzwUN(struct zzfile *zz, zzKey key, uint32_t size);	// deprecated
 bool zzwUS(struct zzfile *zz, zzKey key, uint16_t value);
 bool zzwUT(struct zzfile *zz, zzKey key, const char *string);
 
@@ -48,11 +48,14 @@ void zzwUN_begin(struct zzfile *zz, zzKey key, long *pos);
 /// Pass in NULL below to use unlimited size. Must be NULL here if NULL in call above.
 void zzwUN_end(struct zzfile *zz, long *pos);
 
-/// Pass in NULL below to use unlimited size
+/// Pass in NULL below to use unlimited size. pos will contain start position of SQ.
 void zzwSQ_begin(struct zzfile *zz, zzKey key, long *pos);
 
-/// Pass in NULL below to use unlimited size. Must be NULL here if NULL in call above.
+/// Pass in NULL below to use unlimited size. Must be NULL here if NULL in call above. pos will contain size of sequence.
 void zzwSQ_end(struct zzfile *zz, long *pos);
+
+void zzwItem_begin(struct zzfile *zz, long *pos);
+void zzwItem_end(struct zzfile *zz, long *pos);
 
 #ifdef __cplusplus
 }

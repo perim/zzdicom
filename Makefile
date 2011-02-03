@@ -4,7 +4,7 @@ COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
 COMMONTEXTURE = zztexture.o
 PART6 = part6.o
-PROGRAMS = zzanon zzdump zzverify zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom
+PROGRAMS = zzanon zzdump zzverify zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom zznifti2dcm
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h
 
 all: CFLAGS += -Os
@@ -46,6 +46,9 @@ zztojpegls: zztojpegls.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(PART6)
 	$(CC) -o $@ $< $(COMMON) $(COMMONWRITE) $(CFLAGS) -lCharLS $(PART6)
 
 zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON) $(COMMONWRITE)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE)
+
+zznifti2dcm: zznifti2dcm.c $(HEADERS) nifti1.h $(COMMON) $(COMMONWRITE)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE)
 
 clean:

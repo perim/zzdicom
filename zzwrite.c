@@ -103,6 +103,29 @@ void zzwUN_end(struct zzfile *zz, long *pos)
 	zz->ladderidx--;
 }
 
+void zzwItem_begin(struct zzfile *zz, long *pos)
+{
+	implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+	if (pos) *pos = ftell(zz->fp) - 4;	// position of length value
+}
+
+void zzwItem_end(struct zzfile *zz, long *pos)
+{
+	if (pos)	// set exact size of data written
+	{
+		long curr = ftell(zz->fp);
+		uint32_t len = curr - *pos;
+
+		fseek(zz->fp, *pos, SEEK_SET);
+		fwrite(&len, 4, 1, zz->fp);
+		fseek(zz->fp, curr, SEEK_SET);
+	}
+	else
+	{
+		implicit(zz->fp, 0xfffe, 0xe00d, 0);	// add end item tag
+	}
+}
+
 void zzwSQ_begin(struct zzfile *zz, zzKey key, long *pos)
 {
 	zzwSQ(zz, key, UNLIMITED);
