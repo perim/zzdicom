@@ -25,7 +25,7 @@ struct zztexture
 	GLint volumeinfo;
 
 	/// Frame of reference UID for coordinate space
-	char frameOfReferenceUid[MAX_LEN_UID];
+	char frameOfReferenceUid[MAX_LEN_UI];
 
 	/// Size of coordinate space
 	struct

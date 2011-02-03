@@ -59,8 +59,8 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 {
 	char modified[MAX_LEN_DATETIME];
 	uint16_t group, element;
-	char studyInstanceUid[MAX_LEN_UID];
-	char seriesInstanceUid[MAX_LEN_UID];
+	char studyInstanceUid[MAX_LEN_UI];
+	char seriesInstanceUid[MAX_LEN_UI];
 	char patientsName[MAX_LEN_PN];
 	char modality[MAX_LEN_CS];
 	long pos, len;

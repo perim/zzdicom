@@ -46,6 +46,9 @@ void dump(char *filename)
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len))
 	{
+		// Extra checks
+		zzverify(zz);
+
 		// Dictionary magic
 		vm = "?";
 		description = "?";
@@ -93,7 +96,6 @@ void dump(char *filename)
 		memset(extra, 0, sizeof(extra));
 		memset(value, 0, sizeof(value));		// need to zero all first
 		strcpy(value, "(unknown value format)");	// for implicit and no dictionary entry
-		memset(extra, 0, sizeof(extra));
 
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
 
@@ -126,11 +128,17 @@ void dump(char *filename)
 
 		if (ZZ_KEY(group, element) == DCM_Item)
 		{
-			snprintf(extra, sizeof(extra) - 1, " %d", zz->ladder[zz->ladderidx].item + 1);
+			snprintf(extra, sizeof(extra) - 1, " %d [%d]", zz->ladder[zz->ladderidx].item + 1, zz->ladderidx);
 		}
 
 		// Presenting in DCMTK's syntax
 		printf("(%04x,%04x) %s %-42s # %4s, %s %s%s\n", group, element, zzvr2str(zz->current.vr, vrstr), value, tmp, vm, description, extra);
+
+		if (!zz->current.valid)
+		{
+			for (i = 0; i < zz->currNesting; i++) printf("  ");
+			printf("^^ Warning: %s\n", zz->current.warning);
+		}
 	}
 	zz = zzclose(zz);
 }

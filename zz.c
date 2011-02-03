@@ -124,10 +124,10 @@ char *zztostring(struct zzfile *zz, char *input, long strsize)
 			strncpy(input, "(Sequence in limited UN - not parsed)", strsize);
 		}
 		break;
-	case OB: case OW: case OF: case UT:
+	case OB: case OW: case OF: case UT: case AT:
 		strcpy(input, "...");
 		break;
-	case AE: case AS: case AT: case CS: case DA: case DS: case DT: case IS:
+	case AE: case AS: case CS: case DA: case DS: case DT: case IS:
 	case LT: case PN: case SH: case ST: case TM: case UI: case LO:
 		if (!zzgetstring(zz, input + 1, strsize - 1))
 		{
@@ -173,6 +173,36 @@ char *zztostring(struct zzfile *zz, char *input, long strsize)
 	}
 	input[strsize-1] = '\0';
 	return input;
+}
+
+int zzrDS(struct zzfile *zz, int len, double *input)
+{
+	char value[MAX_LEN_DS];
+	long curr = zz->current.pos;
+	int found = 0, ch, strpos = 0;
+
+	fseek(zz->fp, zz->current.pos, SEEK_SET);
+	memset(value, 0, sizeof(value));
+	while (!feof(zz->fp) && curr < zz->current.pos + zz->current.length && found < len)
+	{
+		ch = fgetc(zz->fp);
+		if (ch == '\\' || ch == EOF)	// found one value
+		{
+			input[found++] = atof(value);
+			memset(value, 0, sizeof(value));
+			strpos = 0;
+		}
+		else if (strpos < MAX_LEN_DS)
+		{
+			value[strpos++] = ch;
+		}
+	}
+	// last value
+	if (found < len)
+	{
+		input[found++] = atof(value);
+	}
+	return found;
 }
 
 char *zzgetstring(struct zzfile *zz, char *input, long strsize)
@@ -261,7 +291,7 @@ int16_t zzgetint16(struct zzfile *zz, int idx)
 
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 {
-	char transferSyntaxUid[MAX_LEN_UID];
+	char transferSyntaxUid[MAX_LEN_UI];
 	// Represent the three different variants of tag headers in one union
 	struct
 	{
@@ -276,6 +306,11 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	{
 		return false;
 	}
+	zz->current.valid = true;
+	zz->current.warning[0] = '\0';
+	zz->previous.group = zz->current.group;
+	zz->previous.element = zz->current.element;
+	zz->previous.ladderidx = zz->ladderidx;
 	zz->current.group = *group = header.group;
 	zz->current.element = *element = header.element;
 	zz->currNesting = zz->nextNesting;
@@ -293,6 +328,12 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		        || key == DCM_SequenceDelimitationItem
 		        || key == DCM_ItemDelimitationItem))
 		{
+			if ((key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem || zz->current.group != zz->ladder[zz->ladderidx].group)
+			    && bytesread < size && size != UNLIMITED)
+			{
+				sprintf(zz->current.warning, "Group has wrong size (%ld, ended at %ld)", size, bytesread);
+				zz->current.valid = false;
+			}
 			zz->ladderidx--;	// end parsing this group now
 			continue;
 		}
@@ -301,11 +342,15 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		             || key == DCM_SequenceDelimitationItem
 		             || key == DCM_ItemDelimitationItem))
 		{
+			if ((key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem) && bytesread < size && size != UNLIMITED)
+			{
+				sprintf(zz->current.warning, "Item has wrong size (%ld, ended at %ld)", size, bytesread);
+				zz->current.valid = false;
+			}
 			if (bytesread > size)
 			{
 				zz->currNesting--;
 			}
-
 			zz->nextNesting--;
 			zz->ladderidx--;	// end parsing this item now
 			continue;
@@ -313,6 +358,11 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		else if (zz->ladder[zz->ladderidx].type == ZZ_SEQUENCE
 		         && (bytesread > size || key == DCM_SequenceDelimitationItem))
 		{
+			if (key == DCM_SequenceDelimitationItem && bytesread < size && size != UNLIMITED)
+			{
+				sprintf(zz->current.warning, "Sequence has wrong size (%ld, ended at %ld)", size, bytesread);
+				zz->current.valid = false;
+			}
 			if (bytesread > size)
 			{
 				zz->currNesting--;

@@ -4,7 +4,7 @@ COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
 COMMONTEXTURE = zztexture.o
 PART6 = part6.o
-PROGRAMS = zzanon zzdump zzverify zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom zznifti2dcm
+PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom zznifti2dcm
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h
 
 all: CFLAGS += -Os
@@ -24,11 +24,8 @@ sqlinit.h: SQL
 zzanon: zzanon.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
 
-zzdump: zzdump.c $(HEADERS) $(COMMON) $(PART6)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6)
-
-zzverify: zzverify.c $(HEADERS) $(COMMON)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
+zzdump: zzdump.c $(HEADERS) $(COMMON) $(PART6) zzverify.o
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) zzverify.o
 
 zzgroupfix: zzgroupfix.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
@@ -65,7 +62,6 @@ check: tests/zz1 tests/zzw tests/zzt
 	./zzdump samples/tw1.dcm > /dev/null
 	./zzdump samples/tw2.dcm > /dev/null
 	./zzdump samples/brokensq.dcm > /dev/null
-	./zzverify samples/tw1.dcm
 	./zzanon TEST samples/tw1.dcm
 	./zzanon TEST samples/tw2.dcm
 

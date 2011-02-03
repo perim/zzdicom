@@ -164,7 +164,7 @@ bool zzwUL(struct zzfile *zz, zzKey key, uint32_t value)
 bool zzwULv(struct zzfile *zz, zzKey key, int len, const uint32_t *value)
 {
 	bool ret = writetag(zz, key, "UL", sizeof(*value) * len);
-	ret = ret && fwrite(value, sizeof(*value), len, zz->fp) == 1;
+	ret = ret && fwrite(value, sizeof(*value), len, zz->fp) == (size_t)len;
 	return ret;
 }
 

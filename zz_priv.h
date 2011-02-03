@@ -27,7 +27,7 @@ extern "C" {
 #define UID_MultiframeGrayscaleWordSecondaryCaptureImageStorage	"1.2.840.10008.5.1.4.1.1.7.3"
 #define UID_MultiframeTrueColorSecondaryCaptureImageStorage	"1.2.840.10008.5.1.4.1.1.7.4"
 
-#define MAX_LEN_UID		(64 + 1)
+#define MAX_LEN_UI		(64 + 1)
 #define MAX_LEN_PN		(64 * 5 + 1)
 #define MAX_LEN_DATETIME	(26 + 1)
 #define MAX_LEN_CS		(16 + 1)
@@ -37,6 +37,7 @@ extern "C" {
 #define MAX_LEN_IS		(12 + 1)
 #define MAX_LEN_TM		(16 + 1)
 #define UNLIMITED		(long)0xffffffff
+#define MAX_LEN_LO		(64 + 1)
 
 /// Enumerant for Value Representations. Approach taken from XMedCon.
 enum VR
@@ -110,15 +111,15 @@ enum zzsteptype
 };
 
 /// Maximum amount of recursiveness in a DICOM file
-#define MAX_LADDER 16
+#define MAX_LADDER 24
 
 struct zzfile
 {
 	FILE		*fp;
 	long		fileSize;
 	char		fullPath[PATH_MAX];
-	char		sopClassUid[MAX_LEN_UID];	// TODO convert to enum
-	char		sopInstanceUid[MAX_LEN_UID];
+	char		sopClassUid[MAX_LEN_UI];	// TODO convert to enum
+	char		sopInstanceUid[MAX_LEN_UI];
 	bool		acrNema, part10;
 	time_t		modifiedTime;
 	int		currNesting, nextNesting, ladderidx;
@@ -130,9 +131,18 @@ struct zzfile
 		long		length;
 		uint16_t	group;
 		uint16_t	element;
-		long		pos;
+		long		pos;		// start of a current tag's data segment
 		int		frame;		// current frame number, or -1, zero indexed
+		char		warning[MAX_LEN_LO];	// if !valid, this string is set to an explanation
+		bool		valid;		// whether the current tag is valid, true unless issue found
 	} current;
+
+	struct
+	{
+		uint16_t	group;
+		uint16_t	element;
+		int		ladderidx;
+	} previous;
 
 	struct
 	{
@@ -161,6 +171,9 @@ struct zzfile
             (void) (&_max1 == &_max2);              \
             _max1 > _max2 ? _max1 : _max2; })
 
+// Read a DS VR into an array of doubles that is len long, return number of elements found
+int zzrDS(struct zzfile *zz, int len, double *input);
+
 float zzgetfloat(struct zzfile *zz, int idx);
 double zzgetdouble(struct zzfile *zz, int idx);
 uint32_t zzgetuint32(struct zzfile *zz, int idx);
@@ -182,6 +195,9 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 /// Utility iterator that wraps zzread. Passing in a NULL pointer for zz makes it a no-op.
 void zziterinit(struct zzfile *zz);
 bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len);
+
+/// Extra low-level verification of current tag. Resides in zzverify.c
+bool zzverify(struct zzfile *zz);
 
 #ifdef __cplusplus
 }

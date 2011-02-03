@@ -34,10 +34,8 @@ as it was, including any esoteric errors the file might contain. Too many other 
 will parse the file before copying it out again, accidentially fixing several classes of errors
 on the way.
 
-zzverify - will run through the files listed to check for various errors. If any are found, they
-are listed on standard out.
-
-zzdump - will dump a list of tags for each DICOM file given.
+zzdump - will dump a list of tags for each DICOM file given in a format very similar to DCMTK's
+dcmdump. It also runs a number of validation checks on each tag, and prints errors found.
 
 zzgroupfix - will run fix erroneous group size tags, useful as some software relies on these being
 correct if they are present.

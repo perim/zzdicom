@@ -6,75 +6,55 @@
 #include <ctype.h>
 #include <errno.h>
 
-// Verifies:
-//  - group lengths
-//  - groups in ascending order
-//  - elements in ascending order
-
-void dump(char *filename)
+bool zzverify(struct zzfile *zz)
 {
-	struct zzfile szz, *zz;
-	uint16_t group, element, lastgroup = 0xffff, lastelement = 0;
-	long len, groupsize = 0, grouppos = 0, pos;
+	zzKey key = ZZ_KEY(zz->current.group, zz->current.element);
+	double tmpd[4];
 
-	zz = zzopen(filename, "r", &szz);
-
-	zziterinit(zz);
-	while (zziternext(zz, &group, &element, &len))
+	if (zz->current.length > 0 && zz->current.length != UNLIMITED && zz->current.pos + zz->current.length > zz->fileSize)
 	{
-		if (group != lastgroup)
+		sprintf(zz->current.warning, "Data size %ld exceeds file end\n", zz->current.length);
+		zz->current.valid = false;
+		return false;
+	}
+	if (zz->current.group != 0xfffe && zz->previous.group != 0xfffe && zz->previous.ladderidx == zz->ladderidx)
+	{
+		if (zz->current.group == zz->previous.group && zz->current.element <= zz->previous.element)
 		{
-			if (groupsize != 0)
-			{
-				if (ftell(zz->fp) - grouppos != groupsize)
-				{
-					fprintf(stderr, "Wrong group %x size - told it was %ld, but it was %ld\n", 
-					        group, groupsize, ftell(zz->fp) - grouppos);
-				}
-			}
-
-			if (element == 0x0000)
-			{
-				groupsize = zzgetuint32(zz, 0);
-				fseek(zz->fp, -4, SEEK_CUR);
-			}
-			groupsize = 0;
-			grouppos = ftell(zz->fp);
-			if (lastgroup != 0xffff && lastgroup != 0xfffe && group < lastgroup)
-			{
-				fprintf(stderr, "Group 0x%04x - order not ascending (last is 0x%04x)!\n", group, lastgroup);
-			}
-			lastgroup = group;
+			zz->current.valid = false;
+			strcpy(zz->current.warning, "Out of order tag");
 		}
-		if (element < lastelement)
+		if (zz->current.group < zz->previous.group)
 		{
-			fprintf(stderr, "Element %x - order not ascending!\n", element);
-		}
-
-		pos = ftell(zz->fp);
-		if ((len > 0 && len != UNLIMITED) || pos == zz->fileSize)
-		{
-			if (pos + len > zz->fileSize)
-			{
-				fprintf(stderr, "(%04x,%04x) -- size %u exceeds file end\n", group, element, (unsigned int)len);
-			}
+			zz->current.valid = false;
+			strcpy(zz->current.warning, "Out of order group");
 		}
 	}
-	if (zz && ferror(zz->fp))
+	switch (key)
 	{
-		fprintf(stderr, "%s read error: %s\n", filename, strerror(errno));
+	case DCM_SliceThickness:
+		zzrDS(zz, 1, tmpd);
+		if (tmpd[0] < 0.0)
+		{
+			sprintf(zz->current.warning, "Negative slice thickness not allowed");
+			zz->current.valid = false;
+		}
+		break;
+	case DCM_PixelSpacing:
+		zzrDS(zz, 2, tmpd);
+		if (tmpd[0] < 0.0 || tmpd[1] < 0.0)
+		{
+			sprintf(zz->current.warning, "Negative pixel spacing not allowed");
+			zz->current.valid = false;
+		}
+		break;
+	default:
+		break;
 	}
-	zz = zzclose(zz);
-}
-
-int main(int argc, char **argv)
-{
-	int i;
-
-	for (i = zzutil(argc, argv, 2, "<filenames>", "Verify validity of a DICOM file"); i < argc; i++)
+	if (zz->current.length != UNLIMITED && zz->current.length % 2 != 0)	// really dumb DICOM requirement, but hey, it's there...
 	{
-		dump(argv[i]);
+		sprintf(zz->current.warning, "Data size is not even");
+		zz->current.valid = false;
 	}
-
-	return 0;
+	return zz->current.valid;
 }
