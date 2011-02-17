@@ -78,6 +78,16 @@
           <item>
            <widget class="QTreeView" name="treeViewTags"/>
           </item>
+          <item>
+           <widget class="QTextBrowser" name="textBrowserTagInfo">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </widget>
@@ -110,7 +120,7 @@
      <x>0</x>
      <y>0</y>
      <width>899</width>
-     <height>24</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">

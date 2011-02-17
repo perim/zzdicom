@@ -24,6 +24,7 @@ public slots:
 
 protected slots:
 	void expanded(const QModelIndex &idx);
+	void clicked(const QModelIndex &idx);
 
 private:
 	Ui::MainWindow *ui;

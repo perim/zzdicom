@@ -13,6 +13,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->setupUi(this);
 	connect(ui->treeViewTags, SIGNAL(expanded(const QModelIndex&)), this, SLOT(expanded(const QModelIndex&)));
 	connect(ui->treeViewTags, SIGNAL(collapsed(const QModelIndex&)), this, SLOT(expanded(const QModelIndex&)));
+	connect(ui->treeViewTags, SIGNAL(clicked(const QModelIndex &)), this, SLOT(clicked(const QModelIndex &)));
 	numFiles = 0;
 
 	files = new QStandardItemModel(0, 1, this);
@@ -47,6 +48,7 @@ void MainWindow::openFile(QString filename)
 	while (zziternext(zz, &group, &element, &len))
 	{
 		QStandardItem *last = NULL;
+		QString infoText;
 
 		pos = ftell(zz->fp);
 		tag = zztag(group, element);
@@ -96,6 +98,19 @@ void MainWindow::openFile(QString filename)
 			item3 = new QStandardItem("");
 			item4 = new QStandardItem("");
 		}
+		infoText.append("Tag starts at byte " + QString::number(zz->current.pos) + " and is of size " + QString::number(zz->current.length) + ".");
+		if (!zz->current.valid)
+		{
+			item->setForeground(QBrush(QColor(Qt::red)));
+			item2->setForeground(QBrush(QColor(Qt::red)));
+			item3->setForeground(QBrush(QColor(Qt::red)));
+			item4->setForeground(QBrush(QColor(Qt::red)));
+			infoText.append("\n\n" + QString(zz->current.warning));
+		}
+		item->setData(infoText);
+		item2->setData(infoText);
+		item3->setData(infoText);
+		item4->setData(infoText);
 
 		if (zz->nextNesting > nesting)
 		{
@@ -145,6 +160,12 @@ void MainWindow::expanded(const QModelIndex &idx)
 {
 	Q_UNUSED(idx);
 	ui->treeViewTags->resizeColumnToContents(0);
+}
+
+void MainWindow::clicked(const QModelIndex &idx)
+{
+	QStandardItem *item = tags->itemFromIndex(idx);
+	ui->textBrowserTagInfo->setText(item->data().toString());
 }
 
 void MainWindow::quit()
