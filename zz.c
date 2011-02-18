@@ -124,7 +124,7 @@ char *zztostring(struct zzfile *zz, char *input, long strsize)
 			strncpy(input, "(Sequence in limited UN - not parsed)", strsize);
 		}
 		break;
-	case OB: case OW: case OF: case UT: case AT:
+	case OB: case OW: case OF: case UT:
 		strcpy(input, "...");
 		break;
 	case AE: case AS: case CS: case DA: case DS: case DT: case IS:
@@ -148,6 +148,9 @@ char *zztostring(struct zzfile *zz, char *input, long strsize)
 			input[strlen(input) + 0] = ']';
 			input[strlen(input) + 1] = '\0';
 		}
+		break;
+	case AT:
+		snprintf(input, strsize - 1, "[(%04x,%04x)]", zzgetuint16(zz, 0), zzgetuint16(zz, 1));
 		break;
 	case UL:
 		snprintf(input, strsize - 1, "[%u]", zzgetuint32(zz, 0));
