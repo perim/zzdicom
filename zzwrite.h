@@ -57,8 +57,9 @@ void zzwSQ_end(struct zzfile *zz, long *pos);
 void zzwItem_begin(struct zzfile *zz, long *pos);
 void zzwItem_end(struct zzfile *zz, long *pos);
 
-void zzwPixelData_begin(struct zzfile *zz, long *pos, long frames, enum VR vr);
-void zzwPixelData_frame(struct zzfile *zz, const long *pos, const char *data, uint32_t size);
+void zzwPixelData_begin(struct zzfile *zz, long frames, enum VR vr);
+void zzwPixelData_frame(struct zzfile *zz, int frame, const char *data, uint32_t size);
+void zzwPixelData_end(struct zzfile *zz);
 
 #ifdef __cplusplus
 }

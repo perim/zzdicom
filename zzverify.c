@@ -32,6 +32,24 @@ bool zzverify(struct zzfile *zz)
 	}
 	switch (key)
 	{
+	case DCM_Item:
+		if (zz->current.pxstate == ZZ_PIXELITEM && zz->pxOffsetTable > 0)
+		{
+			uint32_t offstored;
+			long offactual;
+			long curr = zz->current.pos;
+
+			fseek(zz->fp, zz->pxOffsetTable + zz->current.frame * sizeof(offstored), SEEK_SET);
+			fread(&offstored, sizeof(offstored), 1, zz->fp);
+			fseek(zz->fp, curr, SEEK_SET);
+			offactual = curr - (zz->pxOffsetTable + sizeof(offstored) * zz->frames + 8);
+			if ((long)offstored != offactual)
+			{
+				sprintf(zz->current.warning, "Frame offset %ld different than actual frame position %ld", (long)offstored, offactual);
+				zz->current.valid = false;
+			}
+		}
+		break;
 	case DCM_SliceThickness:
 		zzrDS(zz, 1, tmpd);
 		if (tmpd[0] < 0.0)

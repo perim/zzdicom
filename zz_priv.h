@@ -123,7 +123,7 @@ struct zzfile
 	bool		acrNema, part10;
 	time_t		modifiedTime;
 	int		currNesting, nextNesting, ladderidx;
-	enum zzpxstate	pxstate;
+	long		pxOffsetTable, frames;
 
 	struct
 	{
@@ -135,6 +135,7 @@ struct zzfile
 		int		frame;		// current frame number, or -1, zero indexed
 		char		warning[MAX_LEN_LO];	// if !valid, this string is set to an explanation
 		bool		valid;		// whether the current tag is valid, true unless issue found
+		enum zzpxstate	pxstate;
 	} current;
 
 	struct
@@ -171,8 +172,11 @@ struct zzfile
             (void) (&_max1 == &_max2);              \
             _max1 > _max2 ? _max1 : _max2; })
 
-// Read a DS VR into an array of doubles that is len long, return number of elements found
+/// Read a DS VR into an array of doubles that is len long, return number of elements found
 int zzrDS(struct zzfile *zz, int len, double *input);
+
+/// Read a IS VR into an array of long that is len long, return number of elements found
+int zzrIS(struct zzfile *zz, int len, long *input);
 
 float zzgetfloat(struct zzfile *zz, int idx);
 double zzgetdouble(struct zzfile *zz, int idx);

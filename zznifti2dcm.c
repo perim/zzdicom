@@ -23,7 +23,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	char *bytes;
 	struct zzfile szw, *zw;
 	char *sopclassuid;
-	long sq1, sq2, item1, item2, pixeldata;
+	long sq1, sq2, item1, item2;
 	bool wrongendian;
 
 	fp = fopen(hdr_file, "r");
@@ -65,6 +65,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 		hdr.pixdim[2] = BSWAP_32(hdr.pixdim[2]);
 	}
 
+#if 0
 	/********** print a little header information */
 	fprintf (stderr, "\n%s header information (%d):", hdr_file, hdr.sizeof_hdr);
 	fprintf (stderr, "\nXYZT dimensions: %d %d %d %d", hdr.dim[1], hdr.dim[2], hdr.dim[3], hdr.dim[4]);
@@ -72,6 +73,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	fprintf (stderr, "\nScaling slope and intercept: %.6f %.6f", hdr.scl_slope, hdr.scl_inter);
 	fprintf (stderr, "\nByte offset to data in datafile: %ld", (long) (hdr.vox_offset) );
 	fprintf (stderr, "\n");
+#endif
 
 	if (hdr.dim[0] != 3)
 	{
@@ -192,22 +194,23 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	switch (hdr.datatype)
 	{
 	case DT_UNSIGNED_CHAR:
-		zzwPixelData_begin(zw, &pixeldata, hdr.dim[3], OB);
+		zzwPixelData_begin(zw, hdr.dim[3], OB);
 		for (i = 0; i < hdr.dim[3]; i++)
 		{
 			int framesize = hdr.dim[0] * hdr.dim[1];
-			zzwPixelData_frame(zw, &pixeldata, bytes + i * framesize, framesize);
+			zzwPixelData_frame(zw, i, bytes + i * framesize, framesize);
 		}
+		zzwPixelData_end(zw);
 		break;
 	case DT_SIGNED_SHORT:
 	case DT_UINT16:
-		zzwPixelData_begin(zw, &pixeldata, hdr.dim[3], OW);
+		zzwPixelData_begin(zw, hdr.dim[3], OW);
 		if (!wrongendian)
 		{
 			for (i = 0; i < hdr.dim[3]; i++)
 			{
 				int framesize = hdr.dim[0] * hdr.dim[1] * 2;
-				zzwPixelData_frame(zw, &pixeldata, bytes + i * framesize, framesize);
+				zzwPixelData_frame(zw, i, bytes + i * framesize, framesize);
 			}
 		}
 		else
@@ -218,14 +221,16 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 				fprintf(stderr, "16bit wrong endian data not supported yet -- skipped\n");
 			}
 		}
+		zzwPixelData_end(zw);
 		break;
 	case DT_RGB:
-		zzwPixelData_begin(zw, &pixeldata, hdr.dim[3], OB);
+		zzwPixelData_begin(zw, hdr.dim[3], OB);
 		for (i = 0; i < hdr.dim[3]; i++)
 		{
 			int framesize = hdr.dim[0] * hdr.dim[1] * 3;
-			zzwPixelData_frame(zw, &pixeldata, bytes + i * framesize, framesize);
+			zzwPixelData_frame(zw, i, bytes + i * framesize, framesize);
 		}
+		zzwPixelData_end(zw);
 		break;
 	default:
 		fprintf(stderr, "Unsupported data type -- skipped\n");

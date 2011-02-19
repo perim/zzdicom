@@ -98,6 +98,8 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	zz->ladder[0].pos = ftell(zz->fp);
 	zz->ladder[0].item = -1;
 	zz->current.frame = -1;
+	zz->frames = -1;
+	zz->pxOffsetTable = -1;
 
 	return zz;
 }
@@ -204,6 +206,36 @@ int zzrDS(struct zzfile *zz, int len, double *input)
 	if (found < len)
 	{
 		input[found++] = atof(value);
+	}
+	return found;
+}
+
+int zzrIS(struct zzfile *zz, int len, long *input)
+{
+	char value[MAX_LEN_IS];
+	long curr = zz->current.pos;
+	int found = 0, ch, strpos = 0;
+
+	fseek(zz->fp, zz->current.pos, SEEK_SET);
+	memset(value, 0, sizeof(value));
+	while (!feof(zz->fp) && curr < zz->current.pos + zz->current.length && found < len)
+	{
+		ch = fgetc(zz->fp);
+		if (ch == '\\' || ch == EOF)	// found one value
+		{
+			input[found++] = atol(value);
+			memset(value, 0, sizeof(value));
+			strpos = 0;
+		}
+		else if (strpos < MAX_LEN_DS)
+		{
+			value[strpos++] = ch;
+		}
+	}
+	// last value
+	if (found < len)
+	{
+		input[found++] = atol(value);
 	}
 	return found;
 }
@@ -426,30 +458,41 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 
 	switch (key)
 	{
+	case DCM_NumberOfFrames:
+		zzrIS(zz, 1, &zz->frames);
+		break;
 	case DCM_Item:
 		zz->nextNesting++;
-		if (zz->pxstate == ZZ_PIXELDATA)
+		if (zz->current.pxstate == ZZ_PIXELDATA)
 		{
-			zz->pxstate = ZZ_OFFSET_TABLE;
+			zz->current.pxstate = ZZ_OFFSET_TABLE;
+			if (zz->current.length != 0)
+			{
+				zz->pxOffsetTable = zz->current.pos;
+			}
 		}
-		else if (zz->pxstate == ZZ_OFFSET_TABLE)
+		else if (zz->current.pxstate == ZZ_OFFSET_TABLE)
 		{
-			zz->pxstate = ZZ_PIXELITEM;
+			zz->current.pxstate = ZZ_PIXELITEM;
+			zz->current.frame = 0;
+		}
+		else if (zz->current.pxstate == ZZ_PIXELITEM)
+		{
+			zz->current.frame++;
 		}
 		break;
 	case DCM_PixelData:
 		if (*len == UNLIMITED)
 		{
 			// Start special ugly handling of the encapsulated pixel data attribute
-			zz->pxstate = ZZ_PIXELDATA;
+			zz->current.pxstate = ZZ_PIXELDATA;
 			zz->nextNesting++;
 		}
 		break;
 	case DCM_SequenceDelimitationItem:
-		if (zz->pxstate != ZZ_NOT_PIXEL)
+		if (zz->current.pxstate != ZZ_NOT_PIXEL)
 		{
-			zz->pxstate = ZZ_NOT_PIXEL;
-			zz->currNesting--;
+			zz->current.pxstate = ZZ_NOT_PIXEL;
 			zz->nextNesting--;
 		}
 		break;
@@ -625,7 +668,7 @@ void zziterinit(struct zzfile *zz)
 		zz->current.element = 0;
 		zz->current.length = 0;
 		zz->current.pos = -1;
-		zz->pxstate = ZZ_NOT_PIXEL;
+		zz->current.pxstate = ZZ_NOT_PIXEL;
 	}
 }
 
@@ -636,7 +679,7 @@ bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len
 	    && (zz->current.length == UNLIMITED || (zz->current.pos + zz->current.length < zz->fileSize) || zz->current.vr == SQ || zz->current.group == 0xfffe))
 	{
 		if (zz->current.pos > 0 && zz->current.length > 0 && zz->current.length != UNLIMITED
-		    && !(zz->current.group == 0xfffe && zz->current.element == 0xe000 && zz->pxstate == ZZ_NOT_PIXEL)
+		    && !(zz->current.group == 0xfffe && zz->current.element == 0xe000 && zz->current.pxstate == ZZ_NOT_PIXEL)
 		    && zz->current.vr != SQ)
 		{
 			fseek(zz->fp, zz->current.pos + zz->current.length, SEEK_SET);	// go to start of next tag
