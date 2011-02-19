@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include "nifti1.h"
+#include "byteorder.h"
 #include "zzwrite.h"
 
 #define MIN_HEADER_SIZE 348
@@ -22,7 +23,8 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	char *bytes;
 	struct zzfile szw, *zw;
 	char *sopclassuid;
-	long sq1, sq2, item1, item2;
+	long sq1, sq2, item1, item2, pixeldata;
+	bool wrongendian;
 
 	fp = fopen(hdr_file, "r");
 	if (fp == NULL)
@@ -43,19 +45,39 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	}
 	fclose (fp);
 
-	if (hdr.dim[0] != 3)
+	wrongendian = (hdr.sizeof_hdr > 348 * 10);	// ten times the size of normal header size? must be wrong endian
+
+	if (wrongendian)	// byte swap some fields that we use
 	{
-		fprintf(stderr, "%s - three dimensions not found, unsupported Analyze dataset\n", hdr_file);
-		return false;
+		hdr.sizeof_hdr = BSWAP_32(hdr.sizeof_hdr);
+		hdr.dim[0] = BSWAP_16(hdr.dim[0]);
+		hdr.dim[1] = BSWAP_16(hdr.dim[1]);
+		hdr.dim[2] = BSWAP_16(hdr.dim[2]);
+		hdr.dim[3] = BSWAP_16(hdr.dim[3]);
+		hdr.dim[4] = BSWAP_16(hdr.dim[4]);
+		hdr.datatype = BSWAP_16(hdr.datatype);
+		hdr.bitpix = BSWAP_16(hdr.bitpix);
+		hdr.scl_slope = BSWAP_32(hdr.scl_slope);
+		hdr.scl_inter = BSWAP_32(hdr.scl_inter);
+		hdr.vox_offset = BSWAP_32(hdr.vox_offset);
+		hdr.pixdim[0] = BSWAP_32(hdr.pixdim[0]);
+		hdr.pixdim[1] = BSWAP_32(hdr.pixdim[1]);
+		hdr.pixdim[2] = BSWAP_32(hdr.pixdim[2]);
 	}
 
 	/********** print a little header information */
-	fprintf (stderr, "\n%s header information:", hdr_file);
+	fprintf (stderr, "\n%s header information (%d):", hdr_file, hdr.sizeof_hdr);
 	fprintf (stderr, "\nXYZT dimensions: %d %d %d %d", hdr.dim[1], hdr.dim[2], hdr.dim[3], hdr.dim[4]);
 	fprintf (stderr, "\nDatatype code and bits/pixel: %d %d", hdr.datatype, hdr.bitpix);
 	fprintf (stderr, "\nScaling slope and intercept: %.6f %.6f", hdr.scl_slope, hdr.scl_inter);
 	fprintf (stderr, "\nByte offset to data in datafile: %ld", (long) (hdr.vox_offset) );
 	fprintf (stderr, "\n");
+
+	if (hdr.dim[0] != 3)
+	{
+		fprintf(stderr, "%s - three dimensions not found (was %d), unsupported Analyze dataset\n", hdr_file, hdr.dim[0]);
+		return false;
+	}
 
 	fp = fopen(data_file, "r");
 	if (fp == NULL)
@@ -154,30 +176,55 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 		zzwItem_end(zw, &item1);
 	zzwSQ_end(zw, &sq1);
 	zzwSQ_begin(zw, DCM_PerFrameFunctionalGroupsSequence, &sq1);
-//		zzwItem_begin(zw, &item1);
-//		zzwItem_end(zw, &item1);
+		for (i = 0; i < hdr.dim[3]; i++)
+		{
+			zzwItem_begin(zw, &item1);
+				zzwSQ_begin(zw, DCM_PlanePositionSequence, &sq2);
+					zzwItem_begin(zw, &item2);
+					// TODO
+					zzwItem_end(zw, &item2);
+				zzwSQ_end(zw, &sq2);
+			zzwItem_end(zw, &item1);
+		}
 	zzwSQ_end(zw, &sq1);
 
 	// Now write the pixels
 	switch (hdr.datatype)
 	{
 	case DT_UNSIGNED_CHAR:
-		for (i = 0; i < size; i++)
+		zzwPixelData_begin(zw, &pixeldata, hdr.dim[3], OB);
+		for (i = 0; i < hdr.dim[3]; i++)
 		{
-			// TODO
+			int framesize = hdr.dim[0] * hdr.dim[1];
+			zzwPixelData_frame(zw, &pixeldata, bytes + i * framesize, framesize);
 		}
 		break;
 	case DT_SIGNED_SHORT:
 	case DT_UINT16:
-		for (i = 0; i < size; i++)
+		zzwPixelData_begin(zw, &pixeldata, hdr.dim[3], OW);
+		if (!wrongendian)
 		{
-			// TODO
+			for (i = 0; i < hdr.dim[3]; i++)
+			{
+				int framesize = hdr.dim[0] * hdr.dim[1] * 2;
+				zzwPixelData_frame(zw, &pixeldata, bytes + i * framesize, framesize);
+			}
+		}
+		else
+		{
+			for (i = 0; i < size; i++)
+			{
+				// TODO, need byte swapping op
+				fprintf(stderr, "16bit wrong endian data not supported yet -- skipped\n");
+			}
 		}
 		break;
 	case DT_RGB:
-		for (i = 0; i < size; i++)
+		zzwPixelData_begin(zw, &pixeldata, hdr.dim[3], OB);
+		for (i = 0; i < hdr.dim[3]; i++)
 		{
-			// TODO
+			int framesize = hdr.dim[0] * hdr.dim[1] * 3;
+			zzwPixelData_frame(zw, &pixeldata, bytes + i * framesize, framesize);
 		}
 		break;
 	default:

@@ -41,11 +41,11 @@ static bool explicit2(FILE *fp, uint16_t group, uint16_t element, const char *vr
 	return ret;
 }
 
-static inline bool writetag(struct zzfile *zz, zzKey key, const char *vrstr, uint32_t size)
+static inline bool writetag(struct zzfile *zz, zzKey key, enum VR vr, uint32_t size)
 {
 	const uint16_t group = ZZ_GROUP(key);
 	const uint16_t element = ZZ_ELEMENT(key);
-	const enum VR vr = ZZ_VR(vrstr[0], vrstr[1]);
+	char dest[MAX_LEN_VR];
 
 	if (!zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT)
 	{
@@ -56,21 +56,21 @@ static inline bool writetag(struct zzfile *zz, zzKey key, const char *vrstr, uin
 		switch (vr)
 		{
 		case OB: case OW: case OF: case SQ: case UT: case UN:
-			return explicit2(zz->fp, group, element, vrstr, size);
+			return explicit2(zz->fp, group, element, zzvr2str(vr, dest), size);
 		default:
-			return explicit1(zz->fp, group, element, vrstr, size);
+			return explicit1(zz->fp, group, element, zzvr2str(vr, dest), size);
 		}
 	}
 }
 
 bool zzwSQ(struct zzfile *zz, zzKey key, uint32_t size)
 {
-	return writetag(zz, key, "SQ", size);
+	return writetag(zz, key, SQ, size);
 }
 
 bool zzwUN(struct zzfile *zz, zzKey key, uint32_t size)
 {
-	return writetag(zz, key, "UN", size);
+	return writetag(zz, key, UN, size);
 }
 
 void zzwUN_begin(struct zzfile *zz, zzKey key, long *pos)
@@ -142,13 +142,40 @@ void zzwSQ_end(struct zzfile *zz, long *pos)
 	zzwUN_end(zz, pos);
 }
 
+void zzwPixelData_begin(struct zzfile *zz, long *pos, long frames, enum VR vr)
+{
+	int i;
+	uint32_t tmp = 0;
+
+	writetag(zz, DCM_PixelData, vr, UNLIMITED);
+	implicit(zz->fp, 0xfffe, 0xe000, sizeof(tmp) * frames);
+	if (pos) *pos = ftell(zz->fp);	// position of index table
+	for (i = 0; i < frames; i++)
+	{
+		fwrite(&tmp, sizeof(tmp), 1, zz->fp);	// write empty index table
+	}
+}
+
+void zzwPixelData_frame(struct zzfile *zz, const long *pos, const char *data, uint32_t size)
+{
+	if (pos)	// this needs to be set
+	{
+		long curr = ftell(zz->fp);
+		fseek(zz->fp, *pos, SEEK_SET);
+		fwrite(&size, 4, 1, zz->fp);
+		fseek(zz->fp, curr, SEEK_SET);
+		implicit(zz->fp, 0xfffe, 0xe000, size);
+		fwrite(data, size, 1, zz->fp);
+	}
+}
+
 bool zzwAT(struct zzfile *zz, zzKey key, zzKey key2)
 {
 	const uint16_t group2 = ZZ_GROUP(key2);
 	const uint16_t element2 = ZZ_ELEMENT(key2);
 	bool ret;
 
-	ret = writetag(zz, key, "AT", sizeof(group2) + sizeof(element2));
+	ret = writetag(zz, key, AT, sizeof(group2) + sizeof(element2));
 	ret = ret && fwrite(&group2, sizeof(group2), 1, zz->fp) == 1;
 	ret = ret && fwrite(&element2, sizeof(element2), 1, zz->fp) == 1;
 	return ret;
@@ -156,49 +183,49 @@ bool zzwAT(struct zzfile *zz, zzKey key, zzKey key2)
 
 bool zzwUL(struct zzfile *zz, zzKey key, uint32_t value)
 {
-	bool ret = writetag(zz, key, "UL", sizeof(value));
+	bool ret = writetag(zz, key, UL, sizeof(value));
 	ret = ret && fwrite(&value, sizeof(value), 1, zz->fp) == 1;
 	return ret;
 }
 
 bool zzwULv(struct zzfile *zz, zzKey key, int len, const uint32_t *value)
 {
-	bool ret = writetag(zz, key, "UL", sizeof(*value) * len);
+	bool ret = writetag(zz, key, UL, sizeof(*value) * len);
 	ret = ret && fwrite(value, sizeof(*value), len, zz->fp) == (size_t)len;
 	return ret;
 }
 
 bool zzwSL(struct zzfile *zz, zzKey key, int32_t value)
 {
-	bool ret = writetag(zz, key, "SL", sizeof(value));
+	bool ret = writetag(zz, key, SL, sizeof(value));
 	ret = ret && fwrite(&value, sizeof(value), 1, zz->fp) == 1;
 	return ret;
 }
 
 bool zzwSS(struct zzfile *zz, zzKey key, int16_t value)
 {
-	bool ret = writetag(zz, key, "SS", sizeof(value));
+	bool ret = writetag(zz, key, SS, sizeof(value));
 	ret = ret && fwrite(&value, sizeof(value), 1, zz->fp) == 1;
 	return ret;
 }
 
 bool zzwUS(struct zzfile *zz, zzKey key, uint16_t value)
 {
-	bool ret = writetag(zz, key, "US", sizeof(value));
+	bool ret = writetag(zz, key, US, sizeof(value));
 	ret = ret && fwrite(&value, sizeof(value), 1, zz->fp) == 1;
 	return ret;
 }
 
 bool zzwFL(struct zzfile *zz, zzKey key, float value)
 {
-	bool ret = writetag(zz, key, "FL", sizeof(value));
+	bool ret = writetag(zz, key, FL, sizeof(value));
 	ret = ret && fwrite(&value, sizeof(value), 1, zz->fp) == 1;
 	return ret;
 }
 
 bool zzwFD(struct zzfile *zz, zzKey key, double value)
 {
-	bool ret = writetag(zz, key, "FD", sizeof(value));
+	bool ret = writetag(zz, key, FD, sizeof(value));
 	ret = ret && fwrite(&value, sizeof(value), 1, zz->fp) == 1;
 	return ret;
 }
@@ -209,7 +236,7 @@ bool zzwOB(struct zzfile *zz, zzKey key, int len, const char *string)
 	bool ret;
 
 	if (len % 2 != 0) wlen++;			// padding
-	ret = writetag(zz, key, "OB", wlen);
+	ret = writetag(zz, key, OB, wlen);
 	ret = ret && fwrite(string, 1, len, zz->fp) == 1;
 	if (len % 2 != 0) ret = ret && fwrite("", 1, 1, zz->fp) == 1;	// pad
 	return ret;
@@ -217,14 +244,14 @@ bool zzwOB(struct zzfile *zz, zzKey key, int len, const char *string)
 
 bool zzwOW(struct zzfile *zz, zzKey key, int len, const uint16_t *string)
 {
-	bool ret = writetag(zz, key, "OW", len * 2);
+	bool ret = writetag(zz, key, OW, len * 2);
 	ret = ret && fwrite(string, 2, len, zz->fp) == (size_t)len;
 	return ret;
 }
 
 bool zzwOF(struct zzfile *zz, zzKey key, int len, const float *string)
 {
-	bool ret = writetag(zz, key, "OF", len * 4);
+	bool ret = writetag(zz, key, OF, len * 4);
 	ret = ret && fwrite(string, 4, len, zz->fp) == (size_t)len;
 	return ret;
 }
@@ -236,7 +263,7 @@ bool zzwUI(struct zzfile *zz, zzKey key, const char *string)
 	bool ret;
 
 	if (length % 2 != 0) wlen++;			// padding
-	ret = writetag(zz, key, "UI", wlen);
+	ret = writetag(zz, key, UI, wlen);
 	ret = ret && fwrite(string, 1, length, zz->fp) == (size_t)length;
 	if (length % 2 != 0) ret = ret && fwrite("", 1, 1, zz->fp) == 1;	// pad with null
 	return ret;
@@ -252,7 +279,7 @@ static inline int countdelims(const char *str, const char delim)
 	return c;
 }
 
-static bool wstr(struct zzfile *zz, zzKey key, const char *string, const char *vr, size_t maxlen)
+static bool wstr(struct zzfile *zz, zzKey key, const char *string, enum VR vr, size_t maxlen)
 {
 	const size_t multiplen = maxlen * (countdelims(string, '\\') + 1);	// max length times value multiplicity
 	const size_t length = MIN(strlen(string), multiplen);
@@ -269,16 +296,16 @@ static bool wstr(struct zzfile *zz, zzKey key, const char *string, const char *v
 	}
 	return ret;
 }
-bool zzwPN(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, "PN", 64); }
-bool zzwSH(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, "SH", 16); }
-bool zzwAE(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, "AE", 16); }
-bool zzwAS(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, "AS", 4); }
-bool zzwCS(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, "CS", 16); }
-bool zzwLO(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, "LO", 64); }
-bool zzwLT(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, "LT", 10240); }
-bool zzwST(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, "ST", 1024); }
-bool zzwUT(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, "UT", UINT32_MAX - 1); }
-bool zzwDSs(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, "DS", 16); }
+bool zzwPN(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, PN, 64); }
+bool zzwSH(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, SH, 16); }
+bool zzwAE(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, AE, 16); }
+bool zzwAS(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, AS, 4); }
+bool zzwCS(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, CS, 16); }
+bool zzwLO(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, LO, 64); }
+bool zzwLT(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, LT, 10240); }
+bool zzwST(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, ST, 1024); }
+bool zzwUT(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, UT, UINT32_MAX - 1); }
+bool zzwDSs(struct zzfile *zz, zzKey key, const char *string) { return wstr(zz, key, string, DS, 16); }
 
 bool zzwIS(struct zzfile *zz, zzKey key, int value)
 {
@@ -286,7 +313,7 @@ bool zzwIS(struct zzfile *zz, zzKey key, int value)
 
 	memset(tmp, 0, sizeof(tmp));
 	snprintf(tmp, sizeof(tmp) - 1, "%d", value);
-	return wstr(zz, key, tmp, "IS", 12);
+	return wstr(zz, key, tmp, IS, 12);
 }
 
 bool zzwDSf(struct zzfile *zz, zzKey key, double value)
@@ -295,7 +322,7 @@ bool zzwDSf(struct zzfile *zz, zzKey key, double value)
 
 	memset(tmp, 0, sizeof(tmp));
 	snprintf(tmp, sizeof(tmp) - 1, "%g", value);
-	return wstr(zz, key, tmp, "DS", 16);
+	return wstr(zz, key, tmp, DS, 16);
 }
 
 bool zzwDSfv(struct zzfile *zz, zzKey key, int len, double *value)
@@ -308,7 +335,7 @@ bool zzwDSfv(struct zzfile *zz, zzKey key, int len, double *value)
 
 	// Set to position of size field, depending on transfer syntax
 	pos += explicit(zz) ? 6 : 4;
-	writetag(zz, key, "DS", 0);
+	writetag(zz, key, DS, 0);
 
 	// Write out values
 	for (i = 0; i < len; i++)
@@ -353,7 +380,7 @@ bool zzwDA(struct zzfile *zz, zzKey key, time_t datestamp)
 
 	localtime_r(&datestamp, &stamp);
 	strftime(tmp, MAX_LEN_DA, "%Y%m%d", &stamp);
-	return wstr(zz, key, tmp, "DA", 8);
+	return wstr(zz, key, tmp, DA, 8);
 }
 
 bool zzwTM(struct zzfile *zz, zzKey key, struct timeval datetimestamp)
@@ -370,7 +397,7 @@ bool zzwTM(struct zzfile *zz, zzKey key, struct timeval datetimestamp)
 		snprintf(frac, 7, ".%06u", (unsigned)datetimestamp.tv_usec);
 		strcat(tmp, frac);
 	}
-	return wstr(zz, key, tmp, "TM", 16);
+	return wstr(zz, key, tmp, TM, 16);
 }
 
 bool zzwDT(struct zzfile *zz, zzKey key, struct timeval datetimestamp)
@@ -387,7 +414,7 @@ bool zzwDT(struct zzfile *zz, zzKey key, struct timeval datetimestamp)
 		snprintf(frac, 7, ".%06u", (unsigned)datetimestamp.tv_usec);
 		strcat(tmp, frac);
 	}
-	return wstr(zz, key, tmp, "DT", 26);
+	return wstr(zz, key, tmp, DT, 26);
 }
 
 struct zzfile *zzcreate(const char *filename, struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer)
@@ -437,7 +464,7 @@ void zzwHeader(struct zzfile *zz, const char *sopclass, const char *sopinstanceu
 	fseek(zz->fp, 0, SEEK_END);		// return to position
 }
 
-bool zzwEmpty(struct zzfile *zz, zzKey key, const char *vr)
+bool zzwEmpty(struct zzfile *zz, zzKey key, enum VR vr)
 {
 	return writetag(zz, key, vr, 0);
 }

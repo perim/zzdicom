@@ -39,7 +39,7 @@ bool zzwUS(struct zzfile *zz, zzKey key, uint16_t value);
 bool zzwUT(struct zzfile *zz, zzKey key, const char *string);
 
 void zzwHeader(struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer);
-bool zzwEmpty(struct zzfile *zz, zzKey key, const char *vr);
+bool zzwEmpty(struct zzfile *zz, zzKey key, enum VR vr);
 struct zzfile *zzcreate(const char *filename, struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer);
 
 /// Pass in NULL below to use unlimited size
@@ -56,6 +56,9 @@ void zzwSQ_end(struct zzfile *zz, long *pos);
 
 void zzwItem_begin(struct zzfile *zz, long *pos);
 void zzwItem_end(struct zzfile *zz, long *pos);
+
+void zzwPixelData_begin(struct zzfile *zz, long *pos, long frames, enum VR vr);
+void zzwPixelData_frame(struct zzfile *zz, const long *pos, const char *data, uint32_t size);
 
 #ifdef __cplusplus
 }

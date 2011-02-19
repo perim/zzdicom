@@ -55,20 +55,20 @@ static void genericfile(struct zzfile *zz)
 {
 	zzwUI(zz, DCM_SOPClassUID, UID_SecondaryCaptureImageStorage);
 	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.0");
-	zzwEmpty(zz, DCM_StudyDate, "DA");
-	zzwEmpty(zz, DCM_StudyTime, "TM");
+	zzwEmpty(zz, DCM_StudyDate, DA);
+	zzwEmpty(zz, DCM_StudyTime, TM);
 	zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
 	zzwPN(zz, DCM_ReferringPhysiciansName, "Doctor^Johnson");
 	zzwPN(zz, DCM_PatientsName, "Sick^Jack");
-	zzwEmpty(zz, DCM_PatientID, "LO");
-	zzwEmpty(zz, DCM_PatientsBirthDate, "DA");
-	zzwEmpty(zz, DCM_PatientsSex, "CS");
+	zzwEmpty(zz, DCM_PatientID, LO);
+	zzwEmpty(zz, DCM_PatientsBirthDate, DA);
+	zzwEmpty(zz, DCM_PatientsSex, CS);
 	zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.1");
 	zzwUI(zz, DCM_SeriesInstanceUID, "1.2.3.4.2");
-	zzwEmpty(zz, DCM_StudyID, "SH");
-	zzwEmpty(zz, DCM_SeriesNumber, "IS");
-	zzwEmpty(zz, DCM_InstanceNumber, "IS");
-	zzwEmpty(zz, DCM_Laterality, "CS");
+	zzwEmpty(zz, DCM_StudyID, SH);
+	zzwEmpty(zz, DCM_SeriesNumber, IS);
+	zzwEmpty(zz, DCM_InstanceNumber, IS);
+	zzwEmpty(zz, DCM_Laterality, CS);
 }
 
 static void garbfill(struct zzfile *zz, int variant)
@@ -127,17 +127,17 @@ int main(int argc, char **argv)
 	}
 	zz->ladder[0].txsyn = ZZ_IMPLICIT;	// no header, implicit
 	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.0");
-	zzwEmpty(zz, DCM_StudyDate, "DA");
-	zzwEmpty(zz, DCM_StudyTime, "TM");
+	zzwEmpty(zz, DCM_StudyDate, DA);
+	zzwEmpty(zz, DCM_StudyTime, TM);
 	zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
-	zzwEmpty(zz, DCM_ReferringPhysiciansName, "PN");
-	zzwEmpty(zz, DCM_PatientsName, "PN");
-	zzwEmpty(zz, DCM_PatientID, "LO");
-	zzwEmpty(zz, DCM_PatientsBirthDate, "DA");
-	zzwEmpty(zz, DCM_PatientsSex, "CS");
+	zzwEmpty(zz, DCM_ReferringPhysiciansName, PN);
+	zzwEmpty(zz, DCM_PatientsName, PN);
+	zzwEmpty(zz, DCM_PatientID, LO);
+	zzwEmpty(zz, DCM_PatientsBirthDate, DA);
+	zzwEmpty(zz, DCM_PatientsSex, CS);
 	zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.1");
 	zzwSH(zz, DCM_StudyID, "ANONDICMSTUDY");
-	zzwEmpty(zz, DCM_Laterality, "CS");
+	zzwEmpty(zz, DCM_Laterality, CS);
 	addCheck(zz);
 	fclose(zz->fp);
 
