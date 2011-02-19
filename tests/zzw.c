@@ -20,7 +20,7 @@
 #define CHECK_ELEM 0x1000
 #define CHECK_VALUE 42
 
-static bool checkContents(const char *testfile)
+static bool checkContents(const char *testfile, bool reqperfection)
 {
 	struct zzfile szz, *zz;
 	uint16_t group, element;
@@ -32,10 +32,13 @@ static bool checkContents(const char *testfile)
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len))
 	{
+		zzverify(zz);
 		if (group == CHECK_GROUP && element == CHECK_ELEM && zzgetuint32(zz, 1) == CHECK_VALUE)
 		{
 			retval = true;
 		}
+		assert(!reqperfection || zz->current.valid);			// check that it is valid
+		assert(zz->current.valid || zz->current.warning[0] != '\0');	// check that warning is set when invalid
 	}
 	assert(zz->currNesting == 0);
 	zz = zzclose(zz);
@@ -141,7 +144,7 @@ int main(int argc, char **argv)
 	addCheck(zz);
 	fclose(zz->fp);
 
-	result = checkContents("samples/confuse.dcm");
+	result = checkContents("samples/confuse.dcm", true);
 	assert(result);
 
 	////
@@ -160,7 +163,7 @@ int main(int argc, char **argv)
 	addCheck(zz);
 	zz = zzclose(zz);
 
-	result = checkContents("samples/tw1.dcm");
+	result = checkContents("samples/tw1.dcm", true);
 	assert(result);
 
 	////
@@ -201,7 +204,7 @@ int main(int argc, char **argv)
 	zzwOBnoise(zz, DCM_DataSetTrailingPadding, 256);
 	zz = zzclose(zz);
 
-	result = checkContents("samples/tw2.dcm");
+	result = checkContents("samples/tw2.dcm", true);
 	assert(result);
 
 	////
@@ -230,7 +233,7 @@ int main(int argc, char **argv)
 	zzwOBnoise(zz, DCM_DataSetTrailingPadding, 0);
 	zz = zzclose(zz);
 
-	result = checkContents("samples/brokensq.dcm");
+	result = checkContents("samples/brokensq.dcm", false);
 	assert(result);
 
 	return 0;

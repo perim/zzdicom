@@ -3,6 +3,7 @@ COMMON = zz.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
 COMMONTEXTURE = zztexture.o
+COMMONVERIFY = zzverify.o
 PART6 = part6.o
 PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom zznifti2dcm
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h
@@ -24,8 +25,8 @@ sqlinit.h: SQL
 zzanon: zzanon.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
 
-zzdump: zzdump.c $(HEADERS) $(COMMON) $(PART6) zzverify.o
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) zzverify.o
+zzdump: zzdump.c $(HEADERS) $(COMMON) $(PART6) $(COMMONVERIFY)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONVERIFY)
 
 zzgroupfix: zzgroupfix.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
@@ -68,8 +69,8 @@ check: tests/zz1 tests/zzw tests/zzt
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
 
-tests/zzw: tests/zzw.c $(HEADERS) $(COMMON) $(COMMONWRITE)
-	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE)
+tests/zzw: tests/zzw.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONVERIFY)
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY)
 
 tests/zzt: tests/zzt.c $(HEADERS) $(COMMON) $(COMMONTEXTURE)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONTEXTURE) -lGLEW -lglut
