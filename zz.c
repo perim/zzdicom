@@ -326,7 +326,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		long size = (zz->ladder[zz->ladderidx].size >= 0) ? zz->ladder[zz->ladderidx].size : INT32_MAX;	// for 32bit systems where UNLIMITED is -1
 
 		if (zz->ladder[zz->ladderidx].type == ZZ_GROUP
-		    && (zz->current.group != zz->ladder[zz->ladderidx].group
+		    && ((zz->current.group != zz->ladder[zz->ladderidx].group && zz->current.group != 0xfffe)
 		        || bytesread > size
 		        || key == DCM_SequenceDelimitationItem
 		        || key == DCM_ItemDelimitationItem))
