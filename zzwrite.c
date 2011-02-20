@@ -323,7 +323,7 @@ bool zzwIS(struct zzfile *zz, zzKey key, int value)
 	return wstr(zz, key, tmp, IS, 12);
 }
 
-bool zzwDSf(struct zzfile *zz, zzKey key, double value)
+bool zzwDSd(struct zzfile *zz, zzKey key, double value)
 {
 	char tmp[MAX_LEN_DS];
 
@@ -332,13 +332,13 @@ bool zzwDSf(struct zzfile *zz, zzKey key, double value)
 	return wstr(zz, key, tmp, DS, 16);
 }
 
-bool zzwDSfv(struct zzfile *zz, zzKey key, int len, double *value)
+bool zzwDSdv(struct zzfile *zz, zzKey key, int len, const double *value)
 {
 	size_t wlen = 0, lenval;
 	bool ret = true;
 	long pos = ftell(zz->fp), now;
 	int i;
-	char tmp[MAX_LEN_DS];
+	char tmp[MAX_LEN_DS + 1];
 
 	// Set to position of size field, depending on transfer syntax
 	pos += explicit(zz) ? 6 : 4;
@@ -348,11 +348,12 @@ bool zzwDSfv(struct zzfile *zz, zzKey key, int len, double *value)
 	for (i = 0; i < len; i++)
 	{
 		memset(tmp, 0, sizeof(tmp));
-		snprintf(tmp, sizeof(tmp) - 1, "%g", value[i]);
+		snprintf(tmp, sizeof(tmp) - 2, "%g", value[i]);
 		lenval = strlen(tmp);
-		if (i + 1 < len && lenval < MAX_LEN_DS)
+		if (i + 1 < len)
 		{
 			strcat(tmp, "\\");	// value delimiter
+			lenval++;
 		}
 		ret = ret && fwrite(tmp, 1, lenval, zz->fp) == lenval;
 		wlen += lenval;
@@ -365,7 +366,7 @@ bool zzwDSfv(struct zzfile *zz, zzKey key, int len, double *value)
 
 	// Now set the size of the tag
 	now = ftell(zz->fp);
-	fseek(zz->fp, pos, SEEK_CUR);
+	fseek(zz->fp, pos, SEEK_SET);
 	if (explicit(zz))
 	{
 		uint16_t val = wlen;
@@ -376,7 +377,7 @@ bool zzwDSfv(struct zzfile *zz, zzKey key, int len, double *value)
 		uint32_t val = wlen;
 		ret = ret && fwrite(&val, 4, 1, zz->fp) == 1;
 	}
-	fseek(zz->fp, now, SEEK_CUR);
+	fseek(zz->fp, now, SEEK_SET);
 	return ret;
 }
 

@@ -25,6 +25,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	char *sopclassuid;
 	long sq1, sq2, item1, item2;
 	bool wrongendian;
+	double pixelspacing[3];
 
 	fp = fopen(hdr_file, "r");
 	if (fp == NULL)
@@ -63,6 +64,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 		hdr.pixdim[0] = BSWAP_32(hdr.pixdim[0]);
 		hdr.pixdim[1] = BSWAP_32(hdr.pixdim[1]);
 		hdr.pixdim[2] = BSWAP_32(hdr.pixdim[2]);
+		hdr.pixdim[3] = BSWAP_32(hdr.pixdim[3]);
 	}
 
 #if 0
@@ -160,8 +162,8 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	zzwUS(zw, DCM_BitsStored, hdr.datatype != DT_UINT16 ? 8 : 16);
 	zzwUS(zw, DCM_HighBit, hdr.datatype != DT_UINT16 ? 7 : 15);
 	zzwUS(zw, DCM_PixelRepresentation, 0);
-	zzwDSf(zw, DCM_RescaleIntercept, hdr.scl_inter);
-	zzwDSf(zw, DCM_RescaleSlope, hdr.scl_slope);
+	zzwDSd(zw, DCM_RescaleIntercept, hdr.scl_inter);
+	zzwDSd(zw, DCM_RescaleSlope, hdr.scl_slope);
 	zzwLO(zw, DCM_RescaleType, "US");
 	zzwSQ_begin(zw, DCM_SharedFunctionalGroupsSequence, &sq1);
 		zzwItem_begin(zw, &item1);
@@ -172,7 +174,11 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 			zzwSQ_end(zw, &sq2);
 			zzwSQ_begin(zw, DCM_PixelMeasuresSequence, &sq2);
 				zzwItem_begin(zw, &item2);
-				// TODO
+					pixelspacing[0] = hdr.pixdim[1];
+					pixelspacing[1] = hdr.pixdim[2];
+					pixelspacing[2] = hdr.pixdim[3];
+					zzwDSd(zw, DCM_SliceThickness, pixelspacing[0]);
+					zzwDSdv(zw, DCM_PixelSpacing, 2, &pixelspacing[1]);
 				zzwItem_end(zw, &item2);
 			zzwSQ_end(zw, &sq2);
 		zzwItem_end(zw, &item1);

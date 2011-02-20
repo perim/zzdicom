@@ -125,7 +125,7 @@ int main(int argc, char **argv)
 
 	if (explicit(zz) && rand() % 10 > 2)	// add SQ block
 	{
-		zzwSQ(zz, ZZ_KEY(0x0020, 0x1115), UNLIMITED);
+		zzwSQ_begin(zz, ZZ_KEY(0x0020, 0x1115), NULL);
 		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz);
 		implicit(zz->fp, 0xfffe, 0xe00d, 0);
@@ -135,7 +135,7 @@ int main(int argc, char **argv)
 		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz);
 		implicit(zz->fp, 0xfffe, 0xe00d, 0);
-		implicit(zz->fp, 0xfffe, 0xe0dd, 0);
+		zzwSQ_end(zz, NULL);
 	}
 
 	if (rand() % 10 > 5) garbfill(zz);
@@ -147,17 +147,14 @@ int main(int argc, char **argv)
 
 	if (explicit(zz) && rand() % 10 > 2)	// add UN block
 	{
-		zzwUN(zz, ZZ_KEY(0x0029, 0x0010), UNLIMITED);
-		zz->ladderidx++;
-		zz->ladder[zz->ladderidx].txsyn = ZZ_IMPLICIT;
+		zzwUN_begin(zz, ZZ_KEY(0x0029, 0x0010), NULL);
 		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz);
 		implicit(zz->fp, 0xfffe, 0xe00d, 0);
 		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz);
 		implicit(zz->fp, 0xfffe, 0xe00d, 0);
-		implicit(zz->fp, 0xfffe, 0xe0dd, 0);
-		zz->ladderidx--;
+		zzwUN_end(zz, NULL);
 	}
 
 	if (rand() % 10 > 2) zzwOBnoise(zz, DCM_PixelData, rand() % 9999);

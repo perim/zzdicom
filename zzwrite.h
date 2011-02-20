@@ -14,8 +14,8 @@ bool zzwCS(struct zzfile *zz, zzKey key, const char *string);
 bool zzwDA(struct zzfile *zz, zzKey key, time_t datestamp);
 bool zzwDT(struct zzfile *zz, zzKey key, struct timeval datetimestamp);
 bool zzwDSs(struct zzfile *zz, zzKey key, const char *string);
-bool zzwDSf(struct zzfile *zz, zzKey key, double value);
-bool zzwDSfv(struct zzfile *zz, zzKey key, int len, double *value);
+bool zzwDSd(struct zzfile *zz, zzKey key, double value);
+bool zzwDSdv(struct zzfile *zz, zzKey key, int len, const double *value);
 bool zzwFL(struct zzfile *zz, zzKey key, float value);
 bool zzwFD(struct zzfile *zz, zzKey key, double value);
 bool zzwIS(struct zzfile *zz, zzKey key, int value);
@@ -27,14 +27,12 @@ bool zzwOW(struct zzfile *zz, zzKey key, int len, const uint16_t *string);
 bool zzwPN(struct zzfile *zz, zzKey key, const char *string);
 bool zzwSH(struct zzfile *zz, zzKey key, const char *string);
 bool zzwSL(struct zzfile *zz, zzKey key, int32_t value);
-bool zzwSQ(struct zzfile *zz, zzKey key, uint32_t size);	// deprecated
 bool zzwSS(struct zzfile *zz, zzKey key, int16_t value);
 bool zzwST(struct zzfile *zz, zzKey key, const char *string);
 bool zzwTM(struct zzfile *zz, zzKey key, struct timeval datetimestamp);
 bool zzwUI(struct zzfile *zz, zzKey key, const char *string);
 bool zzwUL(struct zzfile *zz, zzKey key, uint32_t value);
 bool zzwULv(struct zzfile *zz, zzKey key, int len, const uint32_t *value);
-bool zzwUN(struct zzfile *zz, zzKey key, uint32_t size);	// deprecated
 bool zzwUS(struct zzfile *zz, zzKey key, uint16_t value);
 bool zzwUT(struct zzfile *zz, zzKey key, const char *string);
 

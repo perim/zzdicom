@@ -56,6 +56,8 @@ static void implicit(FILE *fp, uint16_t group, uint16_t element, uint32_t length
 
 static void genericfile(struct zzfile *zz)
 {
+	const double axial[] = { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0 };
+
 	zzwUI(zz, DCM_SOPClassUID, UID_SecondaryCaptureImageStorage);
 	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.0");
 	zzwEmpty(zz, DCM_StudyDate, DA);
@@ -71,6 +73,7 @@ static void genericfile(struct zzfile *zz)
 	zzwEmpty(zz, DCM_StudyID, SH);
 	zzwEmpty(zz, DCM_SeriesNumber, IS);
 	zzwEmpty(zz, DCM_InstanceNumber, IS);
+	zzwDSdv(zz, DCM_ImageOrientationPatient, 6, axial);
 	zzwEmpty(zz, DCM_Laterality, CS);
 }
 
@@ -177,7 +180,6 @@ int main(int argc, char **argv)
 		implicit(zz->fp, 0xfffe, 0xe00d, 0);
 		implicit(zz->fp, 0xfffe, 0xe000, 24);
 		garbfill(zz, 1);
-		//implicit(zz->fp, 0xfffe, 0xe00d, 0);	// this crashed dicom3tools; not really legal dicom; fun to do anyway
 		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz, 2);
 		implicit(zz->fp, 0xfffe, 0xe00d, 0);
