@@ -1,10 +1,8 @@
 #include "zz_priv.h"
 
-#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
-#include <errno.h>
 
 bool zzverify(struct zzfile *zz)
 {

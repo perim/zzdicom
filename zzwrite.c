@@ -142,38 +142,57 @@ void zzwSQ_end(struct zzfile *zz, long *pos)
 	zzwUN_end(zz, pos);
 }
 
-void zzwPixelData_begin(struct zzfile *zz, long frames, enum VR vr)
+void zzwPixelData_begin(struct zzfile *zz, long frames, int bits, long size)
 {
 	int i;
 	uint32_t tmp = 0;
+	enum VR vr = OB;
 
-	writetag(zz, DCM_PixelData, vr, UNLIMITED);
-	implicit(zz->fp, 0xfffe, 0xe000, sizeof(tmp) * frames);
-	zz->pxOffsetTable = ftell(zz->fp);	// position of index table
-	for (i = 0; i < frames; i++)
+	if ((bits == 16 && zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT) || zz->ladder[zz->ladderidx].txsyn == ZZ_IMPLICIT)
 	{
-		fwrite(&tmp, sizeof(tmp), 1, zz->fp);	// write empty index table
+		vr = OW;	// all other cases use OB
+	}
+	if (zz->ladder[zz->ladderidx].txsyn > ZZ_EXPLICIT)
+	{
+		writetag(zz, DCM_PixelData, vr, UNLIMITED);	// encapsulated pixel data
+		implicit(zz->fp, 0xfffe, 0xe000, sizeof(tmp) * frames);
+		zz->pxOffsetTable = ftell(zz->fp);	// position of index table
+		for (i = 0; i < frames; i++)
+		{
+			fwrite(&tmp, sizeof(tmp), 1, zz->fp);	// write empty index table
+		}
+	}
+	else
+	{
+		writetag(zz, DCM_PixelData, vr, size);
+		zz->pxOffsetTable = -1;			// no index table
 	}
 	zz->frames = frames;
 }
 
-void zzwPixelData_frame(struct zzfile *zz, int frame, const char *data, uint32_t size)
+void zzwPixelData_frame(struct zzfile *zz, int frame, const void *data, uint32_t size)
 {
-	long curr = ftell(zz->fp);
-	uint32_t offset = curr - (zz->pxOffsetTable + zz->frames * sizeof(offset));
-	long pos = zz->pxOffsetTable + frame * sizeof(offset);
+	if (zz->ladder[zz->ladderidx].txsyn > ZZ_EXPLICIT)	// write encapsulation
+	{
+		long curr = ftell(zz->fp);
+		uint32_t offset = curr - (zz->pxOffsetTable + zz->frames * sizeof(offset));
+		long pos = zz->pxOffsetTable + frame * sizeof(offset);
 
-	fseek(zz->fp, pos, SEEK_SET);
-	fwrite(&offset, 4, 1, zz->fp);
-	fseek(zz->fp, curr, SEEK_SET);
-	implicit(zz->fp, 0xfffe, 0xe000, size);
+		fseek(zz->fp, pos, SEEK_SET);
+		fwrite(&offset, 4, 1, zz->fp);
+		fseek(zz->fp, curr, SEEK_SET);
+		implicit(zz->fp, 0xfffe, 0xe000, size);
+	}
 	fwrite(data, size, 1, zz->fp);
 	// TODO pad to even length?
 }
 
 void zzwPixelData_end(struct zzfile *zz)
 {
-	implicit(zz->fp, 0xfffe, 0xe0dd, 0);
+	if (zz->ladder[zz->ladderidx].txsyn > ZZ_EXPLICIT)	// terminate encapsulation
+	{
+		implicit(zz->fp, 0xfffe, 0xe0dd, 0);
+	}
 }
 
 bool zzwAT(struct zzfile *zz, zzKey key, zzKey key2)

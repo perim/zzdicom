@@ -200,17 +200,17 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	switch (hdr.datatype)
 	{
 	case DT_UNSIGNED_CHAR:
-		zzwPixelData_begin(zw, hdr.dim[3], OB);
+		zzwPixelData_begin(zw, hdr.dim[3], 8, hdr.dim[1] * hdr.dim[2] * hdr.dim[3]);
 		for (i = 0; i < hdr.dim[3]; i++)
 		{
-			int framesize = hdr.dim[0] * hdr.dim[1];
+			int framesize = hdr.dim[1] * hdr.dim[2];
 			zzwPixelData_frame(zw, i, bytes + i * framesize, framesize);
 		}
 		zzwPixelData_end(zw);
 		break;
 	case DT_SIGNED_SHORT:
 	case DT_UINT16:
-		zzwPixelData_begin(zw, hdr.dim[3], OW);
+		zzwPixelData_begin(zw, hdr.dim[3], 16, hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * 2);
 		if (!wrongendian)
 		{
 			for (i = 0; i < hdr.dim[3]; i++)
@@ -230,7 +230,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 		zzwPixelData_end(zw);
 		break;
 	case DT_RGB:
-		zzwPixelData_begin(zw, hdr.dim[3], OB);
+		zzwPixelData_begin(zw, hdr.dim[3], 8, hdr.dim[1] * hdr.dim[2] * hdr.dim[3] * 3);
 		for (i = 0; i < hdr.dim[3]; i++)
 		{
 			int framesize = hdr.dim[0] * hdr.dim[1] * 3;
