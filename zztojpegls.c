@@ -8,20 +8,12 @@
 #include <errno.h>
 #include <limits.h>
 #include <sys/mman.h>
-
-#include "charlsintf.h"	// private port of CharLS pseudo-C interface to real C interface
+#include <CharLS/interface.h>
 
 #include "zz_priv.h"
 #include "zzsql.h"
 #include "zzwrite.h"
 #include "part6.h"
-
-static void implicit(FILE *fp, uint16_t group, uint16_t element, uint32_t length)
-{
-        fwrite(&group, 2, 1, fp);
-        fwrite(&element, 2, 1, fp);
-        fwrite(&length, 4, 1, fp);
-}
 
 static void explicit1(FILE *fp, uint16_t group, uint16_t element, const char *vr, uint16_t length)
 {
@@ -46,7 +38,7 @@ static void explicit2(FILE *fp, uint16_t group, uint16_t element, const char *vr
 
 static bool jpegtols(char *filename)
 {
-	struct JlsParamaters params;
+	struct JlsParameters params;
 	enum JLS_ERROR err;
 	struct zzfile szw, *zw;
 	struct zzfile szz, *zz = zzopen(filename, "r", &szz);
@@ -184,6 +176,7 @@ static bool jpegtols(char *filename)
 			switch (err)
 			{
 			case OK: break;
+			case TooMuchCompressedData: fprintf(stderr, "%s - too much compressed data\n", filename); break;
 			case InvalidJlsParameters: fprintf(stderr, "%s - invalid encoding parameters\n", filename); break;
 			case ParameterValueNotSupported: fprintf(stderr, "%s - not supported encoding parameters\n", filename); break;
 			case UncompressedBufferTooSmall: fprintf(stderr, "%s - could not yield compression gain\n", filename); break;
@@ -193,12 +186,10 @@ static bool jpegtols(char *filename)
 			case UnsupportedBitDepthForTransform: fprintf(stderr, "%s - unsupported bit depth\n", filename); break;
 			case UnsupportedColorTransform: fprintf(stderr, "%s - unsupported color transform\n", filename); break;
 			};
-			explicit2(zw->fp, group, element, "OB", UNLIMITED);
-			implicit(zw->fp, 0xfffe, 0xe000, 0);		// offset table
-			implicit(zw->fp, 0xfffe, 0xe000, result);		// pixel data
-			fwrite(dst, result, 1, zw->fp);
-			implicit(zw->fp, 0xfffe, 0xe0dd, 0);		// seq delim
-			// just plain ignore the padding requirement, who cares about that anymore in this day and age?
+			zw->ladder[zw->ladderidx].txsyn = ZZ_EXPLICIT_JPEGLS;
+			zzwPixelData_begin(zw, 1, 8, UNLIMITED);
+			zzwPixelData_frame(zw, 0, dst, result);
+			zzwPixelData_end(zw);
 			free(dst);
 			munmap(addr, zz->fileSize);
 			zz = zzclose(zz);
