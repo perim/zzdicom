@@ -66,6 +66,7 @@ check: tests/zz1 tests/zzw tests/zzt
 	./zzanon TEST samples/tw1.dcm
 	./zzanon TEST samples/tw2.dcm
 	./zznifti2dcm samples/minimal.hdr samples/minimal.img
+	./zznifti2dcm samples/minimal.nii
 
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
