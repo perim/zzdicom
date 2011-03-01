@@ -27,18 +27,47 @@ FILE *fmemopen(void *buffer, size_t s, const char *mode);
 #define UID_StandardApplicationContext "1.2.840.10008.3.1.1.1"
 #define UID_VerificationSOPClass "1.2.840.10008.1.1"
 
+enum psctxs_list
+{
+	PSCTX_VERIFICATION,
+	PSCTX_LAST
+};
+static const char *psctxs_uids[] = { UID_VerificationSOPClass };
+static const char *txsyn_uids[] = { UID_LittleEndianImplicitTransferSyntax, UID_LittleEndianExplicitTransferSyntax, 
+                                    UID_DeflatedExplicitVRLittleEndianTransferSyntax, UID_JPEGLSLosslessTransferSyntax };
+
+struct zznet
+{
+	FILE *fp;		///< Network socket for data traffic
+	FILE *buffer;		///< Memory buffer disguised as a file
+	void *mem;		///< Pointer to buffer's memory
+	long maxpdatasize;	///< Maximum size of other party's pdata payload
+	uint16_t version;	///< Association version capability bitfield
+	enum zztxsyn psctxs[PSCTX_LAST];	///< List of negotiated presentation contexts
+};
+
 // // Convenience functions
+// -- Debug
+//#define DEBUG
+#ifdef DEBUG
+#define phex(...) printf(__VA_ARGS__)
+#else
+#define phex(...)
+#endif
 // -- Writing
-static inline void fput2(uint16_t val, FILE *fp) { uint16_t tmp = htons(val); fwrite(&tmp, 2, 1, fp); }
-static inline void fput4(uint32_t val, FILE *fp) { uint32_t tmp = htonl(val); fwrite(&tmp, 4, 1, fp); }
-static inline void fputaet(const char *aet, FILE *fp) { char tmp[16]; memset(tmp, 0, sizeof(tmp)); strncpy(tmp, aet, 16); fwrite(tmp, 16, 1, fp); }
-static inline void fpad(int num, FILE *fp) { int i; for (i = 0; i < num; i++) fputc(0, fp); }
-static inline void fput2at(uint16_t val, long pos, FILE *fp) { uint16_t tmp = htons(val); long curr = ftell(fp); fseek(fp, pos, SEEK_SET); fwrite(&tmp, 2, 1, fp); fseek(fp, curr, SEEK_SET); }
-static inline void fput4at(uint32_t val, long pos, FILE *fp) { uint32_t tmp = htonl(val); long curr = ftell(fp); fseek(fp, pos, SEEK_SET); fwrite(&tmp, 4, 1, fp); fseek(fp, curr, SEEK_SET); }
+static inline void znw1(uint8_t val, struct zznet *zn) { fputc(val, zn->buffer); phex(" %x", val); }
+static inline void znw2(uint16_t val, struct zznet *zn) { uint16_t tmp = htons(val); fwrite(&tmp, 2, 1, zn->buffer); phex(" %x %x", val >> 8, val & 0xff); }
+static inline void znw4(uint32_t val, struct zznet *zn) { uint32_t tmp = htonl(val); fwrite(&tmp, 4, 1, zn->buffer); phex(" %x %x %x %x", val >> 24, val >> 16, val >> 8, val & 0xff); }
+static inline void znwaet(const char *aet, struct zznet *zn) { char tmp[16]; memset(tmp, 0, sizeof(tmp)); strncpy(tmp, aet, 16); fwrite(tmp, 16, 1, zn->buffer); phex(" ..."); }
+static inline void znwuid(const char *uid, struct zznet *zn) { int size = strlen(uid) + 1; znw2(size, zn); fwrite(uid, size, 1, zn->buffer); phex(" uid=%d", size); }
+static inline void znwpad(int num, struct zznet *zn) { int i; for (i = 0; i < num; i++) fputc(0, zn->buffer); phex(" (pad %d)", num); }
+static inline void znw2at(uint16_t val, long pos, struct zznet *zn) { long curr = ftell(zn->buffer); fseek(zn->buffer, pos, SEEK_SET); znw2(val, zn); phex("<<%ld", pos); fseek(zn->buffer, curr, SEEK_SET); }
+static inline void znw4at(uint32_t val, long pos, struct zznet *zn) { long curr = ftell(zn->buffer); fseek(zn->buffer, pos, SEEK_SET); znw4(val, zn); phex("<<%ld", pos); fseek(zn->buffer, curr, SEEK_SET); }
 // --- Reading
-static inline void fskip(int num, FILE *fp) { int i; for (i = 0; i < num; i++) getc(fp); }
-static inline uint32_t fget4(FILE *fp) { uint32_t tmp; fread(&tmp, 4, 1, fp); tmp = ntohl(tmp); return tmp; }
-static inline uint16_t fget2(FILE *fp) { uint16_t tmp; fread(&tmp, 2, 1, fp); tmp = ntohs(tmp); return tmp; }
+static inline void znrskip(int num, struct zznet *zn) { int i; for (i = 0; i < num; i++) getc(zn->fp); }
+static inline uint8_t znr1(struct zznet *zn) { uint8_t tmp = fgetc(zn->fp); return tmp; }
+static inline uint16_t znr2(struct zznet *zn) { uint16_t tmp; fread(&tmp, 2, 1, zn->fp); tmp = ntohs(tmp); return tmp; }
+static inline uint32_t znr4(struct zznet *zn) { uint32_t tmp; fread(&tmp, 4, 1, zn->fp); tmp = ntohl(tmp); return tmp; }
 
 enum PDU_State
 {
@@ -61,31 +90,12 @@ enum PDU_State
 #define BACKLOG 10
 #define MAXDATASIZE 100 // max number of bytes we can get at once
 
-enum psctxs_list
-{
-	PSCTX_VERIFICATION,
-	PSCTX_LAST
-};
-static const char *psctxs_uids[] = { UID_VerificationSOPClass };
-static const char *txsyn_uids[] = { UID_LittleEndianImplicitTransferSyntax, UID_LittleEndianExplicitTransferSyntax, UID_DeflatedExplicitVRLittleEndianTransferSyntax, 
-                                   UID_JPEGLSLosslessTransferSyntax };
-
-struct zznet
-{
-	FILE *fp;		///< Network socket for data traffic
-	FILE *buffer;		///< Memory buffer disguised as a file
-	void *mem;		///< Pointer to buffer's memory
-	long maxpdatasize;	///< Maximum size of other party's pdata payload
-	uint16_t version;	///< Association version capability bitfield
-	enum zztxsyn psctxs[PSCTX_LAST];	///< List of negotiated presentation contexts
-};
-
 static struct zznet *zznetinit(struct zznet *zn)
 {
 	const long size = 1024 * 1024; // 1mb
 	memset(zn, 0, sizeof(*zn));
 	zn->mem = malloc(size);
-	zn->buffer = fmemopen(zn->mem, size, "r+");
+	zn->buffer = fmemopen(zn->mem, size, "w");
 	return zn;
 }
 
@@ -97,13 +107,13 @@ static void zzsendbuffer(struct zznet *zn)
 static void PDATA_TF_start(struct zznet *zn, long *pos, char contextID)
 {
 	rewind(zn->buffer);
-	fputc(4, zn->buffer);			// PDU type
-	fputc(0, zn->buffer);			// reserved, shall be zero
-	fput4(0, zn->buffer);			// size of packet, fill in later
+	znw1(4, zn);				// PDU type
+	znw1(0, zn);				// reserved, shall be zero
+	znw4(0, zn);				// size of packet, fill in later
 	// One or more Presentation-data-value Item(s) to follow
 	*pos = ftell(zn->buffer);
-	fput4(0, zn->buffer);			// size of packet, fill in later
-	fputc(contextID, zn->buffer);		// context id, see PS3.8 7.1.1.13
+	znw4(0, zn);				// size of packet, fill in later
+	znw1(contextID, zn);			// context id, see PS3.8 7.1.1.13
 	// Add DICOM data with command header after this
 }
 
@@ -113,68 +123,68 @@ static void PDATA_TF_next(struct zznet *zn, long *pos, char contextID)
 
 	// Set size of previous packet
 	fseek(zn->buffer, *pos, SEEK_SET);
-	fput4(ftell(zn->buffer) - *pos, zn->buffer);
+	znw4(ftell(zn->buffer) - *pos, zn);
 	fseek(zn->buffer, curr, SEEK_SET);
 	*pos = curr;
-	fput4(0, zn->buffer);			// size of packet, fill in later
-	fputc(contextID, zn->buffer);		// context id, see PS3.8 7.1.1.13
+	znw4(0, zn);				// size of packet, fill in later
+	znw1(contextID, zn);			// context id, see PS3.8 7.1.1.13
 	// Add DICOM data with command header after this
 }
 
 static void PDATA_TF_end(struct zznet *zn, long *pos)
 {
 	// Set size of previous packet
-	fput4at(ftell(zn->buffer) - *pos, *pos, zn->buffer);
+	znw4at(ftell(zn->buffer) - *pos, *pos, zn);
 
 	// Set the size of entire pdata message
-	fput4at(ftell(zn->buffer) - 6, 2, zn->buffer);
+	znw4at(ftell(zn->buffer) - 6, 2, zn);
 	zzsendbuffer(zn);
 }
 
 static void PDU_ReleaseRQ(struct zznet *zn)
 {
 	rewind(zn->buffer);
-	fputc(5, zn->buffer);				// PDU type
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fput4(4, zn->buffer);				// size of packet
-	fput2(0, zn->buffer);				// reserved, shall be zero
+	znw1(5, zn);				// PDU type
+	znw1(0, zn);				// reserved, shall be zero
+	znw4(4, zn);				// size of packet
+	znw2(0, zn);				// reserved, shall be zero
 	zzsendbuffer(zn);
 }
 
 static void PDU_ReleaseRP(struct zznet *zn)
 {
 	rewind(zn->buffer);
-	fputc(6, zn->buffer);				// PDU type
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fput4(4, zn->buffer);				// size of packet
-	fput2(0, zn->buffer);				// reserved, shall be zero
+	znw1(6, zn);				// PDU type
+	znw1(0, zn);				// reserved, shall be zero
+	znw4(4, zn);				// size of packet
+	znw2(0, zn);				// reserved, shall be zero
 	zzsendbuffer(zn);
 }
 
 static void PDU_Abort(struct zznet *zn, char source, char diag)
 {
 	rewind(zn->buffer);
-	fputc(7, zn->buffer);				// PDU type
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fput4(4, zn->buffer);				// size of packet
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fputc(source, zn->buffer);			// source of abort, see PS 3.8, Table 9-26
-	fputc(diag, zn->buffer);			// reason for abort, see PS 3.8, Table 9-26
+	znw1(7, zn);				// PDU type
+	znw1(0, zn);				// reserved, shall be zero
+	znw4(4, zn);				// size of packet
+	znw1(0, zn);				// reserved, shall be zero
+	znw1(0, zn);				// reserved, shall be zero
+	znw1(source, zn);			// source of abort, see PS 3.8, Table 9-26
+	znw1(diag, zn);				// reason for abort, see PS 3.8, Table 9-26
 	zzsendbuffer(zn);
 }
 
 static void PDU_AssociateRJ(struct zznet *zn, char result, char source, char diag)
 {
 	rewind(zn->buffer);
-	fputc(3, zn->buffer);				// PDU type
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fput4(4, zn->buffer);				// size of packet
-	fput2(1, zn->buffer);				// version bitfield
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fputc(result, zn->buffer);			// result
-	fputc(source, zn->buffer);			// source
-	fputc(diag, zn->buffer);			// reason/diagnosis
+	znw1(3, zn);				// PDU type
+	znw1(0, zn);				// reserved, shall be zero
+	znw4(4, zn);				// size of packet
+	znw2(1, zn);				// version bitfield
+	znw1(0, zn);				// reserved, shall be zero
+	znw1(result, zn);			// result
+	znw1(source, zn);			// source
+	znw1(diag, zn);				// reason/diagnosis
 	zzsendbuffer(zn);
 }
 
@@ -191,40 +201,36 @@ static bool PDU_Associate_Accept(struct zznet *zn)
 
 	// Read input
 	// PDU type already parsed
-	fgetc(zn->fp);
-	msize = fget4(zn->fp);
-	zn->version = fget2(zn->fp);
-	fskip(2, zn->fp);
+	znr1(zn);
+	msize = znr4(zn);
+	zn->version = znr2(zn);
+	znrskip(2, zn);
 	fread(calledaet, 16, 1, zn->fp);
 	fread(callingaet, 16, 1, zn->fp);
-printf("called AET: %s\n", calledaet);
-printf("calling AET: %s\n", callingaet);
-	fskip(32, zn->fp);
-	pdu = fgetc(zn->fp);
-	fgetc(zn->fp);
-	size = fget2(zn->fp);
-	fskip(size, zn->fp);				// skip Application Context Item
+	znrskip(32, zn);
+	pdu = znr1(zn);
+	znr1(zn);
+	size = znr2(zn);
+	znrskip(size, zn);				// skip Application Context Item
 
 	// Start writing response
 	rewind(zn->buffer);
-	fputc(0x02, zn->buffer);			// PDU type
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fput4(0, zn->buffer);				// size of packet, fill in later
-	fput2(1, zn->buffer);				// version bitfield
-	fput2(0, zn->buffer);				// reserved, shall be zero
-	fputaet(calledaet, zn->buffer);			// called AE Title
-	fputaet(callingaet, zn->buffer);		// calling AE Title
-	fpad(32, zn->buffer);				// reserved, shall be zero
+	znw1(0x02, zn);				// PDU type
+	znw1(0, zn);				// reserved, shall be zero
+	znw4(0, zn);				// size of packet, fill in later
+	znw2(1, zn);				// version bitfield
+	znw2(0, zn);				// reserved, shall be zero
+	znwaet(calledaet, zn);			// called AE Title
+	znwaet(callingaet, zn);			// calling AE Title
+	znwpad(32, zn);				// reserved, shall be zero
 
 	// Application Context Item (useless fluff)
-	fputc(0x10, zn->buffer);			// PDU type
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	size = sizeof(UID_StandardApplicationContext);
-	fput2(size, zn->buffer);			// size of packet
-	fwrite(UID_StandardApplicationContext, size, 1, zn->buffer);	// See PS 3.8, section 7.1.1.2.
+	znw1(0x10, zn);				// PDU type
+	znw1(0, zn);				// reserved, shall be zero
+	znwuid(UID_StandardApplicationContext, zn);	// See PS 3.8, section 7.1.1.2.
 
 	// Read presentation Contexts
-	pdu = fgetc(zn->fp);
+	pdu = znr1(zn);
 	while (pdu == 0x20)
 	{
 		uint32_t psize, isize, i;
@@ -234,104 +240,90 @@ printf("calling AET: %s\n", callingaet);
 		bool txsyns[ZZ_TX_LAST], foundAcceptableTx = false;
 
 		memset(txsyns, 0, sizeof(txsyns));	// set all to false
-		fgetc(zn->fp);				// reserved, shall be zero
-		psize = fget2(zn->fp);			// size of packet
-		cid = fgetc(zn->fp);			// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
-printf("pres id = %u\n", cid);
-		fskip(3, zn->fp);
+		znr1(zn);				// reserved, shall be zero
+		psize = znr2(zn);			// size of packet
+		cid = znr1(zn);			// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
+		znrskip(3, zn);
 
 		// Abstract Syntax (SOP Class) belonging to Presentation Syntax, see PS 3.8 Table 9-14
-		pdu = fgetc(zn->fp);			// PDU type
+		pdu = znr1(zn);			// PDU type
 		if (pdu != 0x30) printf("weirdo pdu\n");
-		fgetc(zn->fp);				// reserved, shall be zero
-		isize = fget2(zn->fp);			// size of packet
+		znr1(zn);				// reserved, shall be zero
+		isize = znr2(zn);			// size of packet
 		memset(auid, 0, sizeof(auid));
 		fread(auid, isize, 1, zn->fp);  	// See PS 3.8, section 7.1.1.2.
-printf("auid=%s\n", auid);
 
-		pdu = fgetc(zn->fp);	// loop
+		pdu = znr1(zn);	// loop
 		while (pdu == 0x40)
 		{
 			// Transfer Syntax(es) belonging to Abstract Syntax
 			// (for AC, only one transfer syntax is allowed), see PS 3.8 Table 9-15
-			fgetc(zn->fp);			// reserved, shall be zero
-			isize = fget2(zn->fp);		// size of packet
+			znr1(zn);			// reserved, shall be zero
+			isize = znr2(zn);		// size of packet
 			memset(tuid, 0, sizeof(tuid));
 			fread(tuid, isize, 1, zn->fp);	// See PS 3.8, section 7.1.1.2.
-printf("tuid=%s\n", tuid);
 			for (i = 0; i < ZZ_TX_LAST; i++)
 			{
 				txsyns[i] = ZZ_TX_LAST;
-				if (strcmp(txsyn_uids[i], tuid) == 0)
+				if (strcmp(txsyn_uids[i], tuid) == 0 && i < 2)
 				{
 					txsyns[i] = true;
 					foundAcceptableTx = true;
-printf("tx[%s] for tuid=%s is TRUE\n", txsyn_uids[i], tuid);
 				}
 			}
-			pdu = fgetc(zn->fp);	// loop
+			pdu = znr1(zn);	// loop
 		}
 
 		// Now generate a response to this presentation context
-		fputc(0x21, zn->buffer);		// PDU type
-		fputc(0, zn->buffer);			// reserved, shall be zero
+		znw1(0x21, zn);		// PDU type
+		znw1(0, zn);			// reserved, shall be zero
 		pos = ftell(zn->buffer);
-		fput2(0, zn->buffer);			// size of packet, fill in later
-		fputc(cid, zn->buffer);			// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
-		fputc(0, zn->buffer);			// reserved, shall be zero
+		znw2(0, zn);			// size of packet, fill in later
+		znw1(cid, zn);			// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
+		znw1(0, zn);			// reserved, shall be zero
 		if (!foundAcceptableTx)
 		{
-			fputc(4, zn->buffer);		// 4 == we found no acceptable transfer syntax for this presentation context
+			znw1(4, zn);		// 4 == we found no acceptable transfer syntax for this presentation context
 		}
 		else
 		{
 			// FIXME, check for not supported abstract syntaxes as well, and respond with 3 if not supported
-			fputc(0, zn->buffer);		// 0 == accepted presentation context
+			znw1(0, zn);		// 0 == accepted presentation context
 		}
-		fputc(0, zn->buffer);			// reserved, shall be zero
+		znw1(0, zn);			// reserved, shall be zero
 
-		// Abstract Syntax (SOP Class) belonging to Presentation Syntax, see PS 3.8 Table 9-14
-		fputc(0x30, zn->buffer);		// PDU type
-		fputc(0, zn->buffer);			// reserved, shall be zero
-		fput2(strlen(auid), zn->buffer);	// size of packet
-		fwrite(auid, strlen(auid), 1, zn->buffer);  // See PS 3.8, section 7.1.1.2.
-
-		// Chosen transfer Syntax for Abstract Syntax, see PS 3.8 Table 9-15
-		fputc(0x40, zn->buffer);		// PDU type
-		fputc(0, zn->buffer);			// reserved, shall be zero
+		// Chosen transfer Syntax, see PS 3.8 Table 9-15
+		znw1(0x40, zn);			// PDU type
+		znw1(0, zn);			// reserved, shall be zero
 		if (txsyns[ZZ_EXPLICIT])
 		{
-			size = sizeof(UID_LittleEndianExplicitTransferSyntax);
-			fput2(size, zn->buffer);	// size of packet
-			fwrite(UID_LittleEndianExplicitTransferSyntax, size, 1, zn->buffer);  // See PS 3.8, section 7.1.1.2.
+			znwuid(UID_LittleEndianExplicitTransferSyntax, zn); // See PS 3.8, section 7.1.1.2.
 		}
-		else if (txsyns[ZZ_IMPLICIT])
+		else
 		{
-			size = sizeof(UID_LittleEndianImplicitTransferSyntax);
-			fput2(size, zn->buffer);	// size of packet
-			fwrite(UID_LittleEndianImplicitTransferSyntax, size, 1, zn->buffer);  // See PS 3.8, section 7.1.1.2.
+			znwuid(UID_LittleEndianImplicitTransferSyntax, zn);  // See PS 3.8, section 7.1.1.2.
 		}
 
 		// Set size of this presentation context item
-		fput2at(ftell(zn->buffer) - pos - 2, pos, zn->buffer);
+		znw2at(ftell(zn->buffer) - pos - 2, pos, zn);
 	}
 
 	// Read User Information (fluff)
 	if (pdu != 0x50) printf("wtf=%x\n", pdu);
-	fskip(7, zn->fp);				// skip to interesting part
-	zn->maxpdatasize = fget4(zn->fp);
+	znrskip(7, zn);				// skip to interesting part
+	zn->maxpdatasize = znr4(zn);
 
 	// Write User Information Item Fields, see PS 3.8, Table 9-16
-	fputc(0x50, zn->buffer);
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fput2(8, zn->buffer);
-	fputc(0x51, zn->buffer);			// define maximum length of data field sub-item
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fput2(4, zn->buffer);				// size of following field
-	fput4(0, zn->buffer);				// zero means unlimited size allowed
+	znw1(0x50, zn);
+	znw1(0, zn);				// reserved, shall be zero
+	znw2(8, zn);				// size of payload that follows
+	znw1(0x51, zn);				// define maximum length of data field sub-item
+	znw1(0, zn);				// reserved, shall be zero
+	znw2(4, zn);				// size of following field
+	znw4(0, zn);				// zero means unlimited size allowed
 
 	// Now set size of entire reply
-	fput4at(ftell(zn->buffer) - 6, 2, zn->buffer);
+	znw4at(ftell(zn->buffer) - 6, 2, zn);
 
 	zzsendbuffer(zn);
 	return true;
@@ -340,63 +332,58 @@ printf("tx[%s] for tuid=%s is TRUE\n", txsyn_uids[i], tuid);
 // FIXME, the UIDs probably need to be padded to even size, like everything else
 static void PDU_AssociateRQ(struct zznet *zn, const char *calledAET, const char *callingAET, const char *sopclass)
 {
-	long pos, size;
+	long pos;
 
 	rewind(zn->buffer);
-	fputc(0x01, zn->buffer);			// PDU type
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fput4(0, zn->buffer);				// size of packet, fill in later
-	fput2(1, zn->buffer);				// version bitfield
-	fput2(0, zn->buffer);				// reserved, shall be zero
-	fputaet(calledAET, zn->buffer);			// called AE Title
-	fputaet(callingAET, zn->buffer);		// calling AE Title
-	fpad(32, zn->buffer);				// reserved, shall be zero
+	znw1(0x01, zn);				// PDU type
+	znw1(0, zn);				// reserved, shall be zero
+	znw4(0, zn);				// size of packet, fill in later
+	znw2(1, zn);				// version bitfield
+	znw2(0, zn);				// reserved, shall be zero
+	znwaet(calledAET, zn);			// called AE Title
+	znwaet(callingAET, zn);			// calling AE Title
+	znwpad(32, zn);				// reserved, shall be zero
 
 	// Application Context Item (useless fluff)
-	fputc(0x10, zn->buffer);			// PDU type
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	size = sizeof(UID_StandardApplicationContext);
-	fput2(size, zn->buffer);			// size of packet
-	fwrite(UID_StandardApplicationContext, size, 1, zn->buffer);	// See PS 3.8, section 7.1.1.2.
+	znw1(0x10, zn);				// PDU type
+	znw1(0, zn);				// reserved, shall be zero
+	znwuid(UID_StandardApplicationContext, zn);	// See PS 3.8, section 7.1.1.2.
 
 	// Presentation Context Item(s)
 	// note that Abstract Syntax == SOP Class
-	fputc(0x20, zn->buffer);			// PDU type
-	fputc(0, zn->buffer);				// reserved, shall be zero
+	znw1(0x20, zn);				// PDU type
+	znw1(0, zn);				// reserved, shall be zero
 	pos = ftell(zn->buffer);
-	fput2(0, zn->buffer);				// size of packet, fill in later
-	fputc(1, zn->buffer);				// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fputc(0, zn->buffer);				// reserved, shall be zero
+	znw2(0, zn);				// size of packet, fill in later
+	znw1(1, zn);				// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
+	znw1(0, zn);				// reserved, shall be zero
+	znw1(0, zn);				// reserved, shall be zero
+	znw1(0, zn);				// reserved, shall be zero
 
 	// Abstract Syntax (SOP Class) belonging to Presentation Syntax, see PS 3.8 Table 9-14
-	fputc(0x30, zn->buffer);			// PDU type
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fput2(strlen(sopclass), zn->buffer);		// size of packet
-	fwrite(sopclass, strlen(sopclass), 1, zn->buffer);  // See PS 3.8, section 7.1.1.2.
+	znw1(0x30, zn);				// PDU type
+	znw1(0, zn);				// reserved, shall be zero
+	znwuid(sopclass, zn); 			// See PS 3.8, section 7.1.1.2.
 
 	// Transfer Syntax(es) belonging to Abstract Syntax (for AC, only one transfer syntax is allowed), see PS 3.8 Table 9-15
-	fputc(0x40, zn->buffer);			// PDU type
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	size = sizeof(UID_LittleEndianExplicitTransferSyntax);
-	fput2(size, zn->buffer);			// size of packet
-	fwrite(UID_LittleEndianExplicitTransferSyntax, size, 1, zn->buffer);  // See PS 3.8, section 7.1.1.2.
+	znw1(0x40, zn);				// PDU type
+	znw1(0, zn);				// reserved, shall be zero
+	znwuid(UID_LittleEndianExplicitTransferSyntax, zn);  // See PS 3.8, section 7.1.1.2.
 
 	// Set size of this presentation context item
-	fput2at(ftell(zn->buffer) - pos - 4, pos, zn->buffer);
+	znw2at(ftell(zn->buffer) - pos - 4, pos, zn);
 
 	// User Information Item Fields, see PS 3.8, Table 9-16
-	fputc(0x50, zn->buffer);
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fput2(8, zn->buffer);				// size of packet
-	fputc(0x51, zn->buffer);			// define maximum length of data field sub-item
-	fputc(0, zn->buffer);				// reserved, shall be zero
-	fput2(4, zn->buffer);				// size of following field
-	fput4(0, zn->buffer);				// zero means unlimited size allowed
+	znw1(0x50, zn);
+	znw1(0, zn);				// reserved, shall be zero
+	znw2(8, zn);				// size of packet
+	znw1(0x51, zn);				// define maximum length of data field sub-item
+	znw1(0, zn);				// reserved, shall be zero
+	znw2(4, zn);				// size of following field
+	znw4(0, zn);				// zero means unlimited size allowed
 
 	// Now set size of entire message
-	fput4at(ftell(zn->buffer) - 6, 2, zn->buffer);
+	znw4at(ftell(zn->buffer) - 6, 2, zn);
 	zzsendbuffer(zn);
 }
 
@@ -516,6 +503,7 @@ bool zznetlisten(int port)
 				switch (type)
 				{
 				case 0x01: printf("Associate RQ received\n"); PDU_Associate_Accept(zn); break;
+				case 0x04: printf("PData received\n"); abort(); break;
 				default: printf("Unknown type: %x\n", type); abort(); break;
 				}
 			}
