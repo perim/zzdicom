@@ -17,6 +17,7 @@ static const char *txsyn2str(enum zztxsyn syn)
 	case ZZ_IMPLICIT: return "Little Endian Implicit";
 	case ZZ_EXPLICIT_COMPRESSED: return "Deflated Explicit Little Endian";	// switched word order is in standard too
 	case ZZ_EXPLICIT_JPEGLS: return "JPEG-LS Lossless Image Compression";
+	case ZZ_TX_LAST: break;
 	}
 	return "Internal Error";
 }
