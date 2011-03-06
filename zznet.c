@@ -27,6 +27,15 @@ FILE *fmemopen(void *buffer, size_t s, const char *mode);
 #define UID_StandardApplicationContext "1.2.840.10008.3.1.1.1"
 #define UID_VerificationSOPClass "1.2.840.10008.1.1"
 
+/// Multi-family socket end-point address
+union socketfamily
+{
+    struct sockaddr sa;
+    struct sockaddr_in sa_in;
+    struct sockaddr_in6 sa_in6;
+    struct sockaddr_storage sa_stor;
+};
+
 enum psctxs_list
 {
 	PSCTX_VERIFICATION,
@@ -102,6 +111,33 @@ static struct zznet *zznetinit(struct zznet *zn)
 static void zzsendbuffer(struct zznet *zn)
 {
 	fwrite(zn->mem, ftell(zn->buffer), 1, zn->fp);
+}
+
+static void PData_receive(struct zznet *zn)
+{
+	uint32_t msize, psize, received = 0;
+	char contextID;
+
+	// PDU type already parsed
+	znr1(zn);			// empty
+	msize = znr4(zn);		// size of packet
+
+	// Get list of presentation-data-values 
+	while (received < msize)
+	{
+		psize = znr4(zn);	// size of item
+		contextID = znr1(zn);	// context id, see PS3.8 7.1.1.13
+
+		// Command data follows
+		// HACK
+		znrskip(psize - 1, zn);
+
+		received += psize + 4;
+	}
+	if (received != msize)
+	{
+		printf("received=%u expected=%u psize=%u tell=%ld\n", received, msize, psize, ftell(zn->fp));
+	}
 }
 
 static void PDATA_TF_start(struct zznet *zn, long *pos, char contextID)
@@ -242,12 +278,11 @@ static bool PDU_Associate_Accept(struct zznet *zn)
 		memset(txsyns, 0, sizeof(txsyns));	// set all to false
 		znr1(zn);				// reserved, shall be zero
 		psize = znr2(zn);			// size of packet
-		cid = znr1(zn);			// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
+		cid = znr1(zn);				// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
 		znrskip(3, zn);
 
 		// Abstract Syntax (SOP Class) belonging to Presentation Syntax, see PS 3.8 Table 9-14
-		pdu = znr1(zn);			// PDU type
-		if (pdu != 0x30) printf("weirdo pdu\n");
+		pdu = znr1(zn);				// PDU type
 		znr1(zn);				// reserved, shall be zero
 		isize = znr2(zn);			// size of packet
 		memset(auid, 0, sizeof(auid));
@@ -275,7 +310,7 @@ static bool PDU_Associate_Accept(struct zznet *zn)
 		}
 
 		// Now generate a response to this presentation context
-		znw1(0x21, zn);		// PDU type
+		znw1(0x21, zn);			// PDU type
 		znw1(0, zn);			// reserved, shall be zero
 		pos = ftell(zn->buffer);
 		znw2(0, zn);			// size of packet, fill in later
@@ -393,31 +428,21 @@ static void sigchld_handler(int s)
 	while(waitpid(-1, NULL, WNOHANG) > 0);
 }
 
-/// get sockaddr, IPv4 or IPv6
-void *get_in_addr(struct sockaddr *sa)
-{
-	if (sa->sa_family == AF_INET)
-	{
-		return &(((struct sockaddr_in*)sa)->sin_addr);
-	}
-	return &(((struct sockaddr_in6*)sa)->sin6_addr);
-}
-
 bool zznetlisten(int port)
 {
 	struct zznet czn, *zn;
 	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
-	struct sockaddr_storage their_addr; // connector's address information
 	socklen_t sin_size;
 	struct sigaction sa;
 	int yes = 1;
 	char s[INET6_ADDRSTRLEN];
 	int rv;
 	char portstr[10];
+	union socketfamily their_addr; // connector's address information
 
 	zn = zznetinit(&czn);
-	memset(&hints, 0, sizeof hints);
+	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE; // use my IP
@@ -481,16 +506,24 @@ bool zznetlisten(int port)
 
 	while (true)
 	{
-		sin_size = sizeof their_addr;
-		new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
+		sin_size = sizeof(their_addr);
+		new_fd = accept(sockfd, &their_addr.sa, &sin_size);
 		if (new_fd == -1)
 		{
 			perror("accept");
 			continue;
 		}
 
-		inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof s);
-		printf("server: got connection from %s\n", s);
+		if (their_addr.sa.sa_family == AF_INET)
+		{
+			inet_ntop(their_addr.sa_stor.ss_family, &their_addr.sa_in.sin_addr, s, sizeof(s));	// ipv4
+			printf("server: got ipv4 connection from %s\n", s);
+		}
+		else
+		{
+			inet_ntop(their_addr.sa_stor.ss_family, &their_addr.sa_in6.sin6_addr, s, sizeof(s));	// ipv6
+			printf("server: got ipv6 connection from %s\n", s);
+		}
 
 		if (!fork())
 		{
@@ -503,7 +536,7 @@ bool zznetlisten(int port)
 				switch (type)
 				{
 				case 0x01: printf("Associate RQ received\n"); PDU_Associate_Accept(zn); break;
-				case 0x04: printf("PData received\n"); abort(); break;
+				case 0x04: printf("PData received\n"); PData_receive(zn); break;
 				default: printf("Unknown type: %x\n", type); abort(); break;
 				}
 			}
@@ -528,7 +561,7 @@ struct zznet *zznetconnect(struct zznet *zn, const char *host, int port)
 	if (!zn) return NULL;
 	zn = zznetinit(zn);
 
-	memset(&hints, 0, sizeof hints);
+	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
@@ -563,7 +596,7 @@ struct zznet *zznetconnect(struct zznet *zn, const char *host, int port)
 		return NULL;
 	}
 
-	inet_ntop(p->ai_family, get_in_addr((struct sockaddr *)p->ai_addr), s, sizeof s);
+	inet_ntop(p->ai_family, p->ai_addr, s, sizeof(s));
 	printf("client: connecting to %s\n", s);
 
 	freeaddrinfo(servinfo); // all done with this structure
