@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -9,6 +10,8 @@
 //#include "charlsintf.h"	// private port of CharLS pseudo-C interface to real C interface
 
 #include "zztexture.h"
+
+#define checkError() //assert(glGetError() == 0)
 
 struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 {
@@ -22,15 +25,19 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 	GLuint textures[2]; // 0 - volume, 1 - volumeinfo
 	GLenum type, size;
 	char value[MAX_LEN_IS];
+	double tmpd[6];
+	GLfloat volinfo[256];	// volume info
 
 	if (!zz || !zzt)
 	{
 		return NULL;
 	}
+	memset(volinfo, 0, sizeof(volinfo));
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_TEXTURE_3D);
 	glGenTextures(2, textures);
 	glBindTexture(GL_TEXTURE_2D, textures[1]);
+	checkError();
 	zzt->volume = textures[0];
 	zzt->volumeinfo = textures[1];
 	zziterinit(zz);
@@ -42,6 +49,11 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 		switch (key)
 		{
 		case DCM_ImagePositionPatient:		// DS, 3 values
+			zzrDS(zz, 3, tmpd);
+			volinfo[9] = tmpd[0];
+			volinfo[10] = tmpd[1];
+			volinfo[11] = tmpd[2];
+			break;
 		case DCM_ImageOrientationPatient:	// DS, 6 values
 			// Require multi-frame type DICOM here
 			if (zzt->pixelsize.z == 0)
@@ -49,7 +61,15 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 				fprintf(stderr, "Number of frames not found before positions -- old style DICOM file?\n");
 				return NULL;
 			}
-			break; // TODO
+			zzrDS(zz, 6, tmpd);
+			volinfo[0] = tmpd[0];
+			volinfo[1] = tmpd[1];
+			volinfo[2] = tmpd[2];
+			volinfo[3] = tmpd[3];
+			volinfo[4] = tmpd[4];
+			volinfo[5] = tmpd[5];
+			// space reserved for the normal vector (not sure if needed)
+			break;
 		case DCM_FrameOfReferenceUID:
 			zzgetstring(zz, zzt->frameOfReferenceUid, sizeof(zzt->frameOfReferenceUid) - 1);
 			break;
@@ -66,7 +86,14 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 		case DCM_NumberOfFrames:
 			zzgetstring(zz, value, sizeof(value) - 1);
 			zzt->pixelsize.z = atoi(value);
+			if (zzt->pixelsize.z <= 3)
+			{
+				fprintf(stderr, "Only multiframe images supported at this time.\n");
+				return NULL;
+			}
+			// Reserve memory on the GPU
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, zzt->pixelsize.z, 64, 0, GL_LUMINANCE, GL_FLOAT, NULL);
+			checkError();
 			break;
 		case DCM_BitsStored:
 			break;
@@ -106,7 +133,30 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 				return NULL;
 			}
 			break;
+		case DCM_SliceThickness:
+			zzrDS(zz, 1, tmpd);
+			volinfo[14] = tmpd[0];
+			break;
+		case DCM_PixelSpacing:
+			zzrDS(zz, 2, tmpd);
+			volinfo[12] = tmpd[0];
+			volinfo[13] = tmpd[1];
+			break;
+		case DCM_Item:
 		case DCM_PixelData:
+			// Upload info from previous frame
+			if (zz->current.pxstate == ZZ_PIXELITEM) printf("item %d\n", zz->current.frame);
+			if (zz->current.frame > 0 && zz->current.pxstate == ZZ_PIXELITEM)
+			{
+				printf("item USED %d\n", zz->current.frame);
+				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, zz->current.frame - 1, 64, 1, GL_LUMINANCE, GL_FLOAT, volinfo);
+				checkError();
+			}
+			if (key == DCM_Item)
+			{
+				break;	// still got more frames to read
+			}
+			glBindTexture(GL_TEXTURE_2D, 0);
 			if (bitspersample == 0)	// by the time we get here, we need to have found all relevant pixel info
 			{
 				fprintf(stderr, "No valid image information found\n");
@@ -125,12 +175,14 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			madvise(bytes, length, MADV_SEQUENTIAL | MADV_WILLNEED);
 			glBindTexture(GL_TEXTURE_3D, textures[0]);
 			glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, bytes);
+			checkError();
 			madvise(bytes, length, MADV_DONTNEED);
 			munmap(addr, length);
+			return zzt;
 		}
 	}
 
-	return zzt;
+	return NULL;
 }
 
 bool zztexturefree(struct zztexture *zzt)

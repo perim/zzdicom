@@ -29,6 +29,7 @@ int main(int argc, char **argv)
 	zzcopytotexture(zz, NULL);
 	assert(tx == NULL);
 	tx = zzcopytotexture(zz, &stx);
+	assert(tx != NULL);
 	glutReportErrors();
 
 	return 0;
