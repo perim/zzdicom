@@ -423,20 +423,17 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 
 		switch (zz->current.vr)
 		{
-		case SQ:
-		case UN:
-		case OB:
-		case OW:
-		case OF:
-		case UT:
-			if (fread(&rlen, 4, 1, zz->fp) != 1)		// the 32 bit variant
+		case AE: case AS: case AT: case CS: case DA: case DS: case DT: case FL: case FD: case IS: case LO: 
+		case LT: case PN: case SH: case SL: case SS: case ST: case TM: case UI: case UL: case US:
+			*len = LE_16(header.buffer.evr.len);	// the insane 16 bit size variant
+			break;
+		case SQ: case UN: case OB: case OW: case OF: case UT:
+		default:	// all future VRs are 4 byte size, see PS3.5 6.2
+			if (fread(&rlen, 4, 1, zz->fp) != 1)
 			{
-				return false;
+				return false;		// the 32 bit variant
 			}
 			*len = LE_32(rlen);
-			break;
-		default:
-			*len = LE_16(header.buffer.evr.len);	// the insane 16 bit size variant
 			break;
 		}
 		if (zz->current.vr == SQ || (*len == UNLIMITED && zz->current.vr == UN))
