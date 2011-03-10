@@ -117,6 +117,7 @@ int main(int argc, char **argv)
 {
 	struct zzfile szz, *zz = &szz;
 	bool result;
+	long val;
 
 	(void)argc;
 	(void)argv;
@@ -201,6 +202,10 @@ int main(int argc, char **argv)
 		garbfill(zz, 1);
 		implicit(zz->fp, 0xfffe, 0xe00d, 0);
 	zzwUN_end(zz, NULL);
+	zzwUN_begin(zz, ZZ_KEY(0x0029, 0x1010), &val);	// UN with specific size
+		zzwItem_begin(zz, NULL);
+		zzwItem_end(zz, NULL);
+	zzwUN_end(zz, &val);
 	addCheck(zz);
 	zzwOBnoise(zz, DCM_PixelData, 1024);
 	zzwOBnoise(zz, DCM_DataSetTrailingPadding, 256);
@@ -243,6 +248,23 @@ int main(int argc, char **argv)
 
 	zz = zzcreate("samples/exotic.dcm", &szz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianExplicitTransferSyntax);
 	genericfile(zz);
+	// Create bad size sequence
+	{
+		const uint16_t group = 0x0020;
+		const uint16_t element = 0x1115;
+		const char vr[] = "SQ";
+		const uint16_t zero = 0;
+		const uint32_t length = 2000;
+
+		fwrite(&group, 2, 1, zz->fp);
+		fwrite(&element, 2, 1, zz->fp);
+		fwrite(vr, 1, 2, zz->fp);
+		fwrite(&zero, 2, 1, zz->fp);
+		fwrite(&length, 4, 1, zz->fp);
+	}
+	implicit(zz->fp, 0xfffe, 0xe0dd, 0);
+	// Create group with wrong size
+	zzwUL(zz, ZZ_KEY(0x0029, 0x0000), 4000);
 	// Invent a new VR to check that the toolkit reads it correctly
 	{
 		const uint16_t group = 0x0029;

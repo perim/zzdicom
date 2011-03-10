@@ -366,7 +366,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			if ((key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem || zz->current.group != zz->ladder[zz->ladderidx].group)
 			    && bytesread < size && size != UNLIMITED)
 			{
-				sprintf(zz->current.warning, "Group has wrong size (%ld, ended at %ld)", size, bytesread);
+				sprintf(zz->current.warning, "Group %04x has wrong size (%ld, ended at %ld)", zz->ladder[zz->ladderidx].group, size, bytesread);
 				zz->current.valid = false;
 			}
 			zz->ladderidx--;	// end parsing this group now
