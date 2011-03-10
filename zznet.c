@@ -395,12 +395,12 @@ static void PDU_AssociateRQ(struct zznet *zn, const char *calledAET, const char 
 	znw1(0, zn);				// reserved, shall be zero
 	znw1(0, zn);				// reserved, shall be zero
 
-	// Abstract Syntax (SOP Class) belonging to Presentation Syntax, see PS 3.8 Table 9-14
+	// Abstract Syntax (SOP Class) belonging to Presentation Context, see PS 3.8 Table 9-14
 	znw1(0x30, zn);				// PDU type
 	znw1(0, zn);				// reserved, shall be zero
 	znwuid(sopclass, zn); 			// See PS 3.8, section 7.1.1.2.
 
-	// Transfer Syntax(es) belonging to Abstract Syntax (for AC, only one transfer syntax is allowed), see PS 3.8 Table 9-15
+	// Transfer Syntax(es) belonging to Abstract Syntax, see PS 3.8 Table 9-15
 	znw1(0x40, zn);				// PDU type
 	znw1(0, zn);				// reserved, shall be zero
 	znwuid(UID_LittleEndianExplicitTransferSyntax, zn);  // See PS 3.8, section 7.1.1.2.

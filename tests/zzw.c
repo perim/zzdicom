@@ -238,5 +238,30 @@ int main(int argc, char **argv)
 	result = checkContents("samples/brokensq.dcm", false);
 	assert(result);
 
+	////
+	// Set # 5 -- Part10 explicit with some really exotic stuff
+
+	zz = zzcreate("samples/exotic.dcm", &szz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianExplicitTransferSyntax);
+	genericfile(zz);
+	// Invent a new VR to check that the toolkit reads it correctly
+	{
+		const uint16_t group = 0x0029;
+		const uint16_t element = 0x1010;
+		const char vr[] = "QQ";
+		const uint16_t zero = 0;
+		const uint32_t length = 0;
+
+		fwrite(&group, 2, 1, zz->fp);
+		fwrite(&element, 2, 1, zz->fp);
+		fwrite(vr, 1, 2, zz->fp);
+		fwrite(&zero, 2, 1, zz->fp);
+		fwrite(&length, 4, 1, zz->fp);
+	}
+	addCheck(zz);
+	zz = zzclose(zz);
+
+	result = checkContents("samples/exotic.dcm", false);
+	assert(result);
+
 	return 0;
 }
