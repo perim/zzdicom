@@ -5,7 +5,7 @@ COMMONWRITE = zzwrite.o
 COMMONTEXTURE = zztexture.o
 COMMONVERIFY = zzverify.o
 PART6 = part6.o
-PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom zznifti2dcm
+PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h
 
 all: CFLAGS += -Os
@@ -46,9 +46,6 @@ zztojpegls: zztojpegls.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(PART6)
 zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON) $(COMMONWRITE)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE)
 
-zznifti2dcm: zznifti2dcm.c $(HEADERS) nifti1.h $(COMMON) $(COMMONWRITE)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE)
-
 clean:
 	rm -f *.o sqlinit.h $(PROGRAMS) *.gcno *.gcda random.dcm
 
@@ -66,8 +63,6 @@ check: tests/zz1 tests/zzw tests/zzt
 	./zzdump samples/spine.dcm > /dev/null
 	./zzanon TEST samples/tw1.dcm
 	./zzanon TEST samples/tw2.dcm
-	./zznifti2dcm samples/minimal.hdr samples/minimal.img
-	./zznifti2dcm samples/minimal.nii
 
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)

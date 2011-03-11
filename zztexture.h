@@ -15,7 +15,7 @@ struct zztexture
 	GLint volume;
 
 	/// Positions are stored as a 2D texture of grayscale floating point values,
-	/// with each slice having a width of 256, height equal to number of rames.
+	/// with each slice having a width of 256, height equal to number of frames.
 	/// The data in each row contains: 9 values of orientation, 3 position, 3 
 	/// voxel size, 3 reserved, and the remaining are LUT values. Each LUT is 
 	/// stored as a sequence of floating point interval values. A simple linear
