@@ -50,14 +50,6 @@ struct zztexture
 /// context must be initialized first.
 struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt);
 
-/// Bind shaders and textures for 2D visualization. Pass in NULL to unbind and reset OpenGL states.
-// TODO
-//bool zztextureslicing(struct zztexture *zzt);
-
-/// Bind shaders and textures for 3D visualization. Pass in NULL to unbind and reset OpenGL states.
-// TODO
-//bool zztextureraycast(struct zztexture *zzt);
-
 /// Remove data from GPU memory
 bool zztexturefree(struct zztexture *zzt);
 

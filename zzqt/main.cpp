@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
 	    w.addFile(argv[i]);
     }
     if (argc == 1)
-	    w.addFile("/home/per/zzdicom/EC0A7F5B");
+	    w.addFile("../samples/spine.dcm");
 
     w.show();
 

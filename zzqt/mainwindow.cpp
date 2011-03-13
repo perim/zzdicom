@@ -6,14 +6,65 @@
 
 #define MAX_LEN_VALUE 200
 
+ImageViewer::ImageViewer(QWidget *parent) : QGLWidget(parent)
+{
+
+}
+
+ImageViewer::~ImageViewer()
+{
+
+}
+
+void ImageViewer::resizeGL(int width, int height)
+{
+	if (height == 0)
+	{
+		height = 1;
+	}
+	glViewport(0, 0, width, height);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(-1.0, 1.0, -1.0, 1.0, 0.0, 1.0);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+}
+
+void ImageViewer::initializeGL()
+{
+	glShadeModel(GL_SMOOTH);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClearDepth(1.0f);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+}
+
+void ImageViewer::paintGL()
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glLoadIdentity();
+	glBegin(GL_QUADS);
+	glColor3f(1.0f, 0.0f, 0.0f);
+	glVertex3f(-1.0f, 1.0f, 0.0f);
+	glColor3f(0.0f, 1.0f, 0.0f);
+	glVertex3f( 1.0f, 1.0f, 0.0f);
+	glColor3f(0.0f, 0.0f, 1.0f);
+	glVertex3f( 1.0f,-1.0f, 0.0f);
+	glColor3f(1.0f, 1.0f, 0.0f);
+	glVertex3f(-1.0f, -1.0f, 0.0f);
+	glEnd();
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
 	ui->setupUi(this);
-	connect(ui->treeViewTags, SIGNAL(expanded(const QModelIndex&)), this, SLOT(expanded(const QModelIndex&)));
-	connect(ui->treeViewTags, SIGNAL(collapsed(const QModelIndex&)), this, SLOT(expanded(const QModelIndex&)));
-	connect(ui->treeViewTags, SIGNAL(clicked(const QModelIndex &)), this, SLOT(clicked(const QModelIndex &)));
+	connect(ui->treeViewTags, SIGNAL(expanded(const QModelIndex &)), this, SLOT(tagexpanded(const QModelIndex &)));
+	connect(ui->treeViewTags, SIGNAL(collapsed(const QModelIndex &)), this, SLOT(tagexpanded(const QModelIndex &)));
+	connect(ui->treeViewTags, SIGNAL(clicked(const QModelIndex &)), this, SLOT(tagclicked(const QModelIndex &)));
+	connect(ui->listView, SIGNAL(clicked(QModelIndex)), this, SLOT(fileclicked(QModelIndex)));
 	numFiles = 0;
 
 	files = new QStandardItemModel(0, 1, this);
@@ -33,7 +84,6 @@ MainWindow::MainWindow(QWidget *parent) :
 
 void MainWindow::openFile(QString filename)
 {
-	struct zzfile szz, *zz;
 	uint16_t group, element;
 	long len, pos;
 	char hexfield[20], vrfield[MAX_LEN_VR], contentfield[MAX_LEN_VALUE];
@@ -44,7 +94,9 @@ void MainWindow::openFile(QString filename)
 	nesting = 0;
 
 	zz = zzopen(filename.toAscii().constData(), "r", &szz);
+	zzt = zzcopytotexture(zz, &szzt);
 	zziterinit(zz);
+	tags->clear();
 	while (zziternext(zz, &group, &element, &len))
 	{
 		QStandardItem *last = NULL;
@@ -151,21 +203,33 @@ void MainWindow::addFile(QString filename)
 {
 	numFiles++;
 	files->setRowCount(numFiles);
-	files->setData(files->index(numFiles - 1, 0, QModelIndex()), filename);
-	qWarning("Added %s", filename.toAscii().constData());
-	openFile(filename);
+	QModelIndex idx = files->index(numFiles - 1, 0);
+	files->setData(idx, filename, Qt::UserRole);
+	files->setData(idx, filename, Qt::DisplayRole);
+	if (numFiles == 1)	// select first file
+	{
+		ui->listView->setCurrentIndex(idx);
+		fileclicked(idx);
+	}
 }
 
-void MainWindow::expanded(const QModelIndex &idx)
+void MainWindow::tagexpanded(const QModelIndex &idx)
 {
 	Q_UNUSED(idx);
 	ui->treeViewTags->resizeColumnToContents(0);
 }
 
-void MainWindow::clicked(const QModelIndex &idx)
+void MainWindow::tagclicked(const QModelIndex &idx)
 {
 	QStandardItem *item = tags->itemFromIndex(idx);
 	ui->textBrowserTagInfo->setText(item->data().toString());
+}
+
+void MainWindow::fileclicked(const QModelIndex idx)
+{
+	QStandardItem *item = files->itemFromIndex(idx);
+	QString filename = item->data(Qt::UserRole).toString();
+	openFile(filename);
 }
 
 void MainWindow::quit()
