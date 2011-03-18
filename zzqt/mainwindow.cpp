@@ -72,12 +72,7 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->listView->setModel(files);
 
 	tags = new QStandardItemModel(0, 4, this);
-	tags->setHeaderData(0, Qt::Horizontal, QString("Tag"));
-	tags->setHeaderData(1, Qt::Horizontal, QString("VR"));
-	tags->setHeaderData(2, Qt::Horizontal, QString("Content"));
-	tags->setHeaderData(3, Qt::Horizontal, QString("Tag name"));
 	ui->treeViewTags->setModel(tags);
-	ui->treeViewTags->resizeColumnToContents(1);
 
 	connect(ui->actionQuit, SIGNAL(triggered()), this, SLOT(quit()));
 }
@@ -92,11 +87,18 @@ void MainWindow::openFile(QString filename)
 	const struct part6 *tag;
 
 	nesting = 0;
-
 	zz = zzopen(filename.toAscii().constData(), "r", &szz);
 	zzt = zzcopytotexture(zz, &szzt);
 	zziterinit(zz);
+
 	tags->clear();
+	tags->setColumnCount(4);
+	tags->setHeaderData(0, Qt::Horizontal, QString("Tag"));
+	tags->setHeaderData(1, Qt::Horizontal, QString("VR"));
+	tags->setHeaderData(2, Qt::Horizontal, QString("Content"));
+	tags->setHeaderData(3, Qt::Horizontal, QString("Tag name"));
+	ui->treeViewTags->resizeColumnToContents(1);
+
 	while (zziternext(zz, &group, &element, &len))
 	{
 		QStandardItem *last = NULL;

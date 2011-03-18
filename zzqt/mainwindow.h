@@ -5,6 +5,8 @@
 #include <QStandardItemModel>
 #include <QtOpenGL/QGLWidget>
 
+#include "../zztexture.h"
+
 namespace Ui
 {
 	class MainWindow;
