@@ -11,7 +11,7 @@
 
 #include "zztexture.h"
 
-#define checkError() //assert(glGetError() == 0)
+#define checkError() assert(glGetError() == 0)
 
 struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 {
@@ -174,6 +174,8 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			bytes = addr + zz->current.pos - offset;	// increment by page alignment shift
 			madvise(bytes, length, MADV_SEQUENTIAL | MADV_WILLNEED);
 			glBindTexture(GL_TEXTURE_3D, textures[0]);
+			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, bytes);
 			checkError();
 			madvise(bytes, length, MADV_DONTNEED);
@@ -185,7 +187,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 	return NULL;
 }
 
-bool zztexturefree(struct zztexture *zzt)
+struct zztexture *zztexturefree(struct zztexture *zzt)
 {
 	GLuint textures[2];
 
@@ -193,5 +195,5 @@ bool zztexturefree(struct zztexture *zzt)
 	textures[1] = zzt->volumeinfo;
 
 	glDeleteTextures(2, textures);
-	return true;
+	return NULL;
 }

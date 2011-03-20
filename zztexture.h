@@ -12,7 +12,7 @@ struct zztexture
 {
 	/// Slices are stored as a variety of texture types, all unsigned fixed point.
 	/// The pixels are not transformed through the modality LUT.
-	GLint volume;
+	GLuint volume;
 
 	/// Positions are stored as a 2D texture of grayscale floating point values,
 	/// with each slice having a width of 256, height equal to number of frames.
@@ -22,7 +22,7 @@ struct zztexture
 	/// LUT for example can be stored as two values. The LUT index values must
 	/// be reverse transformed through the modality LUT before uploading. The
 	/// LUT stream is ended on a zero value.
-	GLint volumeinfo;
+	GLuint volumeinfo;
 
 	/// Frame of reference UID for coordinate space
 	char frameOfReferenceUid[MAX_LEN_UI];
@@ -51,7 +51,7 @@ struct zztexture
 struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt);
 
 /// Remove data from GPU memory
-bool zztexturefree(struct zztexture *zzt);
+struct zztexture *zztexturefree(struct zztexture *zzt);
 
 #ifdef __cplusplus
 }

@@ -48,7 +48,7 @@
          </attribute>
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
-           <widget class="ImageViewer" name="widget" native="true">
+           <widget class="ImageViewer" name="glviewer" native="true">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="MinimumExpanding">
               <horstretch>0</horstretch>
@@ -58,22 +58,11 @@
            </widget>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_3">
-            <item>
-             <widget class="QPushButton" name="pushButtonPrevFrame">
-              <property name="text">
-               <string>Previous frame</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButtonNextFrame">
-              <property name="text">
-               <string>Next frame</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
+           <widget class="QSlider" name="horizontalSliderFrames">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+           </widget>
           </item>
          </layout>
         </widget>

@@ -4,16 +4,19 @@
 #include "../zz_priv.h"
 #include "../part6.h"
 
+#include <assert.h>
+#include <QImage>
+
 #define MAX_LEN_VALUE 200
 
-ImageViewer::ImageViewer(QWidget *parent) : QGLWidget(parent)
+ImageViewer::ImageViewer(QWidget *parent) : QGLWidget(parent), shader(parent)
 {
-
+	zzt = NULL;
+	initialized = false;
 }
 
 ImageViewer::~ImageViewer()
 {
-
 }
 
 void ImageViewer::resizeGL(int width, int height)
@@ -30,30 +33,58 @@ void ImageViewer::resizeGL(int width, int height)
 	glLoadIdentity();
 }
 
+void ImageViewer::reload()
+{
+	if (initialized && !dcm.isEmpty() && isValid())
+	{
+		struct zzfile szz;
+
+		if (zzt)
+		{
+			zzt = zztexturefree(zzt);
+		}
+		struct zzfile *zz = zzopen(dcm.toAscii().constData(), "r", &szz);
+		zzt = zzcopytotexture(zz, &szzt);
+		zz = zzclose(zz);
+	}
+}
+
+void ImageViewer::setFile(QString filename)
+{
+	dcm = filename;
+}
+
+void ImageViewer::setDepth(qreal value)
+{
+	depth = value;
+}
+
 void ImageViewer::initializeGL()
 {
+	shader.addShaderFromSourceFile(QGLShader::Fragment, "shader.frag");
+	shader.link();
+
 	glShadeModel(GL_SMOOTH);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	glClearDepth(1.0f);
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
-	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+	initialized = true;
+	reload();
 }
 
 void ImageViewer::paintGL()
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	shader.bind();
+	glEnable(GL_TEXTURE_3D);
+	glClear(GL_COLOR_BUFFER_BIT);
 	glLoadIdentity();
+	glBindTexture(GL_TEXTURE_3D, zzt->volume);
 	glBegin(GL_QUADS);
-	glColor3f(1.0f, 0.0f, 0.0f);
-	glVertex3f(-1.0f, 1.0f, 0.0f);
-	glColor3f(0.0f, 1.0f, 0.0f);
-	glVertex3f( 1.0f, 1.0f, 0.0f);
-	glColor3f(0.0f, 0.0f, 1.0f);
-	glVertex3f( 1.0f,-1.0f, 0.0f);
-	glColor3f(1.0f, 1.0f, 0.0f);
-	glVertex3f(-1.0f, -1.0f, 0.0f);
+	glTexCoord3f(0.0f, 1.0f, depth);	glVertex3f(-1.0f, 1.0f, 0.0f);
+	glTexCoord3f(1.0f, 1.0f, depth);	glVertex3f( 1.0f, 1.0f, 0.0f);
+	glTexCoord3f(1.0f, 0.0f, depth);	glVertex3f( 1.0f,-1.0f, 0.0f);
+	glTexCoord3f(0.0f, 0.0f, depth);	glVertex3f(-1.0f, -1.0f, 0.0f);
 	glEnd();
+	assert(glGetError() == 0);
+	shader.release();
 }
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -65,7 +96,9 @@ MainWindow::MainWindow(QWidget *parent) :
 	connect(ui->treeViewTags, SIGNAL(collapsed(const QModelIndex &)), this, SLOT(tagexpanded(const QModelIndex &)));
 	connect(ui->treeViewTags, SIGNAL(clicked(const QModelIndex &)), this, SLOT(tagclicked(const QModelIndex &)));
 	connect(ui->listView, SIGNAL(clicked(QModelIndex)), this, SLOT(fileclicked(QModelIndex)));
+	connect(ui->horizontalSliderFrames, SIGNAL(sliderMoved(int)), this, SLOT(setframe(int)));
 	numFiles = 0;
+	frame = 0;
 
 	files = new QStandardItemModel(0, 1, this);
 	files->setHeaderData(0, Qt::Horizontal, QString("Files"));
@@ -86,10 +119,9 @@ void MainWindow::openFile(QString filename)
 	QList<QStandardItem *> hierarchy;
 	const struct part6 *tag;
 
-	nesting = 0;
-	zz = zzopen(filename.toAscii().constData(), "r", &szz);
-	zzt = zzcopytotexture(zz, &szzt);
-	zziterinit(zz);
+	ui->glviewer->setFile(filename);
+	ui->glviewer->setDepth(0.0);
+	ui->glviewer->reload();
 
 	tags->clear();
 	tags->setColumnCount(4);
@@ -99,6 +131,9 @@ void MainWindow::openFile(QString filename)
 	tags->setHeaderData(3, Qt::Horizontal, QString("Tag name"));
 	ui->treeViewTags->resizeColumnToContents(1);
 
+	nesting = 0;
+	zz = zzopen(filename.toAscii().constData(), "r", &szz);
+	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len))
 	{
 		QStandardItem *last = NULL;
@@ -106,6 +141,13 @@ void MainWindow::openFile(QString filename)
 
 		pos = ftell(zz->fp);
 		tag = zztag(group, element);
+
+		if (ZZ_KEY(group, element) == DCM_NumberOfFrames)
+		{
+			char value[MAX_LEN_IS];
+			zzgetstring(zz, value, sizeof(value) - 1);
+			ui->horizontalSliderFrames->setMaximum(atoi(value) - 1);
+		}
 
 		// reduce nesting
 		while (zz->currNesting < nesting && !hierarchy.isEmpty())
@@ -225,6 +267,16 @@ void MainWindow::tagclicked(const QModelIndex &idx)
 {
 	QStandardItem *item = tags->itemFromIndex(idx);
 	ui->textBrowserTagInfo->setText(item->data().toString());
+}
+
+void MainWindow::setframe(int value)
+{
+	const struct zztexture *zzt = ui->glviewer->volume();
+	if (zzt && value >= 0 && value < zzt->pixelsize.z)
+	{
+		ui->glviewer->setDepth((1.0 / zzt->pixelsize.z) * value);
+		ui->glviewer->updateGL();
+	}
 }
 
 void MainWindow::fileclicked(const QModelIndex idx)
