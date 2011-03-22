@@ -696,7 +696,10 @@ struct zzfile *zzclose(struct zzfile *zz)
 	if (zz)
 	{
 		fclose(zz->fp);
-		fclose(zz->net.buffer);
+		if (zz->net.buffer)
+		{
+			fclose(zz->net.buffer);
+		}
 		free(zz->net.mem);
 	}
 	return NULL;
