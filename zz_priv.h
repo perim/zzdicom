@@ -7,6 +7,10 @@
 extern "C" {
 #endif
 
+#if defined(__linux__) || defined(__linux)
+#define ZZ_LINUX
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
@@ -117,8 +121,8 @@ enum zzsteptype
 
 struct zzfile
 {
-	FILE		*fp;
-	long		fileSize;
+	FILE		*fp;			///< File pointer or network socket
+	long		fileSize;		///< File or current buffer size
 	char		fullPath[PATH_MAX];
 	char		sopClassUid[MAX_LEN_UI];	// TODO convert to enum
 	char		sopInstanceUid[MAX_LEN_UI];
@@ -126,6 +130,17 @@ struct zzfile
 	time_t		modifiedTime;
 	int		currNesting, nextNesting, ladderidx;
 	long		pxOffsetTable, frames;
+
+	struct
+	{
+		FILE		*buffer;	///< Memory buffer disguised as a file
+		char		callingaet[17];	///< Our AE Title
+		char		interface[64];	///< Our network interface
+		void		*mem;		///< Pointer to buffer's memory
+		long		maxpdatasize;	///< Maximum size of other party's pdata payload
+		uint16_t	version;	///< Association version capability bitfield
+		// TODO enum zztxsyn psctxs[PSCTX_LAST];        ///< List of negotiated presentation contexts
+	} net;
 
 	struct
 	{
@@ -193,7 +208,7 @@ char *zztostring(struct zzfile *zz, char *input, long strsize);
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len);
 
 struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile);
-static inline struct zzfile *zzclose(struct zzfile *zz) { if (zz) { fclose(zz->fp); } return NULL; }
+struct zzfile *zzclose(struct zzfile *zz);
 
 /// Utility function to process some common command-line arguments. Returns the number of initial arguments to ignore.
 int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help);

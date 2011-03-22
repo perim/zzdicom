@@ -691,6 +691,17 @@ bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len
 	return false;	// do NOT use any other returned data in this case!
 }
 
+struct zzfile *zzclose(struct zzfile *zz)
+{
+	if (zz)
+	{
+		fclose(zz->fp);
+		fclose(zz->net.buffer);
+		free(zz->net.mem);
+	}
+	return NULL;
+}
+
 void zz_c_test()
 {
 	char filename[12];

@@ -1,12 +1,13 @@
-CFLAGS = -Wall -Wextra -DPOSIX -Werror -Wshadow -Wformat-security
+CFLAGS = -Wall -Wextra -DPOSIX -Werror -Wshadow -Wformat-security -Wno-unused
 COMMON = zz.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
 COMMONTEXTURE = zztexture.o
 COMMONVERIFY = zzverify.o
+COMMONNET = zznet.o
 PART6 = part6.o
-PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom
-HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h
+PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom zzechoscp
+HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h
 
 all: CFLAGS += -Os
 all: sqlinit.h $(PROGRAMS)
@@ -45,6 +46,9 @@ zztojpegls: zztojpegls.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(PART6)
 
 zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON) $(COMMONWRITE)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE)
+
+zzechoscp: zzechoscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONNET)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONNET)
 
 clean:
 	rm -f *.o sqlinit.h $(PROGRAMS) *.gcno *.gcda random.dcm
