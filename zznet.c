@@ -110,7 +110,7 @@ static void zzsendbuffer(struct zzfile *zz)
 
 static void PData_receive(struct zzfile *zz)
 {
-	uint32_t msize, psize, received = 0;
+	uint32_t msize, psize = 0, received = 0;
 	char contextID;
 
 	// PDU type already parsed
