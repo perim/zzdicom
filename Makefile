@@ -51,7 +51,7 @@ zzechoscp: zzechoscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONNET)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONNET)
 
 clean:
-	rm -f *.o sqlinit.h $(PROGRAMS) *.gcno *.gcda random.dcm
+	rm -f *.o sqlinit.h $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov
 
 check: tests/zz1 tests/zzw tests/zzt
 	tests/zz1 2> /dev/null
