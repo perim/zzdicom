@@ -103,7 +103,7 @@ struct zzfile *zznetwork(const char *interface, const char *myaetitle, struct zz
 	return zz;
 }
 
-static void zzsendbuffer(struct zzfile *zz)
+static void znwsendbuffer(struct zzfile *zz)
 {
 	fwrite(zz->net.mem, ftell(zz->net.buffer), 1, zz->fp);
 }
@@ -169,7 +169,7 @@ static void PDATA_TF_end(struct zzfile *zz, long *pos)
 
 	// Set the size of entire pdata message
 	znw4at(ftell(zz->net.buffer) - 6, 2, zz);
-	zzsendbuffer(zz);
+	znwsendbuffer(zz);
 }
 
 static void PDU_ReleaseRQ(struct zzfile *zz)
@@ -179,7 +179,7 @@ static void PDU_ReleaseRQ(struct zzfile *zz)
 	znw1(0, zz);				// reserved, shall be zero
 	znw4(4, zz);				// size of packet
 	znw2(0, zz);				// reserved, shall be zero
-	zzsendbuffer(zz);
+	znwsendbuffer(zz);
 }
 
 static void PDU_ReleaseRP(struct zzfile *zz)
@@ -189,7 +189,7 @@ static void PDU_ReleaseRP(struct zzfile *zz)
 	znw1(0, zz);				// reserved, shall be zero
 	znw4(4, zz);				// size of packet
 	znw2(0, zz);				// reserved, shall be zero
-	zzsendbuffer(zz);
+	znwsendbuffer(zz);
 }
 
 static void PDU_Abort(struct zzfile *zz, char source, char diag)
@@ -202,7 +202,7 @@ static void PDU_Abort(struct zzfile *zz, char source, char diag)
 	znw1(0, zz);				// reserved, shall be zero
 	znw1(source, zz);			// source of abort, see PS 3.8, Table 9-26
 	znw1(diag, zz);				// reason for abort, see PS 3.8, Table 9-26
-	zzsendbuffer(zz);
+	znwsendbuffer(zz);
 }
 
 static void PDU_AssociateRJ(struct zzfile *zz, char result, char source, char diag)
@@ -216,7 +216,7 @@ static void PDU_AssociateRJ(struct zzfile *zz, char result, char source, char di
 	znw1(result, zz);			// result
 	znw1(source, zz);			// source
 	znw1(diag, zz);				// reason/diagnosis
-	zzsendbuffer(zz);
+	znwsendbuffer(zz);
 }
 
 static bool PDU_Associate_Accept(struct zzfile *zz)
@@ -354,7 +354,7 @@ static bool PDU_Associate_Accept(struct zzfile *zz)
 	// Now set size of entire reply
 	znw4at(ftell(zz->net.buffer) - 6, 2, zz);
 
-	zzsendbuffer(zz);
+	znwsendbuffer(zz);
 	return true;
 }
 
@@ -413,7 +413,7 @@ static void PDU_AssociateRQ(struct zzfile *zz, const char *calledAET, const char
 
 	// Now set size of entire message
 	znw4at(ftell(zz->net.buffer) - 6, 2, zz);
-	zzsendbuffer(zz);
+	znwsendbuffer(zz);
 }
 
 /// Reap dead child processes

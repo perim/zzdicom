@@ -3,8 +3,8 @@
 
 #include "zz_priv.h"
 
-/// Tells the zzreceive method to fork when receiving a connection. The parent immediately returns NULL. The child
-/// starts to negotiate an association then returns a zz file pointer.
+/// Tells the zzreceive method to fork when receiving a connection. The parent then immediately returns false. The child
+/// starts to negotiate an association then returns true.
 #define ZZNET_FORK 0x0001
 
 /// Setup networking. The returned zz file pointer is still only half initialized, and needs to be further passed
