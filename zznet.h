@@ -3,6 +3,9 @@
 
 #include "zz_priv.h"
 
+// -----
+// Setup functions
+
 /// Tells the zzreceive method to fork when receiving a connection. The parent then immediately returns false. The child
 /// starts to negotiate an association then returns true.
 #define ZZNET_FORK 0x0001
@@ -21,5 +24,14 @@ bool zzconnect(struct zzfile *zz, const char *host, int port, const char *theira
 /// Listen to given port for connections. Returns once a connection has been negotiated. The zz file pointer must first have been
 /// passed to zznetwork().
 bool zzlisten(struct zzfile *zz, int port, const char *myaetitle, int flags);
+
+// -----
+// Write functions
+
+/// Send an echo request.
+void znwechoreq(struct zzfile *zz);
+
+/// Send an echo response. Add echo message ID received as parameter.
+void znwechoresp(struct zzfile *zz, long mesID);
 
 #endif

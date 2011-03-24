@@ -2,6 +2,7 @@
 // such a hideous, bloated and grossly inefficient, over-engineered monstrousity.
 
 #include "zznet.h"
+#include "zzwrite.h"
 
 #include <unistd.h>
 #include <errno.h>
@@ -108,6 +109,23 @@ static void znwsendbuffer(struct zzfile *zz)
 	fwrite(zz->net.mem, ftell(zz->net.buffer), 1, zz->fp);
 }
 
+/// Special built-in support for echo requests
+static void C_ECHO_req_recv(struct zzfile *zz)
+{
+	uint16_t group, element, mesID;
+	long len;
+
+	// Read ping
+	while (zzread(zz, &group, &element, &len))
+	{
+		switch (ZZ_KEY(group, element))
+		{
+		case DCM_MessageID: mesID = zzgetuint16(zz, 0); break;
+		default: break;	// ignore
+		}
+	}
+}
+
 static void PData_receive(struct zzfile *zz)
 {
 	uint32_t msize, psize = 0, received = 0;
@@ -162,14 +180,45 @@ static void PDATA_TF_next(struct zzfile *zz, long *pos, char contextID)
 	// Add DICOM data with command header after this
 }
 
-static void PDATA_TF_end(struct zzfile *zz, long *pos)
+static void PDATA_TF_end(struct zzfile *zz, long pos)
 {
 	// Set size of previous packet
-	znw4at(ftell(zz->net.buffer) - *pos, *pos, zz);
+	znw4at(ftell(zz->net.buffer) - pos, pos, zz);
 
 	// Set the size of entire pdata message
 	znw4at(ftell(zz->net.buffer) - 6, 2, zz);
 	znwsendbuffer(zz);
+}
+
+void znwechoreq(struct zzfile *zz)
+{
+	long pos = 0;
+
+	// first presentation context is always verification, and is always accepted, no need to check
+	PDATA_TF_start(zz, &pos, 0);
+	zzwUL(zz, DCM_CommandGroupLength, 0);		// value to be written later
+	zzwUI(zz, DCM_AffectedSOPClassUID, UID_VerificationSOPClass);
+	zzwUS(zz, DCM_CommandField, 0x0030);
+	zzwUS(zz, DCM_MessageID, zz->net.lastMesID++);
+	zzwUS(zz, DCM_DataSetType, 0x0101);		// "null value"
+	znw4at(ftell(zz->net.buffer) - 8, 8, zz);	// set command length
+	PDATA_TF_end(zz, pos);
+}
+
+void znwechoresp(struct zzfile *zz, long mesID)
+{
+	long pos = 0;
+
+	// first presentation context is always verification, and is always accepted, no need to check
+	PDATA_TF_start(zz, &pos, 0);
+	zzwUL(zz, DCM_CommandGroupLength, 0);		// value to be written later
+	zzwUI(zz, DCM_AffectedSOPClassUID, UID_VerificationSOPClass);
+	zzwUS(zz, DCM_CommandField, 0x8030);
+	zzwUS(zz, DCM_MessageIDBeingRespondedTo, mesID);
+	zzwUS(zz, DCM_DataSetType, 0x0101);		// "null value"
+	zzwUS(zz, DCM_Status, 0x0000);			// "Success", always
+	znw4at(ftell(zz->net.buffer) - 8, 8, zz);	// set command length
+	PDATA_TF_end(zz, pos);
 }
 
 static void PDU_ReleaseRQ(struct zzfile *zz)
