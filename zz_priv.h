@@ -74,9 +74,11 @@ enum VR
 	UN = ('U'<<8)|'N',
 	UT = ('U'<<8)|'T',
 	/* special tag (multiple choices) */
-	OX = ('O'<<8)|'X',
+	OX = ('?'<<8)|'=',
 	/* special tag (no info - implicit syntax) */
-	NO = ('N'<<8)|'O',
+	NO = ('-'<<8)|'-',
+	/* special tag (hack to work around ?? as 2-byte length field VR) */
+	HACK_VR = ('?'<<8)|'?',
 };
 
 #define MAX_LEN_VR 3	///< 2 chars for VR and one for terminating null
@@ -139,6 +141,7 @@ struct zzfile
 		void		*mem;		///< Pointer to buffer's memory
 		long		maxpdatasize;	///< Maximum size of other party's pdata payload
 		uint16_t	version;	///< Association version capability bitfield
+		long		lastMesID;	///< Last message ID used, to make it unique
 		// TODO enum zztxsyn psctxs[PSCTX_LAST];        ///< List of negotiated presentation contexts
 	} net;
 

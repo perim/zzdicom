@@ -174,6 +174,7 @@ char *zztostring(struct zzfile *zz, char *input, long strsize)
 		break;
 	case OX:
 	case NO:
+	case HACK_VR:
 		break;
 	}
 	input[strsize-1] = '\0';
@@ -424,7 +425,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		switch (zz->current.vr)
 		{
 		case AE: case AS: case AT: case CS: case DA: case DS: case DT: case FL: case FD: case IS: case LO: 
-		case LT: case PN: case SH: case SL: case SS: case ST: case TM: case UI: case UL: case US:
+		case LT: case PN: case SH: case SL: case SS: case ST: case TM: case UI: case UL: case US: case HACK_VR:
 			*len = LE_16(header.buffer.evr.len);	// the insane 16 bit size variant
 			break;
 		case SQ: case UN: case OB: case OW: case OF: case UT:
