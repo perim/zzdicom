@@ -145,10 +145,10 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 		case DCM_Item:
 		case DCM_PixelData:
 			// Upload info from previous frame
-			if (zz->current.pxstate == ZZ_PIXELITEM) printf("item %d\n", zz->current.frame);
+			if (zz->current.pxstate == ZZ_PIXELITEM) printf("item %ld\n", zz->current.frame);
 			if (zz->current.frame > 0 && zz->current.pxstate == ZZ_PIXELITEM)
 			{
-				printf("item USED %d\n", zz->current.frame);
+				printf("item USED %ld\n", zz->current.frame);
 				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, zz->current.frame - 1, 64, 1, GL_LUMINANCE, GL_FLOAT, volinfo);
 				checkError();
 			}
