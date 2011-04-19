@@ -1,4 +1,4 @@
-CFLAGS = -Wall -Wextra -DPOSIX -Werror -Wshadow -Wformat-security -Wno-unused
+CFLAGS = -Wall -Wextra -DPOSIX -Werror -Wshadow -Wformat-security -Wno-unused -mtune=native -march=native
 COMMON = zz.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
@@ -12,6 +12,7 @@ HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h
 all: CFLAGS += -Os
 all: sqlinit.h $(PROGRAMS)
 
+debug: clean
 debug: CFLAGS += -O0 -g -DDEBUG -fprofile-arcs -ftest-coverage
 debug: sqlinit.h $(PROGRAMS) check
 
@@ -79,3 +80,5 @@ tests/zzt: tests/zzt.c $(HEADERS) $(COMMON) $(COMMONTEXTURE)
 
 install:
 	install -t /usr/local/bin $(PROGRAMS)
+
+.PHONY: all clean install
