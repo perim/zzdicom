@@ -165,7 +165,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			offset = zz->current.pos & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
 			length = zz->fileSize - zz->current.pos;			// FIXME - use actual pixel length
 			// TODO - check actual pixel length against length of pixel data in file before reading
-			addr = mmap(NULL, length, PROT_READ, MAP_SHARED, fileno(zz->fp), offset);
+			addr = mmap(NULL, length + zz->current.pos - offset, PROT_READ, MAP_SHARED, fileno(zz->fp), offset);
 			if (addr == MAP_FAILED)
 			{
 				fprintf(stderr, "Could not memory map file: %s\n", strerror(errno));
