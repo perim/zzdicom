@@ -23,7 +23,8 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 	off_t offset;
 	size_t length;
 	GLuint textures[2]; // 0 - volume, 1 - volumeinfo
-	GLenum type, size;
+	GLenum type = GL_LUMINANCE16;
+	GLenum size = GL_UNSIGNED_SHORT;
 	char value[MAX_LEN_IS];
 	double tmpd[6];
 	GLfloat volinfo[256];	// volume info
