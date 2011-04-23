@@ -30,6 +30,9 @@ int main(int argc, char **argv)
 	assert(tx == NULL);
 	tx = zzcopytotexture(zz, &stx);
 	assert(tx != NULL);
+	assert(tx->pixelsize.x == 448);
+	assert(tx->pixelsize.y == 448);
+	assert(tx->pixelsize.z == 15);
 	glutReportErrors();
 
 	return 0;

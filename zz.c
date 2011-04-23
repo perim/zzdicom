@@ -228,7 +228,7 @@ int zzrIS(struct zzfile *zz, int len, long *input)
 			memset(value, 0, sizeof(value));
 			strpos = 0;
 		}
-		else if (strpos < MAX_LEN_DS)
+		else if (strpos < MAX_LEN_IS)
 		{
 			value[strpos++] = ch;
 		}

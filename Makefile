@@ -1,4 +1,4 @@
-CFLAGS = -Wall -Wextra -DPOSIX -Werror -Wshadow -Wformat-security -Wno-unused -mtune=native -march=native
+CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -mtune=native -march=native
 COMMON = zz.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
@@ -9,7 +9,7 @@ PART6 = part6.o
 PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom zzechoscp
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h
 
-all: CFLAGS += -Os
+all: CFLAGS += -Os -fstack-protector
 all: sqlinit.h $(PROGRAMS)
 
 debug: clean
