@@ -242,6 +242,7 @@ void MainWindow::openFile(QString filename)
 		}
 	}
 	zz = zzclose(zz);
+	ui->treeViewTags->expandAll();
 	ui->treeViewTags->resizeColumnToContents(0);
 	ui->treeViewTags->resizeColumnToContents(2);
 }
