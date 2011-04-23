@@ -180,7 +180,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, bytes);
 			checkError();
 			madvise(bytes, length, MADV_DONTNEED);
-			munmap(addr, length);
+			munmap(addr, length + zz->current.pos - offset);
 			return zzt;
 		}
 	}
