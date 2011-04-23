@@ -72,19 +72,22 @@ void ImageViewer::initializeGL()
 
 void ImageViewer::paintGL()
 {
-	shader.bind();
-	glEnable(GL_TEXTURE_3D);
-	glClear(GL_COLOR_BUFFER_BIT);
-	glLoadIdentity();
-	glBindTexture(GL_TEXTURE_3D, zzt->volume);
-	glBegin(GL_QUADS);
-	glTexCoord3f(0.0f, 1.0f, depth);	glVertex3f(-1.0f, 1.0f, 0.0f);
-	glTexCoord3f(1.0f, 1.0f, depth);	glVertex3f( 1.0f, 1.0f, 0.0f);
-	glTexCoord3f(1.0f, 0.0f, depth);	glVertex3f( 1.0f,-1.0f, 0.0f);
-	glTexCoord3f(0.0f, 0.0f, depth);	glVertex3f(-1.0f, -1.0f, 0.0f);
-	glEnd();
-	assert(glGetError() == 0);
-	shader.release();
+	if (zzt)
+	{
+		shader.bind();
+		glEnable(GL_TEXTURE_3D);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glLoadIdentity();
+		glBindTexture(GL_TEXTURE_3D, zzt->volume);
+		glBegin(GL_QUADS);
+		glTexCoord3f(0.0f, 1.0f, depth);	glVertex3f(-1.0f, 1.0f, 0.0f);
+		glTexCoord3f(1.0f, 1.0f, depth);	glVertex3f( 1.0f, 1.0f, 0.0f);
+		glTexCoord3f(1.0f, 0.0f, depth);	glVertex3f( 1.0f,-1.0f, 0.0f);
+		glTexCoord3f(0.0f, 0.0f, depth);	glVertex3f(-1.0f, -1.0f, 0.0f);
+		glEnd();
+		assert(glGetError() == 0);
+		shader.release();
+	}
 }
 
 MainWindow::MainWindow(QWidget *parent) :
