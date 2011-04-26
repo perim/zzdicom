@@ -53,11 +53,19 @@ bool zzverify(struct zzfile *zz)
 			zz->current.valid = false;
 		}
 		break;
+	case DCM_WindowWidth:
+		zzrDS(zz, 1, tmpd);
+		if (tmpd[0] < 0.0)
+		{
+			sprintf(zz->current.warning, "Value must be 1 or higher");
+			zz->current.valid = false;
+		}
+		break;
 	case DCM_SliceThickness:
 		zzrDS(zz, 1, tmpd);
 		if (tmpd[0] < 0.0)
 		{
-			sprintf(zz->current.warning, "Negative slice thickness not allowed");
+			sprintf(zz->current.warning, "Negative value not allowed");
 			zz->current.valid = false;
 		}
 		break;
@@ -65,7 +73,7 @@ bool zzverify(struct zzfile *zz)
 		zzrDS(zz, 2, tmpd);
 		if (tmpd[0] < 0.0 || tmpd[1] < 0.0)
 		{
-			sprintf(zz->current.warning, "Negative pixel spacing not allowed");
+			sprintf(zz->current.warning, "Negative value not allowed");
 			zz->current.valid = false;
 		}
 		break;

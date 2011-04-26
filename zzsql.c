@@ -47,8 +47,7 @@ static int callback(void *nada, int cols, char **data, char **colnames)
 {
 	char *modified = (char *)nada;
 
-	(void)nada;	// ignore
-	(void)cols;
+	(void)cols;	// ignore
 	(void)colnames;
 	strcpy(modified, data[0]);
 	return 0;
