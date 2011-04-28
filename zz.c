@@ -104,7 +104,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	return zz;
 }
 
-bool zztostring(struct zzfile *zz, char *input, long strsize)
+bool zztostring(struct zzfile *zz, char *input, long strsize, long charsize)
 {
 	memset(input, 0, strsize);
 	if (zz->current.length == 0)
@@ -135,7 +135,9 @@ bool zztostring(struct zzfile *zz, char *input, long strsize)
 			strncpy(input, "(Error)", strsize - 1);
 			break;
 		}
-		if (zz->current.length > strsize - 4)
+		if (zz->current.length > strsize - 1
+		    || (zz->utf8 && strlen_utf8(input) > charsize)
+		    || (!zz->utf8 && strlen(input) > charsize))
 		{
 			input[strsize - 2] = '.';
 			input[strsize - 3] = '.';
@@ -448,6 +450,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	{
 	case DCM_SpecificCharacterSet:
 		zzgetstring(zz, zz->characterSet, sizeof(zz->characterSet) - 1);
+		zz->utf8 = strcmp(zz->characterSet, "ISO_IR 192") == 0;
 		break;
 	case DCM_NumberOfFrames:
 		zzrIS(zz, 1, &zz->frames);

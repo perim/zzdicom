@@ -133,6 +133,7 @@ struct zzfile
 	time_t		modifiedTime;
 	int		currNesting, nextNesting, ladderidx;
 	long		pxOffsetTable, frames;
+	bool		utf8;
 
 	struct
 	{
@@ -206,7 +207,7 @@ uint16_t zzgetuint16(struct zzfile *zz, int idx);
 int32_t zzgetint32(struct zzfile *zz, int idx);
 int16_t zzgetint16(struct zzfile *zz, int idx);
 char *zzgetstring(struct zzfile *zz, char *input, long strsize);
-bool zztostring(struct zzfile *zz, char *input, long strsize);
+bool zztostring(struct zzfile *zz, char *input, long strsize, long charsize);
 
 /// From the current file position, start reading DICOM tag information.
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len);
@@ -223,6 +224,22 @@ bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len
 
 /// Extra low-level verification of current tag. Resides in zzverify.c
 bool zzverify(struct zzfile *zz);
+
+//
+// -- Utility functions --
+// 
+
+/// strlen for utf-8
+static inline size_t strlen_utf8(char *s)
+{
+	size_t i = 0, j = 0;
+	while (s[i])
+	{
+		if ((s[i] & 0xc0) != 0x80) j++;
+		i++;
+	}
+	return j;
+}
 
 #ifdef __cplusplus
 }

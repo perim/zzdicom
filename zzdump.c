@@ -7,7 +7,8 @@
 
 #include "part6.h"
 
-#define MAX_LEN_VALUE 54
+#define MAX_LEN_VALUE 120
+#define PADLEN 54
 
 static const char *txsyn2str(enum zztxsyn syn)
 {
@@ -33,7 +34,7 @@ void dump(char *filename)
 	char value[MAX_LEN_VALUE];
 	char privcreator[MAX_LEN_VALUE];
 	char tmp[MAX_LEN_VALUE], vrstr[MAX_LEN_VR];
-	int i, privoffset = 0;
+	int i, privoffset = 0, charlen;
 	int header = 0;		// 0 - started, 1 - writing header, 2 - written header
 	char extra[10], pstart[10], pstop[100];
 	bool content;
@@ -104,15 +105,17 @@ void dump(char *filename)
 
 		memset(pstart, 0, sizeof(pstart));
 		memset(pstop, 0, sizeof(pstop));
-		if (zztostring(zz, value, sizeof(value) - 2))
+		content = zztostring(zz, value, sizeof(value) - 2, PADLEN);
+		charlen = (strcmp(zz->characterSet, "ISO_IR 192") == 0) ? strlen_utf8(value) : strlen(value);
+		if (content)
 		{
 			strcpy(pstart, "[");
-			snprintf(pstop, sizeof(pstop) - 1, "]%*s", (int)(sizeof(value) - strlen(value) - 2), "");
+			snprintf(pstop, sizeof(pstop) - 1, "]%*s", (int)(PADLEN - charlen - 2), "");
 		}
 		else
 		{
 			strcpy(pstart, "\033[22m\033[33m");
-			snprintf(pstop, sizeof(pstop) - 1, "\033[0m%*s", (int)(sizeof(value) - strlen(value)), "");
+			snprintf(pstop, sizeof(pstop) - 1, "\033[0m%*s", (int)(PADLEN - charlen), "");
 		}
 
 		if (group > 0x0002 && element == 0x0000)	// generic group length
