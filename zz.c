@@ -104,14 +104,13 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	return zz;
 }
 
-char *zztostring(struct zzfile *zz, char *input, long strsize)
+bool zztostring(struct zzfile *zz, char *input, long strsize)
 {
 	memset(input, 0, strsize);
 	if (zz->current.length == 0)
 	{
-		strncpy(input, "(no value available)", strsize);
-		input[strsize-1] = '\0';
-		return input;
+		strncpy(input, "(no value available)", strsize - 1);
+		return false;
 	}
 	switch (zz->current.vr)
 	{
@@ -119,66 +118,57 @@ char *zztostring(struct zzfile *zz, char *input, long strsize)
 	case SQ:
 		if ((zz->current.vr == UN && zz->current.length == UNLIMITED) || zz->current.vr == SQ)
 		{
-			strncpy(input, "(Sequence)", strsize);
+			strncpy(input, "(Sequence)", strsize - 1);
 		}
 		else
 		{
-			strncpy(input, "(Sequence in limited UN - not parsed)", strsize);
+			strncpy(input, "(Sequence in limited UN - not parsed)", strsize - 1);
 		}
-		break;
+		return false;
 	case OB: case OW: case OF: case UT:
-		strcpy(input, "...");
-		break;
+		strncpy(input, "...", strsize - 1);
+		return false;
 	case AE: case AS: case CS: case DA: case DS: case DT: case IS:
 	case LT: case PN: case SH: case ST: case TM: case UI: case LO:
-		if (!zzgetstring(zz, input + 1, strsize - 1))
+		if (!zzgetstring(zz, input, strsize))
 		{
-			strncpy(input, "(Error)", strsize);
+			strncpy(input, "(Error)", strsize - 1);
 			break;
 		}
-		input[0] = '[';
-		input[strsize-1] = '\0';
 		if (zz->current.length > strsize - 4)
 		{
-			input[strsize - 2] = ']';
+			input[strsize - 2] = '.';
 			input[strsize - 3] = '.';
 			input[strsize - 4] = '.';
-			input[strsize - 5] = '.';
-		}
-		else
-		{
-			input[strlen(input) + 0] = ']';
-			input[strlen(input) + 1] = '\0';
 		}
 		break;
 	case AT:
-		snprintf(input, strsize - 1, "[(%04x,%04x)]", zzgetuint16(zz, 0), zzgetuint16(zz, 1));
+		snprintf(input, strsize - 1, "(%04x,%04x)", zzgetuint16(zz, 0), zzgetuint16(zz, 1));
 		break;
 	case UL:
-		snprintf(input, strsize - 1, "[%u]", zzgetuint32(zz, 0));
+		snprintf(input, strsize - 1, "%u", zzgetuint32(zz, 0));
 		break;
 	case US:
-		snprintf(input, strsize - 1, "[%u]", zzgetuint16(zz, 0));
+		snprintf(input, strsize - 1, "%u", zzgetuint16(zz, 0));
 		break;
 	case SS:
-		snprintf(input, strsize - 1, "[%d]", zzgetint16(zz, 0));
+		snprintf(input, strsize - 1, "%d", zzgetint16(zz, 0));
 		break;
 	case SL:
-		snprintf(input, strsize - 1, "[%d]", zzgetint32(zz, 0));
+		snprintf(input, strsize - 1, "%d", zzgetint32(zz, 0));
 		break;
 	case FL:
-		snprintf(input, strsize - 1, "[%f]", zzgetfloat(zz, 0));
+		snprintf(input, strsize - 1, "%f", zzgetfloat(zz, 0));
 		break;
 	case FD:
-		snprintf(input, strsize - 1, "[%g]", zzgetdouble(zz, 0));
+		snprintf(input, strsize - 1, "%g", zzgetdouble(zz, 0));
 		break;
 	case OX:
 	case NO:
 	case HACK_VR:
-		break;
+		return false;
 	}
-	input[strsize-1] = '\0';
-	return input;
+	return true;
 }
 
 int zzrDS(struct zzfile *zz, int len, double *input)
@@ -456,6 +446,9 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 
 	switch (key)
 	{
+	case DCM_SpecificCharacterSet:
+		zzgetstring(zz, zz->characterSet, sizeof(zz->characterSet) - 1);
+		break;
 	case DCM_NumberOfFrames:
 		zzrIS(zz, 1, &zz->frames);
 		break;

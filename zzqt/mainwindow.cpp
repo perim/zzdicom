@@ -179,7 +179,12 @@ void MainWindow::openFile(QString filename)
 			{
 				item3 = new QStandardItem("(Unknown tag)");
 			}
-			item4 = new QStandardItem(zztostring(zz, contentfield, sizeof(contentfield)));
+			bool validcontent = zztostring(zz, contentfield, sizeof(contentfield));
+			item4 = new QStandardItem(contentfield);
+			if (!validcontent)
+			{
+				item4->setForeground(QBrush(QColor(Qt::gray)));
+			}
 		}
 		else if (ZZ_KEY(zz->current.group, zz->current.element) == DCM_Item && !hierarchy.isEmpty())
 		{

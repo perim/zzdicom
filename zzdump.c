@@ -7,7 +7,7 @@
 
 #include "part6.h"
 
-#define MAX_LEN_VALUE 42
+#define MAX_LEN_VALUE 54
 
 static const char *txsyn2str(enum zztxsyn syn)
 {
@@ -35,7 +35,8 @@ void dump(char *filename)
 	char tmp[MAX_LEN_VALUE], vrstr[MAX_LEN_VR];
 	int i, privoffset = 0;
 	int header = 0;		// 0 - started, 1 - writing header, 2 - written header
-	char extra[10];
+	char extra[10], pstart[10], pstop[100];
+	bool content;
 
 	zz = zzopen(filename, "r", &szz);
 
@@ -101,22 +102,33 @@ void dump(char *filename)
 
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
 
-		zztostring(zz, value, sizeof(value));
+		memset(pstart, 0, sizeof(pstart));
+		memset(pstop, 0, sizeof(pstop));
+		if (zztostring(zz, value, sizeof(value) - 2))
+		{
+			strcpy(pstart, "[");
+			snprintf(pstop, sizeof(pstop) - 1, "]%*s", (int)(sizeof(value) - strlen(value) - 2), "");
+		}
+		else
+		{
+			strcpy(pstart, "\033[22m\033[33m");
+			snprintf(pstop, sizeof(pstop) - 1, "\033[0m%*s", (int)(sizeof(value) - strlen(value)), "");
+		}
 
 		if (group > 0x0002 && element == 0x0000)	// generic group length
 		{
-			printf("(%04x,%04x) UL %-42s # %4ld, 1 Generic Group Length\n", group, element, value, len);
-			continue;
+			zz->current.vr = UL;
+			description = "Generic Group Length";
+			vm = "1";
 		}
 		else if (group % 2 > 0 && element < 0x1000 && len != UNLIMITED)
 		{
 			// TODO: Handle multiple private creator groups somehow
-			printf("(%04x,%04x) LO %-42s # %4ld, 1 Private Creator\n", group, element, value, len);
 			zz->current.vr = LO;
+			description = "Private Creator";
+			vm = "1";
 			privoffset = element * 0x100;
-			fseek(zz->fp, zz->current.pos, SEEK_SET);
-			zzgetstring(zz, privcreator, sizeof(privcreator) - 1);
-			continue;
+			strcpy(privcreator, value);
 		}
 
 		if (len == UNLIMITED)
@@ -134,12 +146,13 @@ void dump(char *filename)
 		}
 
 		// Presenting in DCMTK's syntax
-		printf("(%04x,%04x) %s %-42s # %4s, %s %s%s\n", group, element, zzvr2str(zz->current.vr, vrstr), value, tmp, vm, description, extra);
+		printf("\033[22m\033[32m(%04x,%04x)\033[0m %s %s%s%s # %4s, %s %s%s\n",
+		       group, element, zzvr2str(zz->current.vr, vrstr), pstart, value, pstop, tmp, vm, description, extra);
 
 		if (!zz->current.valid)
 		{
 			for (i = 0; i < zz->currNesting; i++) printf("  ");
-			printf("^^ Warning: %s\n", zz->current.warning);
+			printf("\033[1m\033[31m^^ Warning: %s\033[0m\n", zz->current.warning);
 		}
 	}
 	zz = zzclose(zz);
