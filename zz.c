@@ -104,7 +104,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	return zz;
 }
 
-bool zztostring(struct zzfile *zz, char *input, long strsize, long charsize)
+bool zztostring(struct zzfile *zz, char *input, int strsize, int charsize)
 {
 	memset(input, 0, strsize);
 	if (zz->current.length == 0)
@@ -135,9 +135,9 @@ bool zztostring(struct zzfile *zz, char *input, long strsize, long charsize)
 			strncpy(input, "(Error)", strsize - 1);
 			break;
 		}
-		if (zz->current.length > charsize - 1
-		    || (zz->utf8 && (long)strlen_utf8(input) > charsize)
-		    || (!zz->utf8 && (long)strlen(input) > charsize))
+		if (zz->current.length > strsize - 1
+		    || (zz->utf8 && (int)strlen_utf8(input) > charsize)
+		    || (!zz->utf8 && (int)strlen(input) > charsize))
 		{
 			input[charsize - 1] = '\0';
 			input[charsize - 2] = '.';

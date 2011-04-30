@@ -7,7 +7,7 @@
 #include <sys/sendfile.h>
 #endif
 
-#include <assert.h>
+#include <assert.h>	// TODO - remove (most) asserts
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -78,7 +78,7 @@ static inline long zi_read_raw(struct zzio *zi, void *buf, long len, bool wait)	
 	{
 		result = pread(zi->fd, buf, len, zi->readpos);
 	}
-	if (result == -1) printf("%s\n", strerror(errno));
+	assert(result != -1);
 	if (result > 0) zi->bytesread += result;
 	return result;
 }
@@ -96,7 +96,7 @@ static inline long zi_write_raw(struct zzio *zi, void *buf, long len)	// zi->wri
 	{
 		result = pwrite(zi->fd, buf, len, zi->writepos);
 	}
-	if (result == -1) printf("%s\n", strerror(errno));
+	assert(result != -1);
 	if (result > 0) zi->writepos += result;
 	return result;
 }
@@ -114,6 +114,7 @@ struct zzio *ziopenread(const char *path, int bufsize, int flags)
 	if (zi->fd == -1)
 	{
 		printf("%s\n", strerror(errno));
+		assert(false);
 		return NULL;
 	}
 	zi->buffersize = bufsize;
@@ -128,10 +129,12 @@ struct zzio *ziopenwrite(const char *path, int bufsize, int flags)
 	if (zi->fd == -1)
 	{
 		printf("%s\n", strerror(errno));
+		assert(false);
 		return NULL;
 	}
 	zi->flags = flags | ZZIO_WRITABLE;
 	zi->buffersize = bufsize;
+
 	return zi;
 }
 
@@ -144,6 +147,7 @@ struct zzio *ziopenmodify(const char *path, int bufsize, int flags)
 	if (zi->fd == -1)
 	{
 		printf("%s\n", strerror(errno));
+		assert(false);
 		return NULL;
 	}
 	zi->flags = flags | ZZIO_WRITABLE | ZZIO_READABLE;
@@ -151,10 +155,11 @@ struct zzio *ziopenmodify(const char *path, int bufsize, int flags)
 	return zi;
 }
 
-struct zzio *ziopensocket(int socket, int bufsize, int flags)
+struct zzio *ziopensocket(int sock, int bufsize, int flags)
 {
 	struct zzio *zi = calloc(1, sizeof(*zi));
-	zi->fd = socket;
+	assert(sock >= 0);
+	zi->fd = sock;
 	zi->readbuf = calloc(1, bufsize);
 	zi->writebuf = calloc(1, bufsize);
 	zi->flags = flags | ZZIO_WRITABLE | ZZIO_READABLE | ZZIO_SOCKET;
@@ -203,8 +208,7 @@ static inline void writeheader(struct zzio *zi, long length)
 	long chunk;
 	zi->writer(length, zi->header, zi->userdata);
 	chunk = zi_write_raw(zi, zi->header, zi->headersize);
-	if (chunk == -1) printf("%s\n", strerror(errno));
-	assert(chunk == zi->headersize); // TODO FIXME loop
+	assert(chunk == zi->headersize);
 }
 
 void ziflush(struct zzio *zi)
@@ -213,7 +217,7 @@ void ziflush(struct zzio *zi)
 
 	// commit writebuffer
 	assert((zi->flags & ZZIO_WRITABLE) || zi->writebuflen == 0);
-	if (zi->writer) writeheader(zi, zi->writebufpos);
+	if (zi->writebuflen > 0 && zi->writer) writeheader(zi, zi->writebufpos);
 	zi->writebufpos = 0;
 	while (zi->writebuflen > 0)
 	{
@@ -316,17 +320,23 @@ static inline void zi_reposition_read(struct zzio *zi, long pos)
 	{
 		zi_read_raw(zi, zi->header, zi->headersize, true);	// read header
 		zi->readbuflen = zi->reader(zi->header, zi->userdata);	// it tells us the size of next packet
+		assert(zi->readbuflen <= zi->buffersize);
+		zi->readpos += zi->headersize;
 	}
 	zi_read_raw(zi, zi->readbuf, zi->readbuflen, true);		// read next packet
 }
 
 int zigetc(struct zzio *zi)
 {
-	if (zi->readbuflen <= zi->readbufpos + 1)
+	if (zi->readbuflen > zi->readbufpos)
+	{
+		return zi->readbuf[zi->readbufpos++];
+	}
+	else
 	{
 		zi_reposition_read(zi, zi->readpos + zi->readbufpos);
+		return zi->readbuf[zi->readbufpos++];
 	}
-	return zi->readbuf[zi->readbufpos++];
 }
 
 // TODO allow skipping forward, also in sockets and packetized input?

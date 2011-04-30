@@ -207,7 +207,7 @@ uint16_t zzgetuint16(struct zzfile *zz, int idx);
 int32_t zzgetint32(struct zzfile *zz, int idx);
 int16_t zzgetint16(struct zzfile *zz, int idx);
 char *zzgetstring(struct zzfile *zz, char *input, long strsize);
-bool zztostring(struct zzfile *zz, char *input, long strsize, long charsize);
+bool zztostring(struct zzfile *zz, char *input, int strsize, int charsize);
 
 /// From the current file position, start reading DICOM tag information.
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len);

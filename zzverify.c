@@ -80,8 +80,9 @@ bool zzverify(struct zzfile *zz)
 	default:
 		break;
 	}
-	if (zz->current.length != UNLIMITED && zz->current.length % 2 != 0)	// really dumb DICOM requirement, but hey, it's there...
+	if (zz->current.valid && zz->current.length != UNLIMITED && zz->current.length % 2 != 0)
 	{
+		// really dumb DICOM requirement, but it's there and some toolkits treat it as a terminal error...
 		sprintf(zz->current.warning, "Data size is not even");
 		zz->current.valid = false;
 	}

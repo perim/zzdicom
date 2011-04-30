@@ -54,11 +54,12 @@ zzechoscp: zzechoscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONNET)
 clean:
 	rm -f *.o sqlinit.h $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov
 
-check: tests/zz1 tests/zzw tests/zzt
+check: tests/zz1 tests/zzw tests/zzt tests/zziotest
 	tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
 	tests/zzt samples/spine-ls.dcm
+	tests/zziotest
 	./zzdump --version > /dev/null
 	./zzdump --help > /dev/null
 	./zzdump --usage > /dev/null
@@ -72,6 +73,9 @@ check: tests/zz1 tests/zzw tests/zzt
 
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
+
+tests/zziotest: tests/zziotest.c $(HEADERS) $(COMMON) zzio.o
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) zzio.o
 
 tests/zzw: tests/zzw.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONVERIFY)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY)

@@ -30,7 +30,7 @@ typedef long headerreadfunc(char *, void *);
 struct zzio *ziopenread(const char *path, int bufsize, int flags);
 struct zzio *ziopenwrite(const char *path, int bufsize, int flags);
 struct zzio *ziopenmodify(const char *path, int bufsize, int flags);
-struct zzio *ziopensocket(int socket, int bufsize, int flags);
+struct zzio *ziopensocket(int sock, int bufsize, int flags);
 
 /// Set up packet splitter that turns a stream of data into neat packets with custom headers. Max length of packet
 /// must be equal to size of buffer as told earlier to ziopen*().
