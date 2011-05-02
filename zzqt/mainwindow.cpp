@@ -179,8 +179,8 @@ void MainWindow::openFile(QString filename)
 			{
 				item3 = new QStandardItem("(Unknown tag)");
 			}
-			bool validcontent = zztostring(zz, contentfield, sizeof(contentfield));
-			item4 = new QStandardItem(contentfield);
+			bool validcontent = zztostring(zz, contentfield, sizeof(contentfield), sizeof(contentfield));
+			item4 = new QStandardItem(QString::fromUtf8(contentfield));
 			if (!validcontent)
 			{
 				item4->setForeground(QBrush(QColor(Qt::gray)));
