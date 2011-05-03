@@ -174,6 +174,11 @@ const char *zistrerror(void)
 
 void zisplitter(struct zzio *zi, long headersize, headerwritefunc writefunc, headerreadfunc readfunc, void *userdata)
 {
+	if (zi->flags & ZZIO_WRITABLE && zi->flags & ZZIO_READABLE && !(zi->flags & ZZIO_SOCKET))
+	{
+		fprintf(stderr, "Cannot use splitter on file modification\n");
+		return;
+	}
 	zi->reader = readfunc;
 	zi->writer = writefunc;
 	zi->headersize = headersize;
@@ -183,12 +188,12 @@ void zisplitter(struct zzio *zi, long headersize, headerwritefunc writefunc, hea
 
 //bool zisetflag(struct zzio *zi, int flag);	// turn compression on/off
 
-long zireadpos(struct zzio *zi)
+long zireadpos(const struct zzio *zi)
 {
 	return zi->readpos + zi->readbufpos;
 }
 
-long ziwritepos(struct zzio *zi)
+long ziwritepos(const struct zzio *zi)
 {
 	return zi->writepos + zi->writebufpos;
 }
@@ -211,11 +216,32 @@ static inline void writeheader(struct zzio *zi, long length)
 	assert(chunk == zi->headersize);
 }
 
+void zicommit(struct zzio *zi)
+{
+	ziflush(zi);	// flush our buffers
+	if (!(zi->flags & ZZIO_SOCKET))
+	{
+#if _POSIX_SYNCHRONIZED_IO > 0
+		fdatasync(zi->fd);
+#else
+		fsync(zi->fd);
+#endif
+	}
+}
+
 void ziflush(struct zzio *zi)
 {
 	long chunk;
 
-	// commit writebuffer
+	// invalidate read buffer if (partially) within write buffer
+	if ((zi->readbufpos > zi->writebufpos && zi->readbufpos < zi->writebufpos + zi->writebuflen)
+	    || (zi->readbufpos + zi->readbuflen > zi->writebufpos && zi->readbufpos + zi->readbuflen < zi->writebufpos + zi->writebuflen)
+	    || (zi->readbufpos < zi->writebufpos && zi->readbufpos + zi->readbuflen > zi->writebufpos + zi->writebuflen))
+	{
+		zi->readbuflen = 0;
+	}
+
+	// commit write buffer
 	assert((zi->flags & ZZIO_WRITABLE) || zi->writebuflen == 0);
 	if (zi->writebuflen > 0 && zi->writer) writeheader(zi, zi->writebufpos);
 	zi->writebufpos = 0;
@@ -271,9 +297,10 @@ long zisendfile(struct zzio *zi, int fd, long offset, long length)
 	mem = mmap(NULL, length + offset - pos, PROT_READ, flags, fd, pos);
 	if (mem != MAP_FAILED)
 	{
+		madvise(mem, length + offset - pos, MADV_SEQUENTIAL);
 		result = ziwrite(zi, mem + offset - pos, length);
+		munmap(mem, length + offset - pos);
 	}
-	munmap(mem, length + offset - pos);
 	return result;
 }
 
@@ -290,10 +317,10 @@ void ziwillneed(struct zzio *zi, long offset, long length)
 }
 
 // TODO make fd into struct zzio
-long zirecvfile(struct zzio *zi, int fd, long length)
+long zirecvfile(struct zzio *zi, int fd, long offset, long length)
 {
 #ifdef ZZ_LINUX
-	posix_fallocate(zi->fd, zi->byteswritten, length);
+	posix_fallocate(fd, offset, length);
 #endif
 	// readv on linux, recvfile on *BSD, append to fd
 	return 0;
@@ -330,12 +357,12 @@ int zigetc(struct zzio *zi)
 {
 	if (zi->readbuflen > zi->readbufpos)
 	{
-		return zi->readbuf[zi->readbufpos++];
+		return (unsigned char)zi->readbuf[zi->readbufpos++];
 	}
 	else
 	{
 		zi_reposition_read(zi, zi->readpos + zi->readbufpos);
-		return zi->readbuf[zi->readbufpos++];
+		return (unsigned char)zi->readbuf[zi->readbufpos++];
 	}
 }
 
@@ -375,7 +402,6 @@ long ziread(struct zzio *zi, void *buf, long count)
 		len = MIN(count, zi->readbuflen - zi->readbufpos);
 		memcpy(buf, zi->readbuf + zi->readbufpos, len);
 		zi->readbufpos += len;
-
 		// Is buffer empty now and we need more?
 		len = count - len;
 		if (len > 0)	// yes, read in more
@@ -387,7 +413,7 @@ long ziread(struct zzio *zi, void *buf, long count)
 	return count;
 }
 
-long ziwrite(struct zzio *zi, void *buf, long count)
+long ziwrite(struct zzio *zi, const void *buf, long count)
 {
 	long len;
 

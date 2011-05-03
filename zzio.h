@@ -1,7 +1,7 @@
 // High-performance buffered IO layer with transparent support for
-// packet splitting and zlib compression. Note: Do NOT mix write
+// packet splitting and zlib compression. Note: Do not mix write
 // calls to this interface with write calls through other inferfaces
-// to the same file. Do not mix read ro write calls to this interface
+// to the same file. Do not mix read or write calls to this interface
 // with read calls through other interfaces to the same socket.
 
 #ifndef ZZIO_H
@@ -23,6 +23,7 @@ struct zzio;
 /// Header write function. First parameter is number of bytes to be written in next packet.
 /// Second parameter is the buffer to write into. Third parameter is user supplied.
 typedef void headerwritefunc(long, char *, const void*);
+
 /// Header read function. First parameter is buffer to read from. Second parameter is user
 /// supplied. Returns number of bytes in next packet.
 typedef long headerreadfunc(char *, void *);
@@ -38,21 +39,33 @@ void zisplitter(struct zzio *zi, long headersize, headerwritefunc writefunc, hea
 
 const char *zistrerror(void);
 bool zisetflag(struct zzio *zi, int flag);	// turn compression on/off
-long zireadpos(struct zzio *zi);
-long ziwritepos(struct zzio *zi);
-void ziflush(struct zzio *zi);
+long zireadpos(const struct zzio *zi);
+long ziwritepos(const struct zzio *zi);
 bool zisetreadpos(struct zzio *zi, long pos);
 bool zisetwritepos(struct zzio *zi, long pos);
 int zigetc(struct zzio *zi);
 void ziputc(struct zzio *zi, int ch);
 long ziread(struct zzio *zi, void *buf, long count);
-long ziwrite(struct zzio *zi, void *buf, long count);
-long zisendfile(struct zzio *zi, int fd, long offset, long length);	// test generating all heads and tails at once, then iovec them + mmap'ed data, maybe faster than sendfile()
-long zirecvfile(struct zzio *zi, int fd, long length);	// readv on linux, recvfile on *BSD, append to fd
+long ziwrite(struct zzio *zi, const void *buf, long count);
 void ziwillneed(struct zzio *zi, long offset, long length);
 void ziwrite2at(struct zzio *zi, uint16_t value);
 void ziwrite4at(struct zzio *zi, uint32_t value);
-struct zzio *ziclose(struct zzio *zi);	// returns NULL
+struct zzio *ziclose(struct zzio *zi);	// always returns NULL
+
+/// Flushes the write buffer to file. Note that this does not force the OS to flush its write
+/// buffer to disk or to send it on the network. Also, you must flush the write buffer before
+/// you read in the same area, otherwise you might get old data.
+void ziflush(struct zzio *zi);
+
+/// Flush and force OS to commit file data to storage. Does nothing for sockets. File metadata
+/// (modification and creation time) may remain uncommitted.
+void zicommit(struct zzio *zi);
+
+/// Optimized way to send data from open file descriptor fd to zzio target zi
+long zisendfile(struct zzio *zi, int fd, long offset, long length);
+
+/// Optimized way to receive data from source zi to open file descriptor fd
+long zirecvfile(struct zzio *zi, int fd, long offset, long length);
 
 // void zirepeat(struct zzio *zi, int ch, long num);	// repeat character ch num times (use memset in buffer, repeatedly if necessary)
 
