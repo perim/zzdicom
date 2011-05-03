@@ -7,7 +7,6 @@
 #include <errno.h>
 #include <limits.h>
 #include <sys/mman.h>
-//#include "charlsintf.h"	// private port of CharLS pseudo-C interface to real C interface
 
 #include "zztexture.h"
 
@@ -146,10 +145,8 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 		case DCM_Item:
 		case DCM_PixelData:
 			// Upload info from previous frame
-			if (zz->current.pxstate == ZZ_PIXELITEM) printf("item %ld\n", zz->current.frame);
 			if (zz->current.frame > 0 && zz->current.pxstate == ZZ_PIXELITEM)
 			{
-				printf("item USED %ld\n", zz->current.frame);
 				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, zz->current.frame - 1, 64, 1, GL_LUMINANCE, GL_FLOAT, volinfo);
 				checkError();
 			}
@@ -173,13 +170,12 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 				return NULL;
 			}
 			bytes = addr + zz->current.pos - offset;	// increment by page alignment shift
-			madvise(bytes, length, MADV_SEQUENTIAL | MADV_WILLNEED);
+			madvise(bytes, length, MADV_SEQUENTIAL);
 			glBindTexture(GL_TEXTURE_3D, textures[0]);
 			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, bytes);
 			checkError();
-			madvise(bytes, length, MADV_DONTNEED);
 			munmap(addr, length + zz->current.pos - offset);
 			return zzt;
 		}
