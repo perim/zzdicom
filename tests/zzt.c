@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <GL/glew.h>
 #include <GL/freeglut.h>
 #include "zztexture.h"
 
@@ -18,8 +17,6 @@ int main(int argc, char **argv)
 	glutInitWindowPosition(0, 0);
 	glutInitWindowSize(640, 480);
 	glutCreateWindow("DICOM texture test");
-	GLenum err = glewInit();
-	assert(GLEW_OK == err);
 	glutReportErrors();
 
 	tx = zzcopytotexture(NULL, NULL);

@@ -76,7 +76,7 @@ tests/zzw: tests/zzw.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONVERIFY)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY)
 
 tests/zzt: tests/zzt.c $(HEADERS) $(COMMON) $(COMMONTEXTURE)
-	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONTEXTURE) -lGLEW -lglut
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONTEXTURE) -lglut -lCharLS
 
 install:
 	install -t /usr/local/bin $(PROGRAMS)
