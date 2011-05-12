@@ -13,7 +13,7 @@ all: CFLAGS += -Os -fstack-protector
 all: sqlinit.h $(PROGRAMS)
 
 debug: clean
-debug: CFLAGS += -O0 -g -DDEBUG -fprofile-arcs -ftest-coverage
+debug: CFLAGS += -O0 -g -DDEBUG -fprofile-arcs -ftest-coverage -fstack-protector-all
 debug: sqlinit.h $(PROGRAMS) check
 
 %.o : %.c
@@ -58,6 +58,7 @@ check: tests/zz1 tests/zzw tests/zzt
 	tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
+	tests/zzt samples/spine-ls.dcm
 	./zzdump --version > /dev/null
 	./zzdump --help > /dev/null
 	./zzdump --usage > /dev/null

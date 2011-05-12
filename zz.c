@@ -136,8 +136,8 @@ bool zztostring(struct zzfile *zz, char *input, long strsize, long charsize)
 			break;
 		}
 		if (zz->current.length > strsize - 1
-		    || (zz->utf8 && strlen_utf8(input) > charsize)
-		    || (!zz->utf8 && strlen(input) > charsize))
+		    || (zz->utf8 && (long)strlen_utf8(input) > charsize)
+		    || (!zz->utf8 && (long)strlen(input) > charsize))
 		{
 			input[strsize - 2] = '.';
 			input[strsize - 3] = '.';
@@ -502,6 +502,10 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		{
 			// once over the header, start parsing implicit
 			zz->ladder[0].txsyn = ZZ_IMPLICIT;
+		}
+		else if (strcmp(transferSyntaxUid, UID_JPEGLSLosslessTransferSyntax) == 0)
+		{
+			zz->ladder[0].txsyn = ZZ_EXPLICIT_JPEGLS;
 		}
 		else if (strcmp(transferSyntaxUid, UID_DeflatedExplicitVRLittleEndianTransferSyntax) == 0)
 		{

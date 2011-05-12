@@ -7,18 +7,20 @@
 #include <errno.h>
 #include <limits.h>
 #include <sys/mman.h>
+#include <CharLS/interface.h>
 
 #include "zztexture.h"
 
 #define checkError() assert(glGetError() == 0)
 
+// TODO factorize this up a bit... it grew to monster size!
 struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 {
 	uint16_t group, element;
 	long len;
 	int bitspersample = 0, components = 0;
 	void *addr;
-	char *bytes;
+	unsigned char *bytes;
 	off_t offset;
 	size_t length;
 	GLuint textures[2]; // 0 - volume, 1 - volumeinfo
@@ -154,12 +156,15 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			{
 				break;	// still got more frames to read
 			}
-			glBindTexture(GL_TEXTURE_2D, 0);
 			if (bitspersample == 0)	// by the time we get here, we need to have found all relevant pixel info
 			{
 				fprintf(stderr, "No valid image information found\n");
 				return NULL;
 			}
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glBindTexture(GL_TEXTURE_3D, textures[0]);
+			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			offset = zz->current.pos & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
 			length = zz->fileSize - zz->current.pos;			// FIXME - use actual pixel length
 			// TODO - check actual pixel length against length of pixel data in file before reading
@@ -171,10 +176,35 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			}
 			bytes = addr + zz->current.pos - offset;	// increment by page alignment shift
 			madvise(bytes, length, MADV_SEQUENTIAL);
-			glBindTexture(GL_TEXTURE_3D, textures[0]);
-			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, bytes);
+			checkError();
+			if (zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT_JPEGLS)
+			{
+				enum JLS_ERROR err;
+				const long bufsize = zzt->pixelsize.x * zzt->pixelsize.y * components * (bitspersample / 8);
+				unsigned char *buffer = malloc(bufsize), *src;
+				long i = 0, start = zz->current.pos;
+				glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, NULL);
+				// iterate into the encapsulated pixel data
+				while (zziternext(zz, &group, &element, &len))
+				{
+					// TODO FIXME -- support fragmented items -- maybe remove padding (if charls cannot handle)
+					if (ZZ_KEY(group, element) == DCM_Item && zz->current.pxstate == ZZ_PIXELITEM)
+					{
+						src = bytes + zz->current.pos - start;
+						assert(src[0] == 0xff);
+						assert(src[1] == 0xd8);
+						err = JpegLsDecode(buffer, bufsize, src, len, NULL);
+						assert(err == 0);
+						glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, i++, zzt->pixelsize.x, zzt->pixelsize.y, 1, GL_LUMINANCE, size, buffer);
+						checkError();
+					}
+				}
+				free(buffer);
+			}
+			else	// assume raw pixels
+			{
+				glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, bytes);
+			}
 			checkError();
 			munmap(addr, length + zz->current.pos - offset);
 			return zzt;
