@@ -105,7 +105,7 @@ void dump(char *filename)
 
 		memset(pstart, 0, sizeof(pstart));
 		memset(pstop, 0, sizeof(pstop));
-		content = zztostring(zz, value, sizeof(value) - 2, PADLEN);
+		content = zztostring(zz, value, sizeof(value) - 2, PADLEN - 2);
 		charlen = (strcmp(zz->characterSet, "ISO_IR 192") == 0) ? strlen_utf8(value) : strlen(value);
 		if (content)
 		{

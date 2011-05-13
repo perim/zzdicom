@@ -135,13 +135,14 @@ bool zztostring(struct zzfile *zz, char *input, long strsize, long charsize)
 			strncpy(input, "(Error)", strsize - 1);
 			break;
 		}
-		if (zz->current.length > strsize - 1
+		if (zz->current.length > charsize - 1
 		    || (zz->utf8 && (long)strlen_utf8(input) > charsize)
 		    || (!zz->utf8 && (long)strlen(input) > charsize))
 		{
-			input[strsize - 2] = '.';
-			input[strsize - 3] = '.';
-			input[strsize - 4] = '.';
+			input[charsize - 1] = '\0';
+			input[charsize - 2] = '.';
+			input[charsize - 3] = '.';
+			input[charsize - 4] = '.';
 		}
 		break;
 	case AT:
