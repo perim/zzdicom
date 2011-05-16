@@ -116,7 +116,7 @@ MainWindow::MainWindow(QWidget *parent) :
 void MainWindow::openFile(QString filename)
 {
 	uint16_t group, element;
-	long len, pos;
+	long len;
 	char hexfield[20], vrfield[MAX_LEN_VR], contentfield[MAX_LEN_VALUE];
 	int nesting;
 	QList<QStandardItem *> hierarchy;
@@ -142,7 +142,6 @@ void MainWindow::openFile(QString filename)
 		QStandardItem *last = NULL;
 		QString infoText;
 
-		pos = ftell(zz->fp);
 		tag = zztag(group, element);
 
 		if (ZZ_KEY(group, element) == DCM_NumberOfFrames)
