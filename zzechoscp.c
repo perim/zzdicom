@@ -1,6 +1,6 @@
 #include "zznet.h"
 
-int main(int argc, char **argv)
+int main(void)
 {
 	struct zzfile szz, *zz;
 	zz = zznetwork(NULL, "zzdicom", &szz);
