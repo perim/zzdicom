@@ -36,15 +36,16 @@ void anonymize(char *filename)
 			{
 				if (group == ZZ_GROUP(taglist[i]) && element == ZZ_ELEMENT(taglist[i]))
 				{
+					zisetwritepos(zz->zi, zireadpos(zz->zi));
 					if (tagvrs[i][0] == 'D' && tagvrs[i][1] == 'A')
 					{
 						const char *dstr = "19000101";
 
-						fwrite(dstr, MIN(len, (long)strlen(dstr)), 1, zz->fp);
+						ziwrite(zz->zi, dstr, MIN(len, (long)strlen(dstr)));
 					}
 					else
 					{
-						fwrite(fill, len, 1, zz->fp);
+						ziwrite(zz->zi, fill, len);
 					}
 					len = 0;			// do not seek further
 					nexttag++;			// abort early when all items found

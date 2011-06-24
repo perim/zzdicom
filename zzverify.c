@@ -37,9 +37,9 @@ bool zzverify(struct zzfile *zz)
 			long offactual;
 			long curr = zz->current.pos;
 
-			fseek(zz->fp, zz->pxOffsetTable + zz->current.frame * sizeof(offstored), SEEK_SET);
-			fread(&offstored, sizeof(offstored), 1, zz->fp);
-			fseek(zz->fp, curr, SEEK_SET);
+			zisetreadpos(zz->zi, zz->pxOffsetTable + zz->current.frame * sizeof(offstored));
+			ziread(zz->zi, &offstored, sizeof(offstored));
+			zisetreadpos(zz->zi, curr);
 			offactual = curr - (zz->pxOffsetTable + sizeof(offstored) * zz->frames + 8);
 			if ((long)offstored != offactual)
 			{

@@ -16,12 +16,8 @@ like MacOSX and FreeBSD.
 Dependencies
 ------------
 The core parser has no dependencies than the system C library. The DICOM database functions require
-SQLite. The experimental JPEG-LS code requires CharLS. The OpenGL utility code requires GLEW and
-FreeGLUT (will probably work with the original GLUT as well).
-
-An implementation of ftell() that gives accurate file positions without calling fflush() first is
-required. A strict interpretation of POSIX does not require this. This works on both Linux and
-MacOSX, and so probably on all the free BSD variants as well.
+SQLite. The experimental JPEG-LS code requires CharLS. The OpenGL utility code requires FreeGLUT 
+(will probably work with the original GLUT as well).
 
 Features
 --------

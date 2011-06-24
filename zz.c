@@ -7,6 +7,7 @@
 
 #include "zz.h"
 #include "zz_priv.h"
+#include "zzio.h"
 
 #include <assert.h>
 #include <stdlib.h>
@@ -27,7 +28,7 @@ static bool verbose = false;
 struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile)
 {
 	struct zzfile *zz;
-	char dicm[4], endianbuf[6];
+	char dicm[5], endianbuf[6];
 	struct stat st;
 
 	if (!infile || !mode || !filename)
@@ -41,28 +42,28 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 		fprintf(stderr, "%s could not be found: %s\n", filename, strerror(errno));
 		return NULL;
 	}
-	zz->fp = fopen(filename, mode);
-	if (!zz->fp || !realpath(filename, zz->fullPath))
+	zz->zi = ziopenfile(filename, mode);
+	if (!zz->zi || !realpath(filename, zz->fullPath))
 	{
 		fprintf(stderr, "%s could not be opened: %s\n", filename, strerror(errno));
 		return NULL;
 	}
 	zz->fileSize = st.st_size;
 	zz->modifiedTime = st.st_mtime;
-#ifdef POSIX
-	posix_fadvise(fileno(zz->fp), 0, 4096 * 4, POSIX_FADV_WILLNEED);	// request 4 pages right away
-#endif
+	ziwillneed(zz->zi, 0, 4096 * 4);	// request 4 pages right away
 
 	// Check for valid Part 10 header
 	zz->part10 = true;	// ever the optimist
-	if (fseek(zz->fp, 128, SEEK_SET) != 0 || fread(dicm, 4, 1, zz->fp) != 1 || strncmp(dicm, "DICM", 4) != 0)
+	memset(dicm, 0, sizeof(dicm));
+	if (!zisetreadpos(zz->zi, 128) || ziread(zz->zi, dicm, 4) != 4 || strncmp(dicm, "DICM", 4) != 0)
 	{
-		fprintf(stderr, "%s does not have a valid part 10 DICOM header\n", filename);
-		rewind(zz->fp);	// try anyway
+		fprintf(stderr, "%s does not have a valid part 10 DICOM header (header=%s %c%c%c%c) pos=%ld\n", 
+		        filename, dicm, dicm[0], dicm[1], dicm[2], dicm[3], zireadpos(zz->zi));
+		zisetreadpos(zz->zi, 0);	// try anyway
 		zz->part10 = false;
 	}
 
-	if (fread(&endianbuf, 1, 6, zz->fp) != 6 || fseek(zz->fp, -6, SEEK_CUR) != 0)
+	if (ziread(zz->zi, &endianbuf, 6) != 6 || !zisetreadpos(zz->zi, zz->part10 ? 128 + 4 : 0))
 	{
 		return NULL;	// not big enough to be a DICOM file
 	}
@@ -70,9 +71,9 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	// Safety check - are we really reading a part 10 file? First tag MUST be (0x0002, 0x0000)
 	if (endianbuf[0] != 2 || endianbuf[1] != 0 || endianbuf[2] != 0 || endianbuf[3] != 0)
 	{
-		rewind(zz->fp);				// rewind and try over without the part10
-		fread(&endianbuf, 1, 6, zz->fp);
-		fseek(zz->fp, -6, SEEK_CUR);
+		zisetreadpos(zz->zi, 0);		// rewind and try over without the part10
+		ziread(zz->zi, &endianbuf, 6);
+		zisetreadpos(zz->zi, 0);
 		zz->part10 = false;
 	}
 
@@ -95,7 +96,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 		zz->ladder[0].txsyn = ZZ_IMPLICIT;
 	}
 
-	zz->ladder[0].pos = ftell(zz->fp);
+	zz->ladder[0].pos = zireadpos(zz->zi);
 	zz->ladder[0].item = -1;
 	zz->current.frame = -1;
 	zz->frames = -1;
@@ -180,11 +181,11 @@ int zzrDS(struct zzfile *zz, int len, double *input)
 	long curr = zz->current.pos;
 	int found = 0, ch, strpos = 0;
 
-	fseek(zz->fp, zz->current.pos, SEEK_SET);
+	zisetreadpos(zz->zi, zz->current.pos);
 	memset(value, 0, sizeof(value));
-	while (!feof(zz->fp) && curr < zz->current.pos + zz->current.length && found < len)
+	while (!zieof(zz->zi) && curr < zz->current.pos + zz->current.length && found < len)
 	{
-		ch = fgetc(zz->fp);
+		ch = zigetc(zz->zi);
 		if (ch == '\\' || ch == EOF)	// found one value
 		{
 			input[found++] = atof(value);
@@ -210,11 +211,11 @@ int zzrIS(struct zzfile *zz, int len, long *input)
 	long curr = zz->current.pos;
 	int found = 0, ch, strpos = 0;
 
-	fseek(zz->fp, zz->current.pos, SEEK_SET);
+	zisetreadpos(zz->zi, zz->current.pos);
 	memset(value, 0, sizeof(value));
-	while (!feof(zz->fp) && curr < zz->current.pos + zz->current.length && found < len)
+	while (!zieof(zz->zi) && curr < zz->current.pos + zz->current.length && found < len)
 	{
-		ch = fgetc(zz->fp);
+		ch = zigetc(zz->zi);
 		if (ch == '\\' || ch == EOF)	// found one value
 		{
 			input[found++] = atol(value);
@@ -239,8 +240,8 @@ char *zzgetstring(struct zzfile *zz, char *input, long strsize)
 	const long desired = MIN(zz->current.length, strsize - 1);
 	long result, last;
 
-	fseek(zz->fp, zz->current.pos, SEEK_SET);
-	last = result = fread(input, 1, desired, zz->fp);
+	zisetreadpos(zz->zi, zz->current.pos);
+	last = result = ziread(zz->zi, input, desired);
 	input[MIN(result, strsize - 1)] = '\0';	// make sure we zero terminate
 	while (last > 0 && input[--last] == ' ')	// remove trailing whitespace
 	{
@@ -250,7 +251,7 @@ char *zzgetstring(struct zzfile *zz, char *input, long strsize)
 }
 
 #define CHECK_SEEK_READ(zz, val, idx) \
-	zz->current.length >= (long)sizeof(val) * (idx + 1) && fseek(zz->fp, zz->current.pos + idx * sizeof(val), SEEK_SET) == 0 && fread(&val, sizeof(val), 1, zz->fp) == 1
+	zz->current.length >= (long)sizeof(val) * (idx + 1) && zisetreadpos(zz->zi, zz->current.pos + idx * sizeof(val)) && ziread(zz->zi, &val, sizeof(val)) == sizeof(val)
 
 float zzgetfloat(struct zzfile *zz, int idx)
 {
@@ -331,7 +332,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	zzKey key;
 	long pos;
 
-	if (fread(&header, 8, 1, zz->fp) != 1)		// group+element then either VR + 0, VR+VL, or just VL
+	if (ziread(zz->zi, &header, 8) != 8)		// group+element then either VR + 0, VR+VL, or just VL
 	{
 		return false;
 	}
@@ -348,7 +349,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	// Did we leave a group, sequence or item? We can drop out of multiple at the same time.
 	while (zz->ladderidx > 0)
 	{
-		long bytesread = ftell(zz->fp) - zz->ladder[zz->ladderidx].pos;
+		long bytesread = zireadpos(zz->zi) - zz->ladder[zz->ladderidx].pos;
 		long size = (zz->ladder[zz->ladderidx].size >= 0) ? zz->ladder[zz->ladderidx].size : INT32_MAX;	// for 32bit systems where UNLIMITED is -1
 
 		if (zz->ladder[zz->ladderidx].type == ZZ_GROUP
@@ -423,7 +424,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			break;
 		case SQ: case UN: case OB: case OW: case OF: case UT:
 		default:	// all future VRs are 4 byte size, see PS3.5 6.2
-			if (fread(&rlen, 4, 1, zz->fp) != 1)
+			if (ziread(zz->zi, &rlen, 4) != 4)
 			{
 				return false;		// the 32 bit variant
 			}
@@ -445,7 +446,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		}
 	}
 	zz->current.length = *len;
-	pos = zz->current.pos = ftell(zz->fp);	// anything we read after this, we roll back the position for
+	pos = zz->current.pos = zireadpos(zz->zi);	// anything we read after this, we roll back the position for
 
 	switch (key)
 	{
@@ -533,7 +534,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	if (key == DCM_FileMetaInformationGroupLength)
 	{
 		zz->ladderidx = 1;
-		zz->ladder[1].pos = ftell(zz->fp);
+		zz->ladder[1].pos = zireadpos(zz->zi);
 		zz->ladder[1].size = zzgetuint32(zz, 0);
 		zz->ladder[1].txsyn = zz->ladder[0].txsyn;
 		zz->ladder[1].group = header.group;
@@ -587,14 +588,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 				zz->ladder[zz->ladderidx + 1].item = -1;	// first item brings it to zero
 			}
 		}
-		if ((header.element == 0x0000 || zz->current.vr == SQ) && zz->ladder[zz->ladderidx].size > 0 && zz->ladder[zz->ladderidx].size != UNLIMITED)
-		{
-#ifdef POSIX
-			posix_fadvise(fileno(zz->fp), 0, pos - 1, POSIX_FADV_DONTNEED);
-			posix_fadvise(fileno(zz->fp), pos, zz->ladder[zz->ladderidx].size, POSIX_FADV_WILLNEED);
-#endif
-		}
-		zz->ladder[zz->ladderidx].pos = ftell(zz->fp);
+		zz->ladder[zz->ladderidx].pos = zireadpos(zz->zi);
 		if (zz->current.vr != UN)
 		{
 			zz->ladder[zz->ladderidx].txsyn = zz->ladder[zz->ladderidx - 1].txsyn;	// inherit transfer syntax
@@ -659,7 +653,7 @@ void zziterinit(struct zzfile *zz)
 {
 	if (zz)
 	{
-		fseek(zz->fp, zz->ladder[0].pos, SEEK_SET);
+		zisetreadpos(zz->zi, zz->ladder[0].pos);
 		zz->currNesting = 0;
 		zz->nextNesting = 0;
 		zz->ladderidx = 0;
@@ -674,14 +668,14 @@ void zziterinit(struct zzfile *zz)
 bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 {
 	// Check if we should read the next tag -- try to iterate over as many tags as possible, even if data is totally fubar
-	if (zz && !feof(zz->fp) && !ferror(zz->fp)
+	if (zz && !zieof(zz->zi) && !zierror(zz->zi)
 	    && (zz->current.length == UNLIMITED || (zz->current.pos + zz->current.length < zz->fileSize) || zz->current.vr == SQ || zz->current.group == 0xfffe))
 	{
 		if (zz->current.pos > 0 && zz->current.length > 0 && zz->current.length != UNLIMITED
 		    && !(zz->current.group == 0xfffe && zz->current.element == 0xe000 && zz->current.pxstate == ZZ_NOT_PIXEL)
 		    && zz->current.vr != SQ)
 		{
-			fseek(zz->fp, zz->current.pos + zz->current.length, SEEK_SET);	// go to start of next tag
+			zisetreadpos(zz->zi, zz->current.pos + zz->current.length);	// go to start of next tag
 			// note if this conditional is not entered, we will try to parse the contents of the tag
 		}
 		if (zzread(zz, group, element, len))
@@ -697,12 +691,7 @@ struct zzfile *zzclose(struct zzfile *zz)
 {
 	if (zz)
 	{
-		fclose(zz->fp);
-		if (zz->net.buffer)
-		{
-			fclose(zz->net.buffer);
-		}
-		free(zz->net.mem);
+		ziclose(zz->zi);
 	}
 	return NULL;
 }

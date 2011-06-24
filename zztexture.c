@@ -19,9 +19,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 	uint16_t group, element;
 	long len;
 	int bitspersample = 0, components = 0;
-	void *addr;
 	unsigned char *bytes;
-	off_t offset;
 	size_t length;
 	GLuint textures[2]; // 0 - volume, 1 - volumeinfo
 	GLenum type = GL_LUMINANCE16;
@@ -165,18 +163,10 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			glBindTexture(GL_TEXTURE_3D, textures[0]);
 			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			offset = zz->current.pos & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
-			length = zz->fileSize - zz->current.pos;			// FIXME - use actual pixel length
-			// TODO - check actual pixel length against length of pixel data in file before reading
-			addr = mmap(NULL, length + zz->current.pos - offset, PROT_READ, MAP_SHARED, fileno(zz->fp), offset);
-			if (addr == MAP_FAILED)
-			{
-				fprintf(stderr, "Could not memory map file: %s\n", strerror(errno));
-				return NULL;
-			}
-			bytes = addr + zz->current.pos - offset;	// increment by page alignment shift
-			madvise(bytes, length, MADV_SEQUENTIAL);
 			checkError();
+			// TODO - check actual pixel length against length of pixel data in file before reading
+			length = zz->fileSize - zz->current.pos;
+			bytes = zireadbuf(zz->zi, zz->current.pos, length);
 			if (zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT_JPEGLS)
 			{
 				enum JLS_ERROR err;
@@ -206,7 +196,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 				glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, bytes);
 			}
 			checkError();
-			munmap(addr, length + zz->current.pos - offset);
+			zifreebuf(zz->zi, bytes, length);
 			return zzt;
 		}
 	}

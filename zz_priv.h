@@ -2,6 +2,7 @@
 #define ZZ_PRIV_H
 
 #include "zz.h"
+#include "zzio.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,7 +12,6 @@ extern "C" {
 #define ZZ_LINUX
 #endif
 
-#include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
 #include <time.h>
@@ -123,7 +123,7 @@ enum zzsteptype
 
 struct zzfile
 {
-	FILE		*fp;			///< File pointer or network socket
+	struct zzio	*zi;			///< File or network socket
 	long		fileSize;		///< File or current buffer size
 	char		fullPath[PATH_MAX];
 	char		sopClassUid[MAX_LEN_UI];	// TODO convert to enum
@@ -137,10 +137,8 @@ struct zzfile
 
 	struct
 	{
-		FILE		*buffer;	///< Memory buffer disguised as a file
 		char		callingaet[17];	///< Our AE Title
 		char		interface[64];	///< Our network interface
-		void		*mem;		///< Pointer to buffer's memory
 		long		maxpdatasize;	///< Maximum size of other party's pdata payload
 		uint16_t	version;	///< Association version capability bitfield
 		long		lastMesID;	///< Last message ID used, to make it unique

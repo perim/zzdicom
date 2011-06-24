@@ -6,6 +6,7 @@
 
 #include "byteorder.h"
 
+#include "zzio.h"
 #include "zz_priv.h"
 #include "zzwrite.h"
 
@@ -47,11 +48,11 @@ static bool checkContents(const char *testfile, bool reqperfection)
 
 static inline bool explicit(struct zzfile *zz) { return zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT; }
 
-static void implicit(FILE *fp, uint16_t group, uint16_t element, uint32_t length)
+static void implicit(struct zzio *zi, uint16_t group, uint16_t element, uint32_t length)
 {
-	fwrite(&group, 2, 1, fp);
-	fwrite(&element, 2, 1, fp);
-	fwrite(&length, 4, 1, fp);
+	ziwrite(zi, &group, 2);
+	ziwrite(zi, &element, 2);
+	ziwrite(zi, &length, 4);
 }
 
 static void genericfile(struct zzfile *zz)
@@ -127,8 +128,8 @@ int main(int argc, char **argv)
 
 	memset(zz, 0, sizeof(*zz));
 	mkdir("samples", 0754);
-	zz->fp = fopen("samples/confuse.dcm", "w");
-	if (!zz->fp)
+	zz->zi = ziopenfile("samples/confuse.dcm", "w");
+	if (!zz->zi)
 	{
 		fprintf(stderr, "Could not open output file: %s\n", strerror(errno));
 	}
@@ -146,7 +147,7 @@ int main(int argc, char **argv)
 	zzwSH(zz, DCM_StudyID, "ANONDICMSTUDY");
 	zzwEmpty(zz, DCM_Laterality, CS);
 	addCheck(zz);
-	fclose(zz->fp);
+	ziclose(zz->zi);
 
 	result = checkContents("samples/confuse.dcm", true);
 	assert(result);
@@ -157,12 +158,12 @@ int main(int argc, char **argv)
 	zz = zzcreate("samples/tw1.dcm", &szz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianImplicitTransferSyntax);
 	genericfile(zz);
 	zzwUN_begin(zz, ZZ_KEY(0x0029, 0x1010), NULL);
-		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz, 0);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);
-		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);
+		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz, 1);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);
 	zzwUN_end(zz, NULL);
 	addCheck(zz);
 	zz = zzclose(zz);
@@ -172,35 +173,34 @@ int main(int argc, char **argv)
 
 	////
 	// Set # 3 -- Basic reading of part10 explicit
-
 	zz = zzcreate("samples/tw2.dcm", &szz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianExplicitTransferSyntax);
 	genericfile(zz);
 	zzwSQ_begin(zz, ZZ_KEY(0x0020, 0x1115), NULL);
-		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz, 0);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);
-		implicit(zz->fp, 0xfffe, 0xe000, 24);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);
+		implicit(zz->zi, 0xfffe, 0xe000, 24);
 		garbfill(zz, 1);
-		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz, 2);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);
-		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);
+		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
 		zzwSS(zz, ZZ_KEY(0x0021, 0x1010), 11);
 		zzwSL(zz, ZZ_KEY(0x0021, 0x1011), 12);
 		zzwUS(zz, ZZ_KEY(0x0021, 0x1012), 13);
 		zzwUL(zz, ZZ_KEY(0x0021, 0x1013), 14);
 		zzwFL(zz, ZZ_KEY(0x0021, 0x1014), 15.0f);
 		zzwFD(zz, ZZ_KEY(0x0021, 0x1015), 16.0);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);
 	zzwSQ_end(zz, NULL);
 	zzwLO(zz, ZZ_KEY(0x0029, 0x0010), "ZZDICOM TEST");
 	zzwUN_begin(zz, ZZ_KEY(0x0029, 0x1010), NULL);
-		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz, 0);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);
-		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);
+		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz, 1);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);
 	zzwUN_end(zz, NULL);
 	zzwUN_begin(zz, ZZ_KEY(0x0029, 0x1010), &val);	// UN with specific size
 		zzwItem_begin(zz, NULL);
@@ -220,20 +220,20 @@ int main(int argc, char **argv)
 	zz = zzcreate("samples/brokensq.dcm", &szz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianExplicitTransferSyntax);
 	genericfile(zz);
 	zzwSQ_begin(zz, ZZ_KEY(0x0020, 0x1115), NULL);
-		implicit(zz->fp, 0xfffe, 0xe000, 200);	// bad size item...
+		implicit(zz->zi, 0xfffe, 0xe000, 200);	// bad size item...
 		zzwSS(zz, ZZ_KEY(0x0021, 0x1010), 11);
 		zzwSL(zz, ZZ_KEY(0x0021, 0x1011), 12);
 		zzwUS(zz, ZZ_KEY(0x0021, 0x1012), 13);
 		zzwUL(zz, ZZ_KEY(0x0021, 0x1013), 14);
 		zzwFL(zz, ZZ_KEY(0x0021, 0x1014), 15.0f);
 		zzwFD(zz, ZZ_KEY(0x0021, 0x1015), 16.0);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);	// ...really ends here
-		implicit(zz->fp, 0xfffe, 0xe000, 24);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);	// ...really ends here
+		implicit(zz->zi, 0xfffe, 0xe000, 24);
 		garbfill(zz, 1);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);	// extra item end; this crashed dicom3tools, confuses dcmtk; not legal dicom; fun to do anyway
-		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);	// extra item end; this crashed dicom3tools, confuses dcmtk; not legal dicom; fun to do anyway
+		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz, 2);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);
 	zzwSQ_end(zz, NULL);
 	addCheck(zz);
 	zzwOBnoise(zz, DCM_PixelData, 255);
@@ -256,13 +256,13 @@ int main(int argc, char **argv)
 		const uint16_t zero = 0;
 		const uint32_t length = 2000;
 
-		fwrite(&group, 2, 1, zz->fp);
-		fwrite(&element, 2, 1, zz->fp);
-		fwrite(vr, 1, 2, zz->fp);
-		fwrite(&zero, 2, 1, zz->fp);
-		fwrite(&length, 4, 1, zz->fp);
+		ziwrite(zz->zi, &group, 2);
+		ziwrite(zz->zi, &element, 2);
+		ziwrite(zz->zi, vr, 2);
+		ziwrite(zz->zi, &zero, 2);
+		ziwrite(zz->zi, &length, 4);
 	}
-	implicit(zz->fp, 0xfffe, 0xe0dd, 0);
+	implicit(zz->zi, 0xfffe, 0xe0dd, 0);
 	// Create group with wrong size
 	zzwUL(zz, ZZ_KEY(0x0029, 0x0000), 4000);
 	// Invent a new VR to check that the toolkit reads it correctly
@@ -273,11 +273,11 @@ int main(int argc, char **argv)
 		const uint16_t zero = 0;
 		const uint32_t length = 0;
 
-		fwrite(&group, 2, 1, zz->fp);
-		fwrite(&element, 2, 1, zz->fp);
-		fwrite(vr, 1, 2, zz->fp);
-		fwrite(&zero, 2, 1, zz->fp);
-		fwrite(&length, 4, 1, zz->fp);
+		ziwrite(zz->zi, &group, 2);
+		ziwrite(zz->zi, &element, 2);
+		ziwrite(zz->zi, vr, 2);
+		ziwrite(zz->zi, &zero, 2);
+		ziwrite(zz->zi, &length, 4);
 	}
 	addCheck(zz);
 	zz = zzclose(zz);

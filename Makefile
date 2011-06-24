@@ -1,13 +1,14 @@
 CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -mtune=native -march=native
-COMMON = zz.o
+COMMON = zz.o zzio.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
 COMMONTEXTURE = zztexture.o
 COMMONVERIFY = zzverify.o
 COMMONNET = zznet.o
 PART6 = part6.o
-PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom zzechoscp
-HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h
+# zztojpegls zzmkrandom
+PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zzechoscp
+HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h
 
 all: CFLAGS += -Os -fstack-protector
 all: sqlinit.h $(PROGRAMS)
@@ -74,8 +75,8 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
 
-tests/zziotest: tests/zziotest.c $(HEADERS) $(COMMON) zzio.o
-	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) zzio.o
+tests/zziotest: tests/zziotest.c $(HEADERS) $(COMMON)
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
 
 tests/zzw: tests/zzw.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONVERIFY)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY)
