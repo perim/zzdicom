@@ -6,8 +6,8 @@ COMMONTEXTURE = zztexture.o
 COMMONVERIFY = zzverify.o
 COMMONNET = zznet.o
 PART6 = part6.o
-# zztojpegls zzmkrandom
-PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zzechoscp
+# zztojpegls
+PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h
 
 all: CFLAGS += -Os -fstack-protector

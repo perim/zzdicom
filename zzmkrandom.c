@@ -14,11 +14,11 @@
 
 static inline bool explicit(struct zzfile *zz) { return zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT; }
 
-static void implicit(FILE *fp, uint16_t group, uint16_t element, uint32_t length)
+static void implicit(struct zzio *zi, uint16_t group, uint16_t element, uint32_t length)
 {
-	fwrite(&group, 2, 1, fp);
-	fwrite(&element, 2, 1, fp);
-	fwrite(&length, 4, 1, fp);
+	ziwrite(zi, &group, 2);
+	ziwrite(zi, &element, 2);
+	ziwrite(zi, &length, 4);
 }
 
 static void genericfile(struct zzfile *zz, const char *sopclass)
@@ -90,8 +90,8 @@ int main(int argc, char **argv)
 	}
 
 	memset(zz, 0, sizeof(*zz));
-	zz->fp = fopen(outputfile, "w");
-	if (!zz->fp)
+	zz->zi = ziopenfile(outputfile, "w");
+	if (!zz->zi)
 	{
 		fprintf(stderr, "Failed to open output file \"%s\": %s\n", outputfile, strerror(errno));
 	}
@@ -126,15 +126,15 @@ int main(int argc, char **argv)
 	if (explicit(zz) && rand() % 10 > 2)	// add SQ block
 	{
 		zzwSQ_begin(zz, ZZ_KEY(0x0020, 0x1115), NULL);
-		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);
-		implicit(zz->fp, 0xfffe, 0xe000, 24);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);
+		implicit(zz->zi, 0xfffe, 0xe000, 24);
 		garbfill(zz);
-		if (rand() % 10 > 9) implicit(zz->fp, 0xfffe, 0xe00d, 0);	// this crashed dicom3tools; not really legal dicom
-		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		if (rand() % 10 > 9) implicit(zz->zi, 0xfffe, 0xe00d, 0);	// this crashed dicom3tools; not really legal dicom
+		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);
 		zzwSQ_end(zz, NULL);
 	}
 
@@ -148,19 +148,19 @@ int main(int argc, char **argv)
 	if (explicit(zz) && rand() % 10 > 2)	// add UN block
 	{
 		zzwUN_begin(zz, ZZ_KEY(0x0029, 0x0010), NULL);
-		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);
-		implicit(zz->fp, 0xfffe, 0xe000, UNLIMITED);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);
+		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
 		garbfill(zz);
-		implicit(zz->fp, 0xfffe, 0xe00d, 0);
+		implicit(zz->zi, 0xfffe, 0xe00d, 0);
 		zzwUN_end(zz, NULL);
 	}
 
 	if (rand() % 10 > 2) zzwOBnoise(zz, DCM_PixelData, rand() % 9999);
 	if (rand() % 10 > 7) zzwOBnoise(zz, DCM_DataSetTrailingPadding, rand() % 9999);
 
-	fclose(zz->fp);
+	ziclose(zz->zi);
 
 	return 0;
 }
