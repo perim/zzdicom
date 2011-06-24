@@ -2,7 +2,9 @@
 // packet splitting and zlib compression. Note: Do not mix write
 // calls to this interface with write calls through other inferfaces
 // to the same file. Do not mix read or write calls to this interface
-// with read calls through other interfaces to the same socket.
+// with read calls through other interfaces to the same socket. Always
+// call the flush function after writing before reading if the areas
+// might overlap (taking buffer size into consideration).
 
 #ifndef ZZIO_H
 #define ZZIO_H
@@ -31,13 +33,20 @@ typedef long headerreadfunc(char *, void *);
 struct zzio *ziopenread(const char *path, int bufsize, int flags);
 struct zzio *ziopenwrite(const char *path, int bufsize, int flags);
 struct zzio *ziopenmodify(const char *path, int bufsize, int flags);
-struct zzio *ziopensocket(int sock, int bufsize, int flags);
+struct zzio *ziopensocket(int sock, int flags);
+
+/// Utility version of the above file opens
+struct zzio *ziopenfile(const char *path, const char *mode);
+
+/// Set buffer size
+void zisetbuffersize(struct zzio *zi, long buffersize);
 
 /// Set up packet splitter that turns a stream of data into neat packets with custom headers. Max length of packet
 /// must be equal to size of buffer as told earlier to ziopen*().
 void zisplitter(struct zzio *zi, long headersize, headerwritefunc writefunc, headerreadfunc readfunc, void *userdata);
 
 const char *zistrerror(void);
+int zierror(const struct zzio *zi);
 bool zisetflag(struct zzio *zi, int flag);	// turn compression on/off
 long zireadpos(const struct zzio *zi);
 long ziwritepos(const struct zzio *zi);
@@ -51,6 +60,8 @@ void ziwillneed(struct zzio *zi, long offset, long length);
 void ziwrite2at(struct zzio *zi, uint16_t value);
 void ziwrite4at(struct zzio *zi, uint32_t value);
 struct zzio *ziclose(struct zzio *zi);	// always returns NULL
+
+bool zieof(const struct zzio *zi);
 
 /// Flushes the write buffer to file. Note that this does not force the OS to flush its write
 /// buffer to disk or to send it on the network. Also, you must flush the write buffer before
@@ -68,5 +79,15 @@ long zisendfile(struct zzio *zi, int fd, long offset, long length);
 long zirecvfile(struct zzio *zi, int fd, long offset, long length);
 
 // void zirepeat(struct zzio *zi, int ch, long num);	// repeat character ch num times (use memset in buffer, repeatedly if necessary)
+
+void ziwriteu8at(struct zzio *zi, uint8_t value, long pos);
+void ziwriteu16at(struct zzio *zi, uint16_t value, long pos);
+void ziwriteu32at(struct zzio *zi, uint32_t value, long pos);
+
+/// Highly optimized buffer read function (implemented with memory mapping where possible) meant for sequential access patterns
+void *zireadbuf(struct zzio *zi, long pos, long size);
+
+/// Deallocate memory buffer created with zireadbuf
+void zifreebuf(struct zzio *zi, void *buf, long size);
 
 #endif

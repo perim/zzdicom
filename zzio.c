@@ -114,7 +114,6 @@ struct zzio *ziopenread(const char *path, int bufsize, int flags)
 	if (zi->fd == -1)
 	{
 		printf("%s\n", strerror(errno));
-		assert(false);
 		return NULL;
 	}
 	zi->buffersize = bufsize;
@@ -155,8 +154,31 @@ struct zzio *ziopenmodify(const char *path, int bufsize, int flags)
 	return zi;
 }
 
-struct zzio *ziopensocket(int sock, int bufsize, int flags)
+struct zzio *ziopenfile(const char *path, const char *mode)
 {
+	struct zzio *zi = calloc(1, sizeof(*zi));
+	const char *p = mode;
+	bool doread = false, dowrite = false;
+	const int bufsize = 8096;
+	while (*p)
+	{
+		switch (*p)
+		{
+		case 'r' : doread = true; break;
+		case 'w' : dowrite = true; break;
+		case '+' : dowrite = true; doread = true; break;
+		default : break; // TODO, error message?
+		}
+		p++;
+	}
+	if (doread && dowrite) return ziopenmodify(path, bufsize, 0);
+	else if (doread) return ziopenread(path, bufsize, 0);
+	else return ziopenwrite(path, bufsize, 0);
+}
+
+struct zzio *ziopensocket(int sock, int flags)
+{
+	const int bufsize = 8096;
 	struct zzio *zi = calloc(1, sizeof(*zi));
 	assert(sock >= 0);
 	zi->fd = sock;
@@ -165,6 +187,16 @@ struct zzio *ziopensocket(int sock, int bufsize, int flags)
 	zi->flags = flags | ZZIO_WRITABLE | ZZIO_READABLE | ZZIO_SOCKET;
 	zi->buffersize = bufsize;
 	return zi;
+}
+
+void zisetbuffersize(struct zzio *zi, long buffersize)
+{
+	ziflush(zi);
+	free(zi->readbuf);
+	free(zi->writebuf);
+	zi->readbuf = calloc(1, buffersize);
+	zi->writebuf = calloc(1, buffersize);
+	zi->buffersize = buffersize;
 }
 
 const char *zistrerror(void)
@@ -304,10 +336,32 @@ long zisendfile(struct zzio *zi, int fd, long offset, long length)
 	return result;
 }
 
-#if 0
-void ziwrite2at(struct zzio *zi, uint16_t value);
-void ziwrite4at(struct zzio *zi, uint32_t value);
-#endif
+// TODO - Optimize me
+void ziwriteu8at(struct zzio *zi, uint8_t value, long pos)
+{
+	long curr = ziwritepos(zi);
+	zisetwritepos(zi, pos);
+	ziputc(zi, value);
+	zisetwritepos(zi, curr);
+}
+
+// TODO - Optimize me
+void ziwriteu16at(struct zzio *zi, uint16_t value, long pos)
+{
+	long curr = ziwritepos(zi);
+	zisetwritepos(zi, pos);
+	ziwrite(zi, &value, 2);
+	zisetwritepos(zi, curr);
+}
+
+// TODO - Optimize me
+void ziwriteu32at(struct zzio *zi, uint32_t value, long pos)
+{
+	long curr = ziwritepos(zi);
+	zisetwritepos(zi, pos);
+	ziwrite(zi, &value, 4);
+	zisetwritepos(zi, curr);
+}
 
 void ziwillneed(struct zzio *zi, long offset, long length)
 {
@@ -350,7 +404,9 @@ static inline void zi_reposition_read(struct zzio *zi, long pos)
 		assert(zi->readbuflen <= zi->buffersize);
 		zi->readpos += zi->headersize;
 	}
-	zi_read_raw(zi, zi->readbuf, zi->readbuflen, true);		// read next packet
+	// Read next buffer or packet. We cannot begin parsing a new packet before
+	// we have read all of it (yet - maybe improve this later).
+	zi_read_raw(zi, zi->readbuf, zi->readbuflen, zi->reader);
 }
 
 int zigetc(struct zzio *zi)
@@ -369,13 +425,16 @@ int zigetc(struct zzio *zi)
 // TODO allow skipping forward, also in sockets and packetized input?
 bool zisetreadpos(struct zzio *zi, long pos)
 {
-	if (pos > zi->readpos + zi->readbuflen || pos <  zi->readpos - (zi->readbuflen - zi->readbufpos))
+	if (pos > zi->readpos + zi->readbuflen || pos <  zi->readpos)
 	{
 		// Seeking outside of buffer
 		if ((zi->flags & ZZIO_SOCKET) || zi->reader) return false;	// TODO make error message
 		zi_reposition_read(zi, pos);
 	}
-	zi->readpos = pos;
+	else
+	{
+		zi->readbufpos = pos - zi->readpos;
+	}
 	return true;
 }
 
@@ -388,7 +447,10 @@ bool zisetwritepos(struct zzio *zi, long pos)
 		ziflush(zi);
 		zi->writepos = pos;
 	}
-	zi->writepos = pos;
+	else
+	{
+		zi->writebufpos = pos - zi->writepos;
+	}
 	return true;
 }
 
@@ -422,8 +484,8 @@ long ziwrite(struct zzio *zi, const void *buf, long count)
 		// Write as much as we can into buffer
 		len = MIN(count, zi->buffersize - zi->writebufpos);
 		memcpy(zi->writebuf + zi->writebufpos, buf, len);
+		zi->writebuflen += MAX(0, zi->writebufpos + len - zi->writebuflen); // extend length of buffer depending on where we are in it
 		zi->writebufpos += len;
-		zi->writebuflen += len;
 
 		// Is buffer full now and we need more?
 		len = count - len;
@@ -452,4 +514,53 @@ struct zzio *ziclose(struct zzio *zi)
 	free(zi->header);
 	free(zi);
 	return NULL;
+}
+
+bool zieof(const struct zzio *zi)
+{
+	// TODO!!!
+	return false;
+}
+
+int zierror(const struct zzio *zi)
+{
+	// TODO!!!
+	return false;
+}
+
+void *zireadbuf(struct zzio *zi, long pos, long size)
+{
+	void *addr, *bytes;
+	long offset = pos & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
+
+	if ((zi->flags & ZZIO_SOCKET) || zi->reader)
+	{
+		bytes = malloc(size);
+		zisetreadpos(zi, pos);
+		ziread(zi, bytes, size);
+		return bytes;
+	}
+	// else -- fast path
+	addr = mmap(NULL, size + pos - offset, PROT_READ, MAP_SHARED, zi->fd, offset);
+	if (addr == MAP_FAILED)
+	{
+		printf("zireadbuf FAILED\n"); // TODO
+		return NULL;
+	}
+	bytes = addr + pos - offset;	// increment by page alignment shift
+	madvise(bytes, size + pos - offset, MADV_SEQUENTIAL);
+	return bytes;
+}
+
+void zifreebuf(struct zzio *zi, void *buf, long size)
+{
+	if ((zi->flags & ZZIO_SOCKET) || zi->reader)
+	{
+		free(buf);
+		return;
+	}
+	// else unmap memory
+	void *addr = (void *)((intptr_t)buf & ~(sysconf(_SC_PAGE_SIZE) - 1));
+	long realsize = size + buf - addr;
+	munmap(addr, realsize);
 }
