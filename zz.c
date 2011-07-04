@@ -359,7 +359,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		        || key == DCM_ItemDelimitationItem))
 		{
 			if ((key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem || zz->current.group != zz->ladder[zz->ladderidx].group)
-			    && bytesread < size && size != UNLIMITED)
+			    && bytesread < size && zz->ladder[zz->ladderidx].size != UNLIMITED)
 			{
 				sprintf(zz->current.warning, "Group %04x has wrong size (%ld, ended at %ld)", zz->ladder[zz->ladderidx].group, size, bytesread);
 				zz->current.valid = false;
@@ -372,7 +372,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		             || key == DCM_SequenceDelimitationItem
 		             || key == DCM_ItemDelimitationItem))
 		{
-			if ((key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem) && bytesread < size && size != UNLIMITED)
+			if ((key == DCM_SequenceDelimitationItem || key == DCM_ItemDelimitationItem) && bytesread < size && zz->ladder[zz->ladderidx].size != UNLIMITED)
 			{
 				sprintf(zz->current.warning, "Item has wrong size (%ld, ended at %ld)", size, bytesread);
 				zz->current.valid = false;
@@ -388,7 +388,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		else if (zz->ladder[zz->ladderidx].type == ZZ_SEQUENCE
 		         && (bytesread > size || key == DCM_SequenceDelimitationItem))
 		{
-			if (key == DCM_SequenceDelimitationItem && bytesread < size && size != UNLIMITED)
+			if (key == DCM_SequenceDelimitationItem && bytesread < size && zz->ladder[zz->ladderidx].size != UNLIMITED)
 			{
 				sprintf(zz->current.warning, "Sequence has wrong size (%ld, ended at %ld)", size, bytesread);
 				zz->current.valid = false;
