@@ -1,5 +1,9 @@
 #include <assert.h>
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#else
 #include <GL/freeglut.h>
+#endif
 #include "zztexture.h"
 
 int main(int argc, char **argv)

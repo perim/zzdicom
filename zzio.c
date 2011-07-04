@@ -66,13 +66,13 @@ struct zzio
 
 // TODO add zlib support here
 // TODO while loop here
-static inline long zi_read_raw(struct zzio *zi, void *buf, long len, bool wait)	// zi->readpos must be updated before calling
+static inline long zi_read_raw(struct zzio *zi, void *buf, long len, bool sendblock)	// zi->readpos must be updated before calling
 {
 	long result;
 	if (zi->flags & ZZIO_SOCKET)
 	{
 		// TODO MSG_DONTWAIT does not work on *BSD! need to set socket to non-blocking...
-		result = recv(zi->fd, buf, len, wait ? MSG_WAITALL : MSG_DONTWAIT);
+		result = recv(zi->fd, buf, len, sendblock ? MSG_WAITALL : MSG_DONTWAIT);
 	}
 	else
 	{
