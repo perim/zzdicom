@@ -21,6 +21,10 @@ void anonymize(char *filename)
 	int i;
 
 	zz = zzopen(filename, "r+", &szz);
+	if (!zz)
+	{
+		exit(1);
+	}
 
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len) && nexttag < ARRAY_SIZE(taglist))
@@ -60,7 +64,7 @@ int main(int argc, char **argv)
 {
 	int i, ignparams;
 
-	ignparams = zzutil(argc, argv, 3, "<replacement text> <filename>", "DICOM anonymization program");
+	ignparams = zzutil(argc, argv, 3, "<replacement text> <filenames>", "DICOM anonymization program");
 	fill[0] = '\0';
 	strcpy(fill, argv[1]);
 	memset(fill + strlen(argv[ignparams]), '#', sizeof(fill));

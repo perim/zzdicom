@@ -40,14 +40,14 @@ void dump(char *filename)
 	bool content;
 
 	zz = zzopen(filename, "r", &szz);
-
-	if (zz)
+	if (!zz)
 	{
-		printf("\n# Dicom-File-Format\n");
+		exit(1);
 	}
 
 	memset(privcreator, 0, sizeof(privcreator));
 	zziterinit(zz);
+	printf("\n# Dicom-File-Format\n");
 	while (zziternext(zz, &group, &element, &len))
 	{
 		// Extra checks

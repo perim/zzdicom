@@ -25,6 +25,11 @@ The software was written with performance as a high priority, and the little it 
 faster than any other DICOM software that I have tested. The core parser does not utilize any
 dynamic memory management.
 
+Installation
+------------
+Currently two build systems are available, plain makefiles and cmake. Using the cmake based system
+with out of source builds is recommended.
+
 The tools
 ---------
 zzanon - an in-place DICOM anonymizer. It *changes* the files you list, overwriting the tags it
