@@ -10,20 +10,19 @@ Limitations
 -----------
 zzdicom currently only works with little-endian DICOM data. I have never encountered big-endian 
 DICOM data in the real world (ie hospital settings), so I never saw a need for adding support for 
-this. It compiles out of the box on Linux, but it should also work on other POSIX-y architectures
-like MacOSX and FreeBSD.
+this. It should compile out of the box on Linux and MacOSX.
 
 Dependencies
 ------------
 The core parser has no dependencies than the system C library. The DICOM database functions require
-SQLite. The experimental JPEG-LS code requires CharLS. The OpenGL utility code requires FreeGLUT 
-(will probably work with the original GLUT as well).
+SQLite. The texture code requires CharLS. The OpenGL utility code tests require GLUT. The sample
+DICOM viewer program requires Qt.
 
 Features
 --------
 The software was written with performance as a high priority, and the little it does, it does far
-faster than any other DICOM software that I have tested. The core parser does not utilize any
-dynamic memory management.
+faster than any other DICOM software that I have tested. Memory management is very simple and
+easy to validate. Unit test coverage of the core code is very high.
 
 Installation
 ------------

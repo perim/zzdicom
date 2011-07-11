@@ -69,6 +69,7 @@ struct zzio
 };
 
 // Convenience functions for setting error. Currently no way to clear them. We also do not check if flag is set on function entry.
+// FIXME: Wrap printf behind an #ifdef DEBUG conditional
 #define ASSERT_OR_RETURN(zi, retval, expr, ...) \
 	do { if (!(expr)) { snprintf(zi->errstr, sizeof(zi->errstr) - 1,  __VA_ARGS__); fprintf(stderr, "%s\n", zi->errstr); assert(#expr); return retval; } } while(0)
 #define ASSERT(zi, expr, ...) \

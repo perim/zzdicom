@@ -60,6 +60,7 @@ static inline void znrskip(int num, struct zzfile *zz) { int i; for (i = 0; i < 
 static inline uint8_t znr1(struct zzfile *zz) { uint8_t tmp = zigetc(zz->zi); return tmp; }
 static inline uint16_t znr2(struct zzfile *zz) { uint16_t tmp; ziread(zz->zi, &tmp, 2); tmp = ntohs(tmp); return tmp; }
 static inline uint32_t znr4(struct zzfile *zz) { uint32_t tmp; ziread(zz->zi, &tmp, 4); tmp = ntohl(tmp); return tmp; }
+static inline void znwsendbuffer(struct zzfile *zz) { ziflush(zz->zi); }
 
 enum PDU_State
 {
@@ -94,11 +95,6 @@ struct zzfile *zznetwork(const char *interface, const char *myaetitle, struct zz
 	zz->frames = -1;
 	zz->pxOffsetTable = -1;
 	return zz;
-}
-
-static void znwsendbuffer(struct zzfile *zz)
-{
-	ziflush(zz->zi);
 }
 
 /// Special built-in support for echo requests
