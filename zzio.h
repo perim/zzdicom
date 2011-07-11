@@ -30,37 +30,58 @@ typedef void headerwritefunc(long, char *, const void*);
 /// supplied. Returns number of bytes in next packet.
 typedef long headerreadfunc(char *, void *);
 
-struct zzio *ziopenread(const char *path, int bufsize, int flags);
-struct zzio *ziopenwrite(const char *path, int bufsize, int flags);
-struct zzio *ziopenmodify(const char *path, int bufsize, int flags);
+/// Open a zzio buffer on a socket. It must already be opened and connected.
 struct zzio *ziopensocket(int sock, int flags);
 
-/// Utility version of the above file opens
+/// Open a zzio buffer on a file. Mode has the same meaning as for fopen(3).
 struct zzio *ziopenfile(const char *path, const char *mode);
 
-/// Set buffer size
+/// Change buffer size. This may flush the existing buffer.
 void zisetbuffersize(struct zzio *zi, long buffersize);
 
 /// Set up packet splitter that turns a stream of data into neat packets with custom headers. Max length of packet
 /// must be equal to size of buffer as told earlier to ziopen*().
 void zisplitter(struct zzio *zi, long headersize, headerwritefunc writefunc, headerreadfunc readfunc, void *userdata);
 
-const char *zistrerror(void);
-int zierror(const struct zzio *zi);
-bool zisetflag(struct zzio *zi, int flag);	// turn compression on/off
-long zireadpos(const struct zzio *zi);
-long ziwritepos(const struct zzio *zi);
-bool zisetreadpos(struct zzio *zi, long pos);
-bool zisetwritepos(struct zzio *zi, long pos);
-int zigetc(struct zzio *zi);
-void ziputc(struct zzio *zi, int ch);
-long ziread(struct zzio *zi, void *buf, long count);
-long ziwrite(struct zzio *zi, const void *buf, long count);
-void ziwillneed(struct zzio *zi, long offset, long length);
-void ziwrite2at(struct zzio *zi, uint16_t value);
-void ziwrite4at(struct zzio *zi, uint32_t value);
-struct zzio *ziclose(struct zzio *zi);	// always returns NULL
+/// Return last error in human readable format.
+const char *zistrerror(const struct zzio *zi);
 
+/// Return non-zero if error flag is set. Will not clear the error flag.
+int zierror(const struct zzio *zi);
+
+/// Return the read position. Note that this is independent of write position.
+long zireadpos(const struct zzio *zi);
+
+/// Return the write position. Note that this is independent of read position.
+long ziwritepos(const struct zzio *zi);
+
+/// Set the read position. Note that this is independent of write position.
+bool zisetreadpos(struct zzio *zi, long pos);
+
+/// Set the write position. Note that this is independent of read position.
+bool zisetwritepos(struct zzio *zi, long pos);
+
+/// Get a single character from the buffer. This is much faster than ziread()
+/// of a single character.
+int zigetc(struct zzio *zi);
+
+/// Put a single character. This is much faster than ziwrite() of a single character.
+void ziputc(struct zzio *zi, int ch);
+
+/// General purpose read function.
+long ziread(struct zzio *zi, void *buf, long count);
+
+/// General purpose write function.
+long ziwrite(struct zzio *zi, const void *buf, long count);
+
+/// Inform the zzio code about how much data you intend to read. zzio may use
+/// this information to speed up the read.
+void ziwillneed(struct zzio *zi, long offset, long length);
+
+/// Close a buffer. Will also close the socket or file it operates on. Always returns NULL.
+struct zzio *ziclose(struct zzio *zi);
+
+/// Returns true if read position is at end of file.
 bool zieof(const struct zzio *zi);
 
 /// Flushes the write buffer to file. Note that this does not force the OS to flush its write
@@ -80,14 +101,33 @@ long zirecvfile(struct zzio *zi, int fd, long offset, long length);
 
 // void zirepeat(struct zzio *zi, int ch, long num);	// repeat character ch num times (use memset in buffer, repeatedly if necessary)
 
-void ziwriteu8at(struct zzio *zi, uint8_t value, long pos);
-void ziwriteu16at(struct zzio *zi, uint16_t value, long pos);
-void ziwriteu32at(struct zzio *zi, uint32_t value, long pos);
+/// Write one byte at a certain position in the file without changing write position.
+/// If splitter is active, or operating on a socket, the position must be within the
+/// current buffer. Returns true on success.
+bool ziwriteu8at(struct zzio *zi, uint8_t value, long pos);
+
+/// Write two bytes at a certain position in the file without changing write position.
+/// If splitter is active, or operating on a socket, the position must be within the
+/// current buffer. Returns true on success.
+bool ziwriteu16at(struct zzio *zi, uint16_t value, long pos);
+
+/// Write four bytes at a certain position in the file without changing write position.
+/// If splitter is active, or operating on a socket, the position must be within the
+/// current buffer. Returns true on success.
+bool ziwriteu32at(struct zzio *zi, uint32_t value, long pos);
 
 /// Highly optimized buffer read function (implemented with memory mapping where possible) meant for sequential access patterns
 void *zireadbuf(struct zzio *zi, long pos, long size);
 
 /// Deallocate memory buffer created with zireadbuf
 void zifreebuf(struct zzio *zi, void *buf, long size);
+
+
+/* --------------------------------------------------------------------- */
+// Private functions below - only for unit testing
+
+struct zzio *ziopenread(const char *path, int bufsize, int flags);
+struct zzio *ziopenwrite(const char *path, int bufsize, int flags);
+struct zzio *ziopenmodify(const char *path, int bufsize, int flags);
 
 #endif

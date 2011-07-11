@@ -52,6 +52,7 @@ struct zzio
 	long byteswritten;
 	int error;
 	long buffersize;
+	long filesize;		// for files only, total file size
 
 	// for header making
 	int packetcount;
@@ -62,7 +63,16 @@ struct zzio
 	headerreadfunc *reader;
 	void *userdata;
 	char *header;
+
+	// for error reporting
+	char errstr[128];
 };
+
+// Convenience functions for setting error. Currently no way to clear them. We also do not check if flag is set on function entry.
+#define ASSERT_OR_RETURN(zi, retval, expr, ...) \
+	do { if (!(expr)) { snprintf(zi->errstr, sizeof(zi->errstr) - 1,  __VA_ARGS__); fprintf(stderr, "%s\n", zi->errstr); assert(#expr); return retval; } } while(0)
+#define ASSERT(zi, expr, ...) \
+	do { if (!(expr)) { snprintf(zi->errstr, sizeof(zi->errstr) - 1,  __VA_ARGS__); fprintf(stderr, "%s\n", zi->errstr); assert(#expr); } } while(0)
 
 // TODO add zlib support here
 // TODO while loop here
@@ -78,8 +88,8 @@ static inline long zi_read_raw(struct zzio *zi, void *buf, long len, bool sendbl
 	{
 		result = pread(zi->fd, buf, len, zi->readpos);
 	}
-	assert(result != -1);
-	if (result > 0) zi->bytesread += result;
+	ASSERT_OR_RETURN(zi, result, result != -1, "Read error: %s", strerror(errno));
+	zi->bytesread += result;
 	return result;
 }
 
@@ -96,13 +106,14 @@ static inline long zi_write_raw(struct zzio *zi, void *buf, long len)	// zi->wri
 	{
 		result = pwrite(zi->fd, buf, len, zi->writepos);
 	}
-	assert(result != -1);
-	if (result > 0) zi->writepos += result;
+	ASSERT_OR_RETURN(zi, result, result != -1, "Write error: %s", strerror(errno));
+	zi->writepos += result;
 	return result;
 }
 
 struct zzio *ziopenread(const char *path, int bufsize, int flags)
 {
+	struct stat st;
 	struct zzio *zi = calloc(1, sizeof(*zi));
 	zi->readbuf = calloc(1, bufsize);
 	zi->flags = flags | ZZIO_READABLE;
@@ -111,12 +122,11 @@ struct zzio *ziopenread(const char *path, int bufsize, int flags)
 #else
 	zi->fd = open(path, O_RDONLY);
 #endif
-	if (zi->fd == -1)
-	{
-		printf("%s\n", strerror(errno));
-		return NULL;
-	}
+	ASSERT_OR_RETURN(zi, NULL, zi->fd != -1, "Open error: %s", strerror(errno));
 	zi->buffersize = bufsize;
+	memset(zi->errstr, 0, sizeof(zi->errstr));
+	fstat(zi->fd, &st);
+	zi->filesize = st.st_size;
 	return zi;
 }
 
@@ -125,32 +135,27 @@ struct zzio *ziopenwrite(const char *path, int bufsize, int flags)
 	struct zzio *zi = calloc(1, sizeof(*zi));
 	zi->writebuf = calloc(1, bufsize);
 	zi->fd = creat(path, S_IRUSR | S_IWUSR | S_IRGRP);
-	if (zi->fd == -1)
-	{
-		printf("%s\n", strerror(errno));
-		assert(false);
-		return NULL;
-	}
+	ASSERT_OR_RETURN(zi, NULL, zi->fd != -1, "Open error: %s", strerror(errno));
 	zi->flags = flags | ZZIO_WRITABLE;
 	zi->buffersize = bufsize;
-
+	zi->filesize = 0;
+	memset(zi->errstr, 0, sizeof(zi->errstr));
 	return zi;
 }
 
 struct zzio *ziopenmodify(const char *path, int bufsize, int flags)
 {
+	struct stat st;
 	struct zzio *zi = calloc(1, sizeof(*zi));
 	zi->readbuf = calloc(1, bufsize);
 	zi->writebuf = calloc(1, bufsize);
 	zi->fd = open(path, O_RDWR);
-	if (zi->fd == -1)
-	{
-		printf("%s\n", strerror(errno));
-		assert(false);
-		return NULL;
-	}
+	ASSERT_OR_RETURN(zi, NULL, zi->fd != -1, "Open error: %s", strerror(errno));
 	zi->flags = flags | ZZIO_WRITABLE | ZZIO_READABLE;
 	zi->buffersize = bufsize;
+	memset(zi->errstr, 0, sizeof(zi->errstr));
+	fstat(zi->fd, &st);
+	zi->filesize = st.st_size;
 	return zi;
 }
 
@@ -180,12 +185,14 @@ struct zzio *ziopensocket(int sock, int flags)
 {
 	const int bufsize = 8096;
 	struct zzio *zi = calloc(1, sizeof(*zi));
-	assert(sock >= 0);
+	ASSERT_OR_RETURN(zi, NULL, sock >=0, "Invalid socket to open");
 	zi->fd = sock;
 	zi->readbuf = calloc(1, bufsize);
 	zi->writebuf = calloc(1, bufsize);
 	zi->flags = flags | ZZIO_WRITABLE | ZZIO_READABLE | ZZIO_SOCKET;
 	zi->buffersize = bufsize;
+	memset(zi->errstr, 0, sizeof(zi->errstr));
+	zi->filesize = 0;
 	return zi;
 }
 
@@ -199,26 +206,20 @@ void zisetbuffersize(struct zzio *zi, long buffersize)
 	zi->buffersize = buffersize;
 }
 
-const char *zistrerror(void)
+const char *zistrerror(const struct zzio *zi)
 {
-	return "error";
+	return zi->errstr;
 }
 
 void zisplitter(struct zzio *zi, long headersize, headerwritefunc writefunc, headerreadfunc readfunc, void *userdata)
 {
-	if (zi->flags & ZZIO_WRITABLE && zi->flags & ZZIO_READABLE && !(zi->flags & ZZIO_SOCKET))
-	{
-		fprintf(stderr, "Cannot use splitter on file modification\n");
-		return;
-	}
+	ASSERT_OR_RETURN(zi, , !(zi->flags & ZZIO_WRITABLE && zi->flags & ZZIO_READABLE && !(zi->flags & ZZIO_SOCKET)), "Cannot use splitter on file modification");
 	zi->reader = readfunc;
 	zi->writer = writefunc;
 	zi->headersize = headersize;
 	zi->userdata = userdata;
 	zi->header = calloc(1, headersize);
 }
-
-//bool zisetflag(struct zzio *zi, int flag);	// turn compression on/off
 
 long zireadpos(const struct zzio *zi)
 {
@@ -245,7 +246,7 @@ static inline void writeheader(struct zzio *zi, long length)
 	long chunk;
 	zi->writer(length, zi->header, zi->userdata);
 	chunk = zi_write_raw(zi, zi->header, zi->headersize);
-	assert(chunk == zi->headersize);
+	ASSERT(zi, chunk == zi->headersize, "Header write failure");
 }
 
 void zicommit(struct zzio *zi)
@@ -282,6 +283,8 @@ void ziflush(struct zzio *zi)
 		chunk = zi_write_raw(zi, zi->writebuf + zi->writebufpos, zi->writebuflen);
 		if (chunk > 0)
 		{
+			long expand = zi->writepos + chunk - zi->filesize;
+			if (expand > 0) zi->filesize += expand;
 			zi->writebuflen -= chunk;
 			zi->writebufpos += chunk;
 			zi->byteswritten += chunk;
@@ -337,30 +340,33 @@ long zisendfile(struct zzio *zi, int fd, long offset, long length)
 }
 
 // TODO - Optimize me
-void ziwriteu8at(struct zzio *zi, uint8_t value, long pos)
+bool ziwriteu8at(struct zzio *zi, uint8_t value, long pos)
 {
 	long curr = ziwritepos(zi);
-	zisetwritepos(zi, pos);
+	bool result = zisetwritepos(zi, pos);
+	ASSERT_OR_RETURN(zi, false, result, "Out of buffer bounds");
 	ziputc(zi, value);
-	zisetwritepos(zi, curr);
+	return zisetwritepos(zi, curr);
 }
 
 // TODO - Optimize me
-void ziwriteu16at(struct zzio *zi, uint16_t value, long pos)
+bool ziwriteu16at(struct zzio *zi, uint16_t value, long pos)
 {
 	long curr = ziwritepos(zi);
-	zisetwritepos(zi, pos);
+	bool result = zisetwritepos(zi, pos);
+	ASSERT_OR_RETURN(zi, false, result, "Out of buffer bounds");
 	ziwrite(zi, &value, 2);
-	zisetwritepos(zi, curr);
+	return zisetwritepos(zi, curr);
 }
 
 // TODO - Optimize me
-void ziwriteu32at(struct zzio *zi, uint32_t value, long pos)
+bool ziwriteu32at(struct zzio *zi, uint32_t value, long pos)
 {
 	long curr = ziwritepos(zi);
-	zisetwritepos(zi, pos);
+	bool result = zisetwritepos(zi, pos);
+	ASSERT_OR_RETURN(zi, false, result, "Out of buffer bounds");
 	ziwrite(zi, &value, 4);
-	zisetwritepos(zi, curr);
+	return zisetwritepos(zi, curr);
 }
 
 void ziwillneed(struct zzio *zi, long offset, long length)
@@ -498,6 +504,7 @@ long ziwrite(struct zzio *zi, const void *buf, long count)
 				long chunk = zi_write_raw(zi, buf + count - len, len);	// dump new content straight to file descriptor
 				len -= chunk;
 				zi->byteswritten += chunk;
+				// todo increase filesize too
 			}
 #endif
 		}
@@ -518,14 +525,12 @@ struct zzio *ziclose(struct zzio *zi)
 
 bool zieof(const struct zzio *zi)
 {
-	// TODO!!!
-	return false;
+	return ((zi->flags & ZZIO_READABLE) && !(zi->flags & ZZIO_SOCKET) && zi->readpos + zi->readbufpos >= zi->filesize);
 }
 
 int zierror(const struct zzio *zi)
 {
-	// TODO!!!
-	return false;
+	return (zi->errstr[0] != '\0');
 }
 
 void *zireadbuf(struct zzio *zi, long pos, long size)
@@ -542,11 +547,7 @@ void *zireadbuf(struct zzio *zi, long pos, long size)
 	}
 	// else -- fast path
 	addr = mmap(NULL, size + pos - offset, PROT_READ, MAP_SHARED, zi->fd, offset);
-	if (addr == MAP_FAILED)
-	{
-		printf("zireadbuf FAILED\n"); // TODO
-		return NULL;
-	}
+	ASSERT_OR_RETURN(zi, NULL, addr != MAP_FAILED, "Memory map failed: %s", strerror(errno));
 	bytes = addr + pos - offset;	// increment by page alignment shift
 	madvise(bytes, size + pos - offset, MADV_SEQUENTIAL);
 	return bytes;
