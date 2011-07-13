@@ -39,7 +39,7 @@ static inline void writetag(struct zzfile *zz, zzKey key, enum VR vr, uint32_t s
 	const uint16_t element = ZZ_ELEMENT(key);
 	char dest[MAX_LEN_VR];
 
-	if (!zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT)
+	if (!zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT || group == 0xfffe)
 	{
 		implicit(zz->zi, group, element, size);
 	}
@@ -52,6 +52,16 @@ static inline void writetag(struct zzfile *zz, zzKey key, enum VR vr, uint32_t s
 		default:
 			explicit1(zz->zi, group, element, zzvr2str(vr, dest), size); break;
 		}
+	}
+}
+
+void zzwCopy(struct zzfile *zz, const struct zzfile *orig)
+{
+	writetag(zz, ZZ_KEY(orig->current.group, orig->current.element), orig->current.vr, orig->current.length);
+	if (orig->current.length != UNLIMITED && orig->current.group != 0xfffe)
+	{
+		zisetreadpos(orig->zi, orig->current.pos);	// reposition read marker to beginning of data
+		zicopy(zz->zi, orig->zi, orig->current.length);
 	}
 }
 
@@ -399,9 +409,7 @@ struct zzfile *zzcreate(const char *filename, struct zzfile *zz, const char *sop
 	zz->acrNema = false;
 	zz->ladder[0].txsyn = ZZ_EXPLICIT;
 	zz->zi = ziopenfile(filename, "w");
-assert(zz->zi);
-	if (!zz->zi) return NULL;
-	zzwHeader(zz, sopclass, sopinstanceuid, transfer);
+	if (zz->zi) zzwHeader(zz, sopclass, sopinstanceuid, transfer);
 	if (strcmp(transfer, UID_LittleEndianImplicitTransferSyntax) == 0)
 	{
 		zz->ladder[0].txsyn = ZZ_IMPLICIT;
@@ -439,9 +447,4 @@ void zzwHeader(struct zzfile *zz, const char *sopclass, const char *sopinstanceu
 void zzwEmpty(struct zzfile *zz, zzKey key, enum VR vr)
 {
 	writetag(zz, key, vr, 0);
-}
-
-void zzwCopyTag(struct zzfile *src, const struct zzfile	*dst, const char *vr)
-{
-	
 }

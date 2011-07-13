@@ -122,6 +122,8 @@ void *zireadbuf(struct zzio *zi, long pos, long size);
 /// Deallocate memory buffer created with zireadbuf
 void zifreebuf(struct zzio *zi, void *buf, long size);
 
+/// Fast copy between the read position of one to write position of another zzio handle.
+void zicopy(struct zzio *dst, struct zzio *src, long length);
 
 /* --------------------------------------------------------------------- */
 // Private functions below - only for unit testing

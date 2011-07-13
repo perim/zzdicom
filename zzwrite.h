@@ -60,7 +60,7 @@ void zzwPixelData_frame(struct zzfile *zz, int frame, const void *data, uint32_t
 void zzwPixelData_end(struct zzfile *zz);
 
 /// Copy tag from one file to another, converting to explicit if necessary
-void zzwCopyTag(struct zzfile *src, const struct zzfile *dst, const char *vr);
+void zzwCopy(struct zzfile *src, const struct zzfile *dst);
 
 #ifdef __cplusplus
 }

@@ -7,7 +7,7 @@ COMMONVERIFY = zzverify.o
 COMMONNET = zznet.o
 PART6 = part6.o
 # zztojpegls
-PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom
+PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h
 
 all: CFLAGS += -Os -fstack-protector
@@ -30,6 +30,9 @@ zzanon: zzanon.c $(HEADERS) $(COMMON)
 
 zzdump: zzdump.c $(HEADERS) $(COMMON) $(PART6) $(COMMONVERIFY)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONVERIFY)
+
+zzcopy: zzcopy.c $(HEADERS) $(COMMON) $(PART6) $(COMMONWRITE)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONWRITE)
 
 zzgroupfix: zzgroupfix.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS)

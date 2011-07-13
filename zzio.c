@@ -165,7 +165,7 @@ struct zzio *ziopenfile(const char *path, const char *mode)
 	struct zzio *zi = calloc(1, sizeof(*zi));
 	const char *p = mode;
 	bool doread = false, dowrite = false;
-	const int bufsize = 8096;
+	const int bufsize = 8192;
 	while (*p)
 	{
 		switch (*p)
@@ -463,53 +463,46 @@ bool zisetwritepos(struct zzio *zi, long pos)
 
 long ziread(struct zzio *zi, void *buf, long count)
 {
-	long len;
+	long len, remaining = count;
 
 	do
 	{
 		// Read as much as we can from buffer
-		len = MIN(count, zi->readbuflen - zi->readbufpos);
+		len = MIN(remaining, zi->readbuflen - zi->readbufpos);
 		memcpy(buf, zi->readbuf + zi->readbufpos, len);
 		zi->readbufpos += len;
 		// Is buffer empty now and we need more?
-		len = count - len;
-		if (len > 0)	// yes, read in more
+		remaining -= len;
+		assert(remaining >= 0);
+		if (remaining > 0)	// yes, read in more
 		{
 			zi_reposition_read(zi, zi->readpos + zi->readbufpos);
 			// TODO - optimize if no packetizer, by reading remainder raw? see ziwrite
 		}
-	} while (len > 0);
+	} while (remaining > 0);
 	return count;
 }
 
 long ziwrite(struct zzio *zi, const void *buf, long count)
 {
-	long len;
+	long len, remaining = count;
 
 	do
 	{
 		// Write as much as we can into buffer
-		len = MIN(count, zi->buffersize - zi->writebufpos);
+		len = MIN(remaining, zi->buffersize - zi->writebufpos);
 		memcpy(zi->writebuf + zi->writebufpos, buf, len);
 		zi->writebuflen += MAX(0, zi->writebufpos + len - zi->writebuflen); // extend length of buffer depending on where we are in it
 		zi->writebufpos += len;
 
 		// Is buffer full now and we need more?
-		len = count - len;
-		if (len > 0)
+		remaining -= len;
+		assert(remaining >= 0);
+		if (remaining > 0)
 		{
 			ziflush(zi); // buffer blown, so flush it
-#if 0
-			if (!zi->writer)	// we can optimize and circumvent the buffer
-			{
-				long chunk = zi_write_raw(zi, buf + count - len, len);	// dump new content straight to file descriptor
-				len -= chunk;
-				zi->byteswritten += chunk;
-				// todo increase filesize too
-			}
-#endif
 		}
-	} while (len > 0);
+	} while (remaining > 0);
 	return count;
 }
 
@@ -565,4 +558,14 @@ void zifreebuf(struct zzio *zi, void *buf, long size)
 	void *addr = (void *)((intptr_t)buf & ~(sysconf(_SC_PAGE_SIZE) - 1));
 	long realsize = size + buf - addr;
 	munmap(addr, realsize);
+}
+
+void zicopy(struct zzio *dst, struct zzio *src, long length)
+{
+	// SLOW test version -- to use as benchmark
+	char *buffer = malloc(length);
+	memset(buffer, 0, length);
+	ziread(src, buffer, length);
+	ziwrite(dst, buffer, length);
+	free(buffer);
 }

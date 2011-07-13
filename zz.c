@@ -196,6 +196,7 @@ int zzrDS(struct zzfile *zz, int len, double *input)
 		{
 			value[strpos++] = ch;
 		}
+		curr++;
 	}
 	// last value
 	if (found < len)
@@ -226,6 +227,7 @@ int zzrIS(struct zzfile *zz, int len, long *input)
 		{
 			value[strpos++] = ch;
 		}
+		curr++;
 	}
 	// last value
 	if (found < len)
@@ -330,7 +332,6 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		union { uint32_t len; struct { char vr[2]; uint16_t len; } evr; } buffer;
 	} header;
 	zzKey key;
-	long pos;
 
 	if (ziread(zz->zi, &header, 8) != 8)		// group+element then either VR + 0, VR+VL, or just VL
 	{
@@ -446,7 +447,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		}
 	}
 	zz->current.length = *len;
-	pos = zz->current.pos = zireadpos(zz->zi);	// anything we read after this, we roll back the position for
+	zz->current.pos = zireadpos(zz->zi);	// anything we read after this, we roll back the position for
 
 	switch (key)
 	{
@@ -534,7 +535,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	if (key == DCM_FileMetaInformationGroupLength)
 	{
 		zz->ladderidx = 1;
-		zz->ladder[1].pos = zireadpos(zz->zi);
+		zz->ladder[1].pos = zz->current.pos;
 		zz->ladder[1].size = zzgetuint32(zz, 0);
 		zz->ladder[1].txsyn = zz->ladder[0].txsyn;
 		zz->ladder[1].group = header.group;
@@ -588,7 +589,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 				zz->ladder[zz->ladderidx + 1].item = -1;	// first item brings it to zero
 			}
 		}
-		zz->ladder[zz->ladderidx].pos = zireadpos(zz->zi);
+		zz->ladder[zz->ladderidx].pos = zz->current.pos;
 		if (zz->current.vr != UN)
 		{
 			zz->ladder[zz->ladderidx].txsyn = zz->ladder[zz->ladderidx - 1].txsyn;	// inherit transfer syntax
