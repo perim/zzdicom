@@ -58,7 +58,7 @@ static inline void writetag(struct zzfile *zz, zzKey key, enum VR vr, uint32_t s
 void zzwCopy(struct zzfile *zz, const struct zzfile *orig)
 {
 	writetag(zz, ZZ_KEY(orig->current.group, orig->current.element), orig->current.vr, orig->current.length);
-	if (orig->current.length != UNLIMITED && orig->current.group != 0xfffe)
+	if (orig->current.length != UNLIMITED && orig->current.length > 0 && orig->current.vr != SQ)
 	{
 		zisetreadpos(orig->zi, orig->current.pos);	// reposition read marker to beginning of data
 		zicopy(zz->zi, orig->zi, orig->current.length);

@@ -37,7 +37,7 @@ void copy(const char *destination, const char *source)
 			{
 				src->current.vr = ZZ_VR(tag->VR[0], tag->VR[1]);
 			}
-			else if (src->current.vr == NO || src->current.vr == UN)
+			else if ((src->current.vr == NO && group != 0xfffe) || src->current.vr == UN)
 			{
 				if (src->current.length == UNLIMITED)
 				{
@@ -46,7 +46,7 @@ void copy(const char *destination, const char *source)
 				else
 				{
 					src->current.vr = UN;
-					src->ladder[src->ladderidx].txsyn = ZZ_IMPLICIT; // I hope this works... TESTME
+					dst->ladder[dst->ladderidx].txsyn = ZZ_IMPLICIT; // This will not work yet... FIXME
 				}
 			}
 			zzwCopy(dst, src);
