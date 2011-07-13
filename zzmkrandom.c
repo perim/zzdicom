@@ -1,5 +1,6 @@
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "zz_priv.h"
 #include "byteorder.h"
@@ -12,6 +13,8 @@
 #define MAGIC4 BSWAP_32(0xfffee0dd)
 #define MAGIC5 ((0x0010 << 24) | (0x0001 << 16) | ('S' << 8) | ('S'))
 
+static long zseed = 0; // stored in instance number
+	
 static inline bool explicit(struct zzfile *zz) { return zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT; }
 
 static void implicit(struct zzio *zi, uint16_t group, uint16_t element, uint32_t length)
@@ -25,20 +28,34 @@ static void genericfile(struct zzfile *zz, const char *sopclass)
 {
 	zzwUI(zz, DCM_SOPClassUID, sopclass);
 	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.0");
-	zzwEmpty(zz, DCM_StudyDate, DA);
-	zzwEmpty(zz, DCM_StudyTime, TM);
-	zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
-	zzwEmpty(zz, DCM_ReferringPhysiciansName, PN);
-	zzwEmpty(zz, DCM_PatientsName, PN);
-	zzwEmpty(zz, DCM_PatientID, LO);
+	if (rand() % 2 == 0) zzwEmpty(zz, DCM_StudyDate, DA);
+	if (rand() % 2 == 0) zzwEmpty(zz, DCM_StudyTime, TM);
+	if (rand() % 2 == 0) zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
+	if (rand() % 2 == 0) zzwEmpty(zz, DCM_ReferringPhysiciansName, PN);
+	if (rand() % 2 == 0)
+	{
+		zzwEmpty(zz, DCM_PatientsName, PN);
+		zzwLO(zz, DCM_PatientID, "zzmkrandom");
+	}
+	else
+	{
+		zzwPN(zz, DCM_PatientsName, "random^zzmk");
+		zzwEmpty(zz, DCM_PatientID, LO);
+	}
 	zzwEmpty(zz, DCM_PatientsBirthDate, DA);
 	zzwEmpty(zz, DCM_PatientsSex, CS);
-	zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.1");
+	if (rand() % 3 == 0)
+		zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17.18.19.20.21.22.23.24.25.26");
+	else
+		zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.1");
 	zzwUI(zz, DCM_SeriesInstanceUID, "1.2.3.4.2");
 	zzwEmpty(zz, DCM_StudyID, SH);
-	zzwEmpty(zz, DCM_SeriesNumber, IS);
-	zzwEmpty(zz, DCM_InstanceNumber, IS);
-	zzwEmpty(zz, DCM_Laterality, CS);
+	if (rand() % 2 == 0)
+		zzwEmpty(zz, DCM_SeriesNumber, IS);
+	else
+		zzwIS(zz, DCM_SeriesNumber, rand());
+	zzwIS(zz, DCM_InstanceNumber, zseed);
+	if (rand() % 2 == 0) zzwEmpty(zz, DCM_Laterality, CS);
 }
 
 static void garbfill(struct zzfile *zz)
@@ -71,6 +88,23 @@ static void zzwOBnoise(struct zzfile *zz, zzKey key, size_t size)
 	free(buf);
 }
 
+void addSQ(struct zzfile *zz)
+{
+	long i, loops, val, *pos = (rand() % 2) == 0 ? NULL : &val;
+	zzwSQ_begin(zz, ZZ_KEY(0x0020, 0x1115), pos);
+	loops = rand() % 6;
+	for (i = 0; i < loops && loops > 0; i++)
+	{
+		long val2, *pos2 = (rand() % 2) == 0 ? NULL : &val2;
+		zzwItem_begin(zz, pos2);
+			if (rand() % 5 > 2) garbfill(zz);
+		zzwItem_end(zz, pos2);
+		if (pos2 != NULL && rand() % 10 > 8) implicit(zz->zi, 0xfffe, 0xe00d, 0); // this crashed dicom3tools; not really legal dicom
+	}
+	if (rand() % 5 == 0) addSQ(zz);
+	zzwSQ_end(zz, pos);
+}
+
 int main(int argc, char **argv)
 {
 	const char *outputfile = "random.dcm";
@@ -82,12 +116,13 @@ int main(int argc, char **argv)
 	zzutil(argc, argv, 1, "<random seed>", "Generate pseudo-random DICOM file for unit testing");
 	if (argc > 1)
 	{
-		srand(atoi(argv[1]));
+		zseed = atoi(argv[1]);
 	}
 	else
 	{
-		srand(1);
+		zseed = time(NULL) + getpid();
 	}
+	srand(zseed);
 
 	memset(zz, 0, sizeof(*zz));
 	zz->zi = ziopenfile(outputfile, "w");
@@ -125,17 +160,7 @@ int main(int argc, char **argv)
 
 	if (explicit(zz) && rand() % 10 > 2)	// add SQ block
 	{
-		zzwSQ_begin(zz, ZZ_KEY(0x0020, 0x1115), NULL);
-		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
-		garbfill(zz);
-		implicit(zz->zi, 0xfffe, 0xe00d, 0);
-		implicit(zz->zi, 0xfffe, 0xe000, 24);
-		garbfill(zz);
-		if (rand() % 10 > 9) implicit(zz->zi, 0xfffe, 0xe00d, 0);	// this crashed dicom3tools; not really legal dicom
-		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
-		garbfill(zz);
-		implicit(zz->zi, 0xfffe, 0xe00d, 0);
-		zzwSQ_end(zz, NULL);
+		addSQ(zz);
 	}
 
 	if (rand() % 10 > 5) garbfill(zz);
@@ -145,15 +170,24 @@ int main(int argc, char **argv)
 	// try to confuse parsers that rely on arbitrary characters in the data stream - pretend to be an explicit VR
 	if (!explicit(zz) && rand() % 10 > 8) zzwOBnoise(zz, ZZ_KEY(0x0029, 0x0009), 'S' + ('S' << 8));
 
-	if (explicit(zz) && rand() % 10 > 2)	// add UN block
+	if (rand() % 10 > 2)	// add UN block
 	{
-		zzwUN_begin(zz, ZZ_KEY(0x0029, 0x0010), NULL);
-		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
-		garbfill(zz);
-		implicit(zz->zi, 0xfffe, 0xe00d, 0);
-		implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
-		garbfill(zz);
-		implicit(zz->zi, 0xfffe, 0xe00d, 0);
+		long val, *pos = (rand() % 2) == 0 ? NULL : &val;
+		zzwUN_begin(zz, ZZ_KEY(0x0029, 0x0010), pos);
+		if (rand() % 10 > 2)
+		{
+			long val2, *pos2 = (rand() % 2) == 0 ? NULL : &val2;
+			zzwItem_begin(zz, pos2);
+				if (rand() % 5 > 2) garbfill(zz);
+			zzwItem_end(zz, pos2);
+			if (rand() % 10 > 2)
+			{
+				long val3, *pos3 = (rand() % 2) == 0 ? NULL : &val3;
+				zzwItem_begin(zz, pos2);
+					if (rand() % 5 > 2) garbfill(zz);
+				zzwItem_end(zz, pos2);
+			}
+		}
 		zzwUN_end(zz, NULL);
 	}
 

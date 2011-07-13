@@ -17,6 +17,9 @@ target_link_libraries(zzanon zzdicom)
 add_executable(zzdump zzdump.c part6.c part6.h)
 target_link_libraries(zzdump zzdicom)
 
+add_executable(zzcopy zzcopy.c part6.c part6.h)
+target_link_libraries(zzcopy zzdicom)
+
 add_executable(zzread zzread.c)
 target_link_libraries(zzread zzdicom sqlite3)
 
