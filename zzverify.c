@@ -11,7 +11,7 @@ bool zzverify(struct zzfile *zz)
 
 	if (zz->current.length > 0 && zz->current.length != UNLIMITED && zz->current.pos + zz->current.length > zz->fileSize)
 	{
-		sprintf(zz->current.warning, "Data size %ld exceeds file end\n", zz->current.length);
+		sprintf(zz->current.warning, "Data size %ld exceeds file end", zz->current.length);
 		zz->current.valid = false;
 		return false;
 	}

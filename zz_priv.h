@@ -118,6 +118,13 @@ enum zzsteptype
 	ZZ_ITEM
 };
 
+struct zzopts	// list of command-line options; NULL-terminate it
+{
+	const char *opt;
+	const char *description;
+	bool found;
+};
+
 /// Maximum amount of recursiveness in a DICOM file
 #define MAX_LADDER 24
 
@@ -214,7 +221,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 struct zzfile *zzclose(struct zzfile *zz);
 
 /// Utility function to process some common command-line arguments. Returns the number of initial arguments to ignore.
-int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help);
+int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help, struct zzopts *opts);
 
 /// Utility iterator that wraps zzread. Passing in a NULL pointer for zz makes it a no-op.
 void zziterinit(struct zzfile *zz);

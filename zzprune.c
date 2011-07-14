@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 	struct updatenode *iter, *next;
 	struct zzfile szz, *zz;
 
-	zzutil(argc, argv, 1, "", "Program to update the local DICOM database for changed and deleted files");
+	zzutil(argc, argv, 1, "", "Program to update the local DICOM database for changed and deleted files", NULL);
 	zdb = zzdbopen(&szdb);
 	if (zdb)
 	{

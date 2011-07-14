@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 {
 	int i;
 
-	for (i = zzutil(argc, argv, 2, "<filenames>", "DICOM tag dumper"); i < argc; i++)
+	for (i = zzutil(argc, argv, 2, "<filenames>", "DICOM tag dumper", NULL); i < argc; i++)
 	{
 		dump(argv[i]);
 	}

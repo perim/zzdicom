@@ -603,12 +603,19 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	return true;
 }
 
-int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help)
+int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help, struct zzopts *opts)
 {
 	FILE *out = stderr;
 	int i, ignparams = 1;	// always tell caller to ignore argv[0]
 	bool usageReq = false;
+	struct zzopts *iter;
 
+	iter = opts;
+	while (iter && iter->opt)
+	{
+		iter->found = false;
+		iter++;
+	}
 	for (i = 1; i < argc; i++)
 	{
 		if (strcmp(argv[i], "--") == 0)
@@ -623,6 +630,12 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 			fprintf(stdout, "  %-10s This help\n", "-h|--help");
 			fprintf(stdout, "  %-10s Version of zzdicom package\n", "--version");
 			fprintf(stdout, "  %-10s Short help\n", "--usage");
+			iter = opts;
+			while (iter && iter->opt)	// null-entry terminated
+			{
+				fprintf(stdout, "  %-10s %s\n", iter->opt, iter->description);
+				iter++;
+			}
 			usageReq = true;
 			out = stdout;
 		}
@@ -641,10 +654,30 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 			ignparams++;
 			verbose = true;
 		}
+		else
+		{
+			iter = opts;
+			while (iter && iter->opt)
+			{
+				if (strcmp(argv[i], iter->opt) == 0)
+				{
+					iter->found = true;
+					ignparams++;
+				}
+				iter++;
+			}
+		}
 	}
 	if (usageReq || argc < minArgs + ignparams - 1)
 	{
-		fprintf(out, "Usage: %s [-v|--version|-h|--usage] %s\n", argv[0], usage); // add -t later
+		fprintf(out, "Usage: %s [-v|--version|-h|--usage", argv[0]);
+		iter = opts;
+		while (iter && iter->opt)
+		{
+			fprintf(out, "|%s", iter->opt);
+			iter++;
+		}
+		fprintf(out, "] %s\n", usage);
 		exit(!usageReq);
 	}
 	return ignparams;

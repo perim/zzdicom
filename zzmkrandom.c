@@ -93,7 +93,7 @@ void addSQ(struct zzfile *zz)
 	long i, loops, val, *pos = (rand() % 2) == 0 ? NULL : &val;
 	zzwSQ_begin(zz, ZZ_KEY(0x0020, 0x1115), pos);
 	loops = rand() % 6;
-	for (i = 0; i < loops && loops > 0; i++)
+	for (i = 0; i < loops; i++)
 	{
 		long val2, *pos2 = (rand() % 2) == 0 ? NULL : &val2;
 		zzwItem_begin(zz, pos2);
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
 	(void)argc;
 	(void)argv;
 
-	zzutil(argc, argv, 1, "<random seed>", "Generate pseudo-random DICOM file for unit testing");
+	zzutil(argc, argv, 1, "<random seed>", "Generate pseudo-random DICOM file for unit testing", NULL);
 	if (argc > 1)
 	{
 		zseed = atoi(argv[1]);
@@ -173,7 +173,7 @@ int main(int argc, char **argv)
 	if (rand() % 10 > 2)	// add UN block
 	{
 		long val, *pos = (rand() % 2) == 0 ? NULL : &val;
-		zzwUN_begin(zz, ZZ_KEY(0x0029, 0x0010), pos);
+		zzwUN_begin(zz, ZZ_KEY(0x0029, 0x1010), pos);
 		if (rand() % 10 > 2)
 		{
 			long val2, *pos2 = (rand() % 2) == 0 ? NULL : &val2;
@@ -189,6 +189,21 @@ int main(int argc, char **argv)
 			}
 		}
 		zzwUN_end(zz, NULL);
+	}
+
+	// Invent a new VR to check that the toolkit reads it correctly
+	if (explicit(zz) && rand() % 5 == 0)
+	{
+		const uint16_t group = 0x0029;
+		const uint16_t element = 0x1090;
+		const uint16_t zero = 0;
+		const uint32_t length = 0;
+
+		ziwrite(zz->zi, &group, 2);
+		ziwrite(zz->zi, &element, 2);
+		ziwrite(zz->zi, "QQ", 2);
+		ziwrite(zz->zi, &zero, 2);
+		ziwrite(zz->zi, &length, 4);
 	}
 
 	if (rand() % 10 > 2) zzwOBnoise(zz, DCM_PixelData, rand() % 9999);

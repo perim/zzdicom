@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     MainWindow w;
 
-    for (int i = zzutil(argc, argv, 1, "<filenames>", "DICOM image viewer"); i < argc; i++)
+    for (int i = zzutil(argc, argv, 1, "<filenames>", "DICOM image viewer", NULL); i < argc; i++)
     {
 	    w.addFile(argv[i]);
     }
