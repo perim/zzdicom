@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 #include "zzio.h"
 
@@ -99,7 +100,7 @@ static void test1(int packetsize, bool splitter)
 	assert(zi == NULL);
 }
 
-void test2(int value, int packetsize, bool splitter)
+static void test2(int value, int packetsize, bool splitter)
 {
 	struct zzio *zi;
 	int i, c;
@@ -171,7 +172,7 @@ void test2(int value, int packetsize, bool splitter)
 	assert(zi == NULL);
 }
 
-void test3(int pos, const char *stamp, int packetsize)
+static void test3(int pos, const char *stamp, int packetsize)
 {
 	int i;
 	struct zzio *zi;
@@ -200,6 +201,49 @@ void test3(int pos, const char *stamp, int packetsize)
 	zi = ziclose(zi);
 }
 
+static void test4()
+{
+	const char *srcfile = "samples/spine.dcm";
+	const char *dstfile = "samples/copy.dcm";
+	struct zzio *src = ziopenfile(srcfile, "r");
+	struct zzio *dst = ziopenfile(dstfile, "w");
+	FILE *cmpsrc = fopen(srcfile, "r");
+	FILE *cmpdst;
+	struct stat st;
+	long size, result;
+	char *mem, *mem2;
+	int i;
+
+	stat("samples/spine.dcm", &st);
+	size = st.st_size;
+	mem = malloc(size);
+	mem2 = malloc(size);
+	result = ziread(src, mem, size);
+	assert(result == size);
+	result = fread(mem2, 1, size, cmpsrc);
+	assert(result == size);
+	for (i = 0; i < size; i++)
+	{
+		if (mem[i] != mem2[i]) fprintf(stderr, "Memory read from file differs at byte %d\n", i);
+		assert(mem[i] == mem2[i]);
+	}
+	fclose(cmpsrc);
+	result = ziwrite(dst, mem, size);
+	assert(result == size);
+	src = ziclose(src);
+	dst = ziclose(dst);
+	cmpdst = fopen(dstfile, "r");
+	result = fread(mem2, 1, size, cmpdst);
+	assert(result == size);
+	for (i = 0; i < size; i++)
+	{
+		if (mem[i] != mem2[i]) fprintf(stderr, "Memory writtent o file differs at byte %d\n", i);
+		assert(mem[i] == mem2[i]);
+	}
+	fclose(cmpdst);
+	free(mem);
+}
+
 int main(void)
 {
 	// Round # 1 - getc, putc
@@ -222,6 +266,9 @@ int main(void)
 
 	// Round # 3 - modify
 	test3(128, "DICM", 32);
+
+	// Large copy
+	test4();
 
 	return 0;
 }

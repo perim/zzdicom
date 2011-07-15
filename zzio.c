@@ -469,7 +469,7 @@ long ziread(struct zzio *zi, void *buf, long count)
 	{
 		// Read as much as we can from buffer
 		len = MIN(remaining, zi->readbuflen - zi->readbufpos);
-		memcpy(buf, zi->readbuf + zi->readbufpos, len);
+		memcpy(buf + (count - remaining), zi->readbuf + zi->readbufpos, len);
 		zi->readbufpos += len;
 		// Is buffer empty now and we need more?
 		remaining -= len;
@@ -491,7 +491,7 @@ long ziwrite(struct zzio *zi, const void *buf, long count)
 	{
 		// Write as much as we can into buffer
 		len = MIN(remaining, zi->buffersize - zi->writebufpos);
-		memcpy(zi->writebuf + zi->writebufpos, buf, len);
+		memcpy(zi->writebuf + zi->writebufpos, buf + (count - remaining), len);
 		zi->writebuflen += MAX(0, zi->writebufpos + len - zi->writebuflen); // extend length of buffer depending on where we are in it
 		zi->writebufpos += len;
 
