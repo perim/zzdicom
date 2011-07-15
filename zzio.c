@@ -298,48 +298,6 @@ void ziflush(struct zzio *zi)
 	zi->writebuflen = 0;
 }
 
-// fd must be open already
-// TODO - rename to ziaddfile? make it also work for files, not just sockets?
-// TODO - test generating all heads at once, then iovec them + mmap'ed data, maybe faster?
-long zisendfile(struct zzio *zi, int fd, long offset, long length)
-{
-	char *mem;
-	long chunk = length, pos = offset;
-	int flags;
-	ssize_t result = 0;
-	if (zi->writer) chunk = MIN(length, zi->buffersize);
-#ifdef ZZ_LINUX
-	// Fast implementation for socket sending on Linux
-	if (zi->flags & ZZIO_SOCKET)
-	{
-		ziflush(zi);	// first empty write buffer, since we won't be using it
-		do
-		{
-			if (zi->writer) writeheader(zi, chunk);
-			while ((result = sendfile(fd, zi->fd, &pos, chunk)) == -1 && errno == EAGAIN) {}
-			assert(result == chunk);
-			chunk = MIN(length - (pos - offset), zi->buffersize);
-		} while (chunk != 0); // chunk is zero when done
-		assert(pos - offset == length);
-		return pos - offset;
-	}
-#endif
-	// Ok, now a general implementation for all remaining cases.
-	flags = MAP_SHARED;
-#ifdef ZZ_LINUX
-	flags |= MAP_POPULATE | MAP_NONBLOCK;	// reserve memory for all pages already
-#endif
-	pos = offset & ~(sysconf(_SC_PAGE_SIZE) - 1); // offset for mmap() must be page aligned
-	mem = mmap(NULL, length + offset - pos, PROT_READ, flags, fd, pos);
-	if (mem != MAP_FAILED)
-	{
-		madvise(mem, length + offset - pos, MADV_SEQUENTIAL);
-		result = ziwrite(zi, mem + offset - pos, length);
-		munmap(mem, length + offset - pos);
-	}
-	return result;
-}
-
 // TODO - Optimize me
 bool ziwriteu8at(struct zzio *zi, uint8_t value, long pos)
 {
@@ -375,16 +333,6 @@ void ziwillneed(struct zzio *zi, long offset, long length)
 #ifdef ZZ_LINUX
 	posix_fadvise(zi->fd, offset, length, POSIX_FADV_WILLNEED);
 #endif
-}
-
-// TODO make fd into struct zzio
-long zirecvfile(struct zzio *zi, int fd, long offset, long length)
-{
-#ifdef ZZ_LINUX
-	posix_fallocate(fd, offset, length);
-#endif
-	// readv on linux, recvfile on *BSD, append to fd
-	return 0;
 }
 
 void ziputc(struct zzio *zi, int ch)

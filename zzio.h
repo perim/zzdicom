@@ -93,12 +93,6 @@ void ziflush(struct zzio *zi);
 /// (modification and creation time) may remain uncommitted.
 void zicommit(struct zzio *zi);
 
-/// Optimized way to send data from open file descriptor fd to zzio target zi
-long zisendfile(struct zzio *zi, int fd, long offset, long length);
-
-/// Optimized way to receive data from source zi to open file descriptor fd
-long zirecvfile(struct zzio *zi, int fd, long offset, long length);
-
 // void zirepeat(struct zzio *zi, int ch, long num);	// repeat character ch num times (use memset in buffer, repeatedly if necessary)
 
 /// Write one byte at a certain position in the file without changing write position.
@@ -124,6 +118,12 @@ void zifreebuf(struct zzio *zi, void *buf, long size);
 
 /// Fast copy between the read position of one to write position of another zzio handle.
 void zicopy(struct zzio *dst, struct zzio *src, long length);
+
+/// Number of bytes written to file
+long zibyteswritten(struct zzio *zi);
+
+/// Number of bytes read from file
+long zibytesread(struct zzio *zi);
 
 /* --------------------------------------------------------------------- */
 // Private functions below - only for unit testing

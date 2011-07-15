@@ -201,7 +201,7 @@ static void test3(int pos, const char *stamp, int packetsize)
 	zi = ziclose(zi);
 }
 
-static void test4()
+static void test4(int bufsize)
 {
 	const char *srcfile = "samples/spine.dcm";
 	const char *dstfile = "samples/copy.dcm";
@@ -213,6 +213,9 @@ static void test4()
 	long size, result;
 	char *mem, *mem2;
 	int i;
+
+	zisetbuffersize(src, bufsize);
+	zisetbuffersize(dst, bufsize);
 
 	stat("samples/spine.dcm", &st);
 	size = st.st_size;
@@ -230,6 +233,13 @@ static void test4()
 	fclose(cmpsrc);
 	result = ziwrite(dst, mem, size);
 	assert(result == size);
+	assert(zieof(src));
+	assert(zierror(src) == 0);
+	assert(zierror(dst) == 0);
+	assert(zibyteswritten(dst) == result);
+	assert(zibytesread(src) == result);
+	assert(zibyteswritten(src) == 0);
+	assert(zibytesread(dst) == 0);
 	src = ziclose(src);
 	dst = ziclose(dst);
 	cmpdst = fopen(dstfile, "r");
@@ -237,9 +247,56 @@ static void test4()
 	assert(result == size);
 	for (i = 0; i < size; i++)
 	{
-		if (mem[i] != mem2[i]) fprintf(stderr, "Memory writtent o file differs at byte %d\n", i);
+		if (mem[i] != mem2[i]) fprintf(stderr, "Memory written to file differs at byte %d\n", i);
 		assert(mem[i] == mem2[i]);
 	}
+	fclose(cmpdst);
+	free(mem);
+}
+
+static void test5(int bufsize)
+{
+	const char *srcfile = "samples/spine.dcm";
+	const char *dstfile = "samples/copy.dcm";
+	struct zzio *src = ziopenfile(srcfile, "r");
+	struct zzio *dst = ziopenfile(dstfile, "w");
+	FILE *cmpsrc = fopen(srcfile, "r");
+	FILE *cmpdst;
+	struct stat st;
+	long size, result;
+	char *mem, *mem2;
+	int i;
+
+	zisetbuffersize(src, bufsize);
+	zisetbuffersize(dst, bufsize);
+
+	stat("samples/spine.dcm", &st);
+	size = st.st_size;
+	zicopy(dst, src, size);
+	assert(zieof(src));
+	assert(zierror(src) == 0);
+	assert(zierror(dst) == 0);
+	assert(zibyteswritten(dst) == size);
+	assert(zibytesread(src) == size);
+	assert(zibyteswritten(src) == 0);
+	assert(zibytesread(dst) == 0);
+	zicommit(dst);
+	src = ziclose(src);
+	dst = ziclose(dst);
+
+	cmpdst = fopen(dstfile, "r");
+	mem = malloc(size);
+	mem2 = malloc(size);
+	result = fread(mem, 1, size, cmpsrc);
+	assert(result == size);
+	result = fread(mem2, 1, size, cmpdst);
+	assert(result == size);
+	for (i = 0; i < size; i++)
+	{
+		if (mem[i] != mem2[i]) fprintf(stderr, "Copied files differ at byte %d\n", i);
+		assert(mem[i] == mem2[i]);
+	}
+	fclose(cmpsrc);
 	fclose(cmpdst);
 	free(mem);
 }
@@ -267,8 +324,13 @@ int main(void)
 	// Round # 3 - modify
 	test3(128, "DICM", 32);
 
-	// Large copy
-	test4();
+	// Large copy, manual
+	test4(8192);
+	test4(512);
+
+	// Large copy, zicopy
+	test5(8192);
+	test5(512);
 
 	return 0;
 }
