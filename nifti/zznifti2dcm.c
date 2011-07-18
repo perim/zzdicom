@@ -227,7 +227,7 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 
 int main(int argc, char **argv)
 {
-	zzutil(argc, argv, 2, "<header file> [<data file>]", "nifti to DICOM converter");
+	zzutil(argc, argv, 2, "<header file> [<data file>]", "nifti to DICOM converter", NULL);
 	if (argc == 3)
 	{
 		return read_nifti_file(argv[1], argv[2]);

@@ -203,7 +203,7 @@ static void test3(int pos, const char *stamp, int packetsize)
 
 static void test4(int bufsize)
 {
-	const char *srcfile = "samples/spine.dcm";
+	const char *srcfile = "samples/tw2.dcm";
 	const char *dstfile = "samples/copy.dcm";
 	struct zzio *src = ziopenfile(srcfile, "r");
 	struct zzio *dst = ziopenfile(dstfile, "w");
@@ -217,7 +217,7 @@ static void test4(int bufsize)
 	zisetbuffersize(src, bufsize);
 	zisetbuffersize(dst, bufsize);
 
-	stat("samples/spine.dcm", &st);
+	stat(srcfile, &st);
 	size = st.st_size;
 	mem = malloc(size);
 	mem2 = malloc(size);
@@ -256,7 +256,7 @@ static void test4(int bufsize)
 
 static void test5(int bufsize)
 {
-	const char *srcfile = "samples/spine.dcm";
+	const char *srcfile = "samples/tw2.dcm";
 	const char *dstfile = "samples/copy.dcm";
 	struct zzio *src = ziopenfile(srcfile, "r");
 	struct zzio *dst = ziopenfile(dstfile, "w");
@@ -270,7 +270,7 @@ static void test5(int bufsize)
 	zisetbuffersize(src, bufsize);
 	zisetbuffersize(dst, bufsize);
 
-	stat("samples/spine.dcm", &st);
+	stat(srcfile, &st);
 	size = st.st_size;
 	zicopy(dst, src, size);
 	assert(zieof(src));
