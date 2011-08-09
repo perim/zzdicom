@@ -183,9 +183,9 @@ int main(int argc, char **argv)
 			if (rand() % 10 > 2)
 			{
 				long val3, *pos3 = (rand() % 2) == 0 ? NULL : &val3;
-				zzwItem_begin(zz, pos2);
+				zzwItem_begin(zz, pos3);
 					if (rand() % 5 > 2) garbfill(zz);
-				zzwItem_end(zz, pos2);
+				zzwItem_end(zz, pos3);
 			}
 		}
 		zzwUN_end(zz, NULL);

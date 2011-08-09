@@ -36,7 +36,7 @@ void dump(char *filename)
 	char tmp[MAX_LEN_VALUE], vrstr[MAX_LEN_VR];
 	int i, privoffset = 0, charlen;
 	int header = 0;		// 0 - started, 1 - writing header, 2 - written header
-	char extra[10], pstart[10], pstop[100];
+	char extra[10], pstart[48], pstop[100];
 	bool content;
 
 	zz = zzopen(filename, "r", &szz);
