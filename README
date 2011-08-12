@@ -26,8 +26,8 @@ easy to validate. Unit test coverage of the core code is very high.
 
 Installation
 ------------
-Currently two build systems are available, plain makefiles and cmake. Using the cmake based system
-with out of source builds is recommended.
+Currently two build systems are available, a plain makefile and cmake. Using the cmake based system
+with an out of source build is recommended.
 
 The tools
 ---------
@@ -39,7 +39,8 @@ will parse the file before copying it out again, accidentially fixing several cl
 on the way.
 
 zzdump - will dump a list of tags for each DICOM file given in a format very similar to DCMTK's
-dcmdump. It also runs a number of validation checks on each tag, and prints errors found.
+dcmdump. It also runs a number of validation checks on each tag, and prints errors found line 
+by line.
 
 zzgroupfix - will run fix erroneous group size tags, useful as some software relies on these being
 correct if they are present.
@@ -53,7 +54,7 @@ longer refer to an existing file.
 
 zzmkrandom - generates a pseudo-random DICOM file for use in manual testing or a unit testing 
 framework. You can pass a random seed on the command line, or let it generate its own random
-seed. The random seed is saved in the Instance Number tag.
+seed. The random seed used is saved in the Instance Number tag.
 
 Credits
 -------

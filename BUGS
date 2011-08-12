@@ -1,0 +1,25 @@
+General:
+* zzwCopy() does not work with UN tags in explicit syntax, no ladder tracking yet
+* Part6 DICOM files with no Group Length available in Meta Information Header 
+  will fail (try with gdcmData/DermaColorLossLess.dcm). Not sure if it is worth
+  trying to handle files this broken. Both DCMTK and GDCM handle them, though.
+  See also gdcmData/MARCONI_MxTWin-12-MONO2-JpegLossless-ZeroLengthSQ.dcm
+* Private or bad VRs are not handled well. Here we may have to guess the length
+  of the length field. See gdcmData/DMCPACS_ExplicitImplicit_BogusIOP.dcm which
+  cannot be read by DCMTK but is handled by GDCM. Also see
+  gdcmData/ExplicitVRforPublicElementsImplicitVRforShadowElements.dcm
+* Wrong length items not handled, may not want to even try; gdcm handles it,
+  see gdcmData/GE_GENESIS-16-MONO2-WrongLengthItem.dcm
+* gdcmData/IM-0001-0066.dcm has something strange after its pixel data, but
+  neither gdcm nor dcmtk reads it fine
+* UN tags of defined size containing an SQ element is not iterated through in 
+  implicit mode, since we do not know what is inside (see impl.dcm, and
+  gdcmData/PET-cardio-Multiframe-Papyrus.dcm), we should check the tag table
+  and set value to 'SQ' before calling zziternext()
+
+zzdump:
+* Newlines in string values not handled gracefully (see DX_GE_FALCON_SNOWY-VOI.dcm
+  in gdcmData for test)
+
+zzmkrandom:
+* Seed 1312930337 generates two SQ with same group:element
