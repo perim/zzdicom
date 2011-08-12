@@ -2,8 +2,10 @@
 // such a hideous, bloated and grossly inefficient, over-engineered monstrousity.
 
 #include "zznet.h"
+#include "zzio.h"
 #include "zzwrite.h"
 
+#include <assert.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
@@ -14,12 +16,6 @@
 #include <arpa/inet.h>
 #include <sys/wait.h>
 #include <signal.h>
-
-#ifndef ZZ_LINUX
-// Hopefully this gets included in C99 so we can remove this hack
-FILE *fmemopen(void *buffer, size_t s, const char *mode);
-#include "fmemopen.c"
-#endif
 
 #define UID_StandardApplicationContext "1.2.840.10008.3.1.1.1"
 #define UID_VerificationSOPClass "1.2.840.10008.1.1"
@@ -44,54 +40,101 @@ static const char *txsyn_uids[] = { UID_LittleEndianImplicitTransferSyntax, UID_
 
 // // Convenience functions
 // -- Debug
-//#define DEBUG
-#ifdef DEBUG
+#define DEBUGPRINT
+#ifdef DEBUGPRINT
 #define phex(...) printf(__VA_ARGS__)
 #else
 #define phex(...)
 #endif
 // -- Writing
-static inline void znw1(uint8_t val, struct zzfile *zz) { fputc(val, zz->net.buffer); phex(" %x", val); }
-static inline void znw2(uint16_t val, struct zzfile *zz) { uint16_t tmp = htons(val); fwrite(&tmp, 2, 1, zz->net.buffer); phex(" %x %x", val >> 8, val & 0xff); }
-static inline void znw4(uint32_t val, struct zzfile *zz) { uint32_t tmp = htonl(val); fwrite(&tmp, 4, 1, zz->net.buffer); phex(" %x %x %x %x", val >> 24, val >> 16, val >> 8, val & 0xff); }
-static inline void znwaet(const char *aet, struct zzfile *zz) { char tmp[16]; memset(tmp, 0, sizeof(tmp)); strncpy(tmp, aet, 16); fwrite(tmp, 16, 1, zz->net.buffer); phex(" ..."); }
-static inline void znwuid(const char *uid, struct zzfile *zz) { int size = strlen(uid) + 1; znw2(size, zz); fwrite(uid, size, 1, zz->net.buffer); phex(" uid=%d", size); }
-static inline void znwpad(int num, struct zzfile *zz) { int i; for (i = 0; i < num; i++) fputc(0, zz->net.buffer); phex(" (pad %d)", num); }
-static inline void znw2at(uint16_t val, long pos, struct zzfile *zz) { long curr = ftell(zz->net.buffer); fseek(zz->net.buffer, pos, SEEK_SET); znw2(val, zz); phex("<<%ld", pos); fseek(zz->net.buffer, curr, SEEK_SET); }
-static inline void znw4at(uint32_t val, long pos, struct zzfile *zz) { long curr = ftell(zz->net.buffer); fseek(zz->net.buffer, pos, SEEK_SET); znw4(val, zz); phex("<<%ld", pos); fseek(zz->net.buffer, curr, SEEK_SET); }
+static inline void znw1(uint8_t val, struct zzfile *zz) { ziputc(zz->zi, val); phex(" %x", val); }
+static inline void znw2(uint16_t val, struct zzfile *zz) { uint16_t tmp = htons(val); ziwrite(zz->zi, &tmp, 2); phex(" %x %x", val >> 8, val & 0xff); }
+static inline void znw4(uint32_t val, struct zzfile *zz) { uint32_t tmp = htonl(val); ziwrite(zz->zi, &tmp, 4); phex(" %x %x %x %x", val >> 24, val >> 16, val >> 8, val & 0xff); }
+static inline void znwaet(const char *aet, struct zzfile *zz) { char tmp[16]; memset(tmp, 0, sizeof(tmp)); strncpy(tmp, aet, 16); ziwrite(zz->zi, tmp, 16); phex(" ..."); }
+static inline void znwuid(const char *uid, struct zzfile *zz) { int size = strlen(uid) + 1; znw2(size, zz); ziwrite(zz->zi, uid, size); phex(" uid=%d", size); }
+static inline void znwpad(int num, struct zzfile *zz) { int i; for (i = 0; i < num; i++) ziputc(zz->zi, 0); phex(" (pad %d)", num); }
+static inline void znw2at(uint16_t val, long pos, struct zzfile *zz) { ziwriteu16at(zz->zi, htons(val), pos); phex("<<%ld@%ld", (long)val, pos); }
+static inline void znw4at(uint32_t val, long pos, struct zzfile *zz) { ziwriteu16at(zz->zi, htons(val), pos); phex("<<%ld@%ld", (long)val, pos); }
+static inline void znwstart(struct zzfile *zz, int pdutype) { zisetwritepos(zz->zi, 0); zz->net.pdutype = pdutype; }
+static inline void znwsendbuffer(struct zzfile *zz) { ziflush(zz->zi); }
 // --- Reading
-static inline void znrskip(int num, struct zzfile *zz) { int i; for (i = 0; i < num; i++) getc(zz->fp); }
-static inline uint8_t znr1(struct zzfile *zz) { uint8_t tmp = fgetc(zz->fp); return tmp; }
-static inline uint16_t znr2(struct zzfile *zz) { uint16_t tmp; fread(&tmp, 2, 1, zz->fp); tmp = ntohs(tmp); return tmp; }
-static inline uint32_t znr4(struct zzfile *zz) { uint32_t tmp; fread(&tmp, 4, 1, zz->fp); tmp = ntohl(tmp); return tmp; }
-
-enum PDU_State
-{
-	STA_NONE,
-	STA_IDLE,
-	STA_CONNECTION_OPEN,	// Awaiting A-ASSOCIATE-RQ PDU
-	STA_ASSOCIATION_RESPONSE, // Awaiting local A-ASSOCIATE response primitive (from local user)
-	STA_TRANSPORT_OPEN, // Awaiting transport connection opening to complete (from local transport service)
-	STA_ASSOCIATION_OPEN, // Awaiting A-ASSOCIATE-AC or A-ASSOCIATE-RJ PDU
-	STA_READY,	// Association established and ready for data transfer
-	STA_RELEASE, 	// Awaiting A-RELEASE-RP PDU
-	STA_RELEASE_RESPONSE, // Awaiting local A-RELEASE response primitive (from local user)
-	STA_COLLISION_REQ, // Release collision requestor side; awaiting A-RELEASE response (from local user)
-	STA_COLLISION_ACC, // Release collision acceptor side; awaiting A-RELEASE-RP PDU
-	STA_COLLISION_REQ2, // Release collision requestor side; awaiting A-RELEASE-RP PDU
-	STA_COLLISION_ACC2, // Release collision acceptor side; awaiting A-RELEASE response primitive (from local user)
-	STA_ASSOCIATION_CLOSED, // Awaiting Transport Connection Close Indication (Association no longer exists)
-};
+static inline void znrskip(int num, struct zzfile *zz) { int i; for (i = 0; i < num; i++) zigetc(zz->zi); }
+static inline uint8_t znr1(struct zzfile *zz) { uint8_t tmp = zigetc(zz->zi); return tmp; }
+static inline uint16_t znr2(struct zzfile *zz) { uint16_t tmp; ziread(zz->zi, &tmp, 2); tmp = ntohs(tmp); return tmp; }
+static inline uint32_t znr4(struct zzfile *zz) { uint32_t tmp; ziread(zz->zi, &tmp, 4); tmp = ntohl(tmp); return tmp; }
 
 #define BACKLOG 10
 #define MAXDATASIZE 100 // max number of bytes we can get at once
 
+static long headerwrite(long bytes, char *buffer, const void *data)
+{
+	struct zzfile *zz = (struct zzfile *)data;
+	uint32_t *size1 = (uint32_t *)(buffer + 2);
+	uint32_t *size2 = (uint32_t *)(buffer + 6);
+
+	buffer[0] = zz->net.pdutype;	// PDU type
+	buffer[1] = 0x00;		// reserved
+	*size1 = htonl(bytes + 5);	// put size of data + PDV header size
+	if (zz->net.pdutype == 0x04)	// P-DATA needs PDV fragmenting for some inexplicable reason
+	{
+		// We do the only sane thing, however, and keep only one PDV for each PDU
+		*size2 = htonl(bytes);		// put size of PDV
+		buffer[10] = zz->net.psctx;	// current presentation context
+		buffer[11] = 0x00;		// FIXME -- message control header!
+		return 12;
+	}
+	return 6;
+}
+
+static long readbuffer(char **bufptr, long *buflen, void *data)
+{
+	struct zzfile *zz = (struct zzfile *)data;
+	int fd = zifd(zz->zi);
+	char buf[6];
+	long result = read(fd, buf, 6);	// FIXME -- loop
+	uint32_t *size1 = (uint32_t *)(buf + 2);
+
+	assert(result == 6);
+	zz->net.pdutype = buf[0];		// PDU type
+	zz->net.pdusize = ntohl(*size1);	// PDU size
+	if (!*bufptr || zz->net.pdusize > *buflen)	// FIXME -- use realloc?
+	{
+		free(*bufptr);
+		*bufptr = malloc(zz->net.pdusize);
+		*buflen = zz->net.pdusize;
+	}
+	if (zz->net.pdutype == 0x04)
+	{
+		// Stitch together PDVs, then pretend they never were there, which makes the network part of the
+		// DICOM standard go from Cthulhu level insane to just stupid. Also look for the oddball eof bit.
+		long count = 0;
+		while (count < zz->net.pdusize)
+		{
+			char *modptr = *bufptr + count;
+
+			result = read(fd, buf, 6);
+			assert(result == 6);
+			uint32_t *size2 = (uint32_t *)(buf + 1);	// PDV size
+			uint8_t msgctrlhdr = buf[5];			// message control header
+			result = read(fd, modptr, *size2);
+			assert(result == *size2);
+			count += result;
+			if (msgctrlhdr & 0x02) // if second bit is set, this is the last PDV
+			{
+				ziseteof(zz->zi);	// end of data stream after this buffer
+			}
+		}
+	}
+	else
+	{
+		result = read(fd, *bufptr, zz->net.pdusize);
+		assert(result == zz->net.pdusize);
+	}
+	return zz->net.pdusize;
+}
+
 struct zzfile *zznetwork(const char *interface, const char *myaetitle, struct zzfile *zz)
 {
-	const long size = 1024 * 1024; // 1mb
-	memset(zz, 0, sizeof(*zz));
-	zz->net.mem = malloc(size);
-	zz->net.buffer = fmemopen(zz->net.mem, size, "w");
 	if (interface)
 	{
 		strcpy(zz->net.interface, interface);	// TODO use sstrcpy
@@ -102,11 +145,6 @@ struct zzfile *zznetwork(const char *interface, const char *myaetitle, struct zz
 	zz->frames = -1;
 	zz->pxOffsetTable = -1;
 	return zz;
-}
-
-static void znwsendbuffer(struct zzfile *zz)
-{
-	fwrite(zz->net.mem, ftell(zz->net.buffer), 1, zz->fp);
 }
 
 /// Special built-in support for echo requests
@@ -128,125 +166,53 @@ static void C_ECHO_req_recv(struct zzfile *zz)
 
 static void PData_receive(struct zzfile *zz)
 {
-	uint32_t msize, psize = 0, received = 0;
-	char contextID;
-
-	// PDU type already parsed
-	znr1(zz);			// empty
-	msize = znr4(zz);		// size of packet
-
-	// Get list of presentation-data-values 
-	while (received < msize)
-	{
-		psize = znr4(zz);	// size of item
-		contextID = znr1(zz);	// context id, see PS3.8 7.1.1.13
-
-		// Command data follows
-		// HACK
-		znrskip(psize - 1, zz);
-
-		received += psize + 4;
-	}
-	if (received != msize)
-	{
-		printf("received=%u expected=%u psize=%u tell=%ld\n", received, msize, psize, ftell(zz->fp));
-	}
-}
-
-static void PDATA_TF_start(struct zzfile *zz, long *pos, char contextID)
-{
-	rewind(zz->net.buffer);
-	znw1(4, zz);				// PDU type
-	znw1(0, zz);				// reserved, shall be zero
-	znw4(0, zz);				// size of packet, fill in later
-	// One or more Presentation-data-value Item(s) to follow
-	*pos = ftell(zz->net.buffer);
-	znw4(0, zz);				// size of packet, fill in later
-	znw1(contextID, zz);			// context id, see PS3.8 7.1.1.13
-	// Add DICOM data with command header after this
-}
-
-static void PDATA_TF_next(struct zzfile *zz, long *pos, char contextID)
-{
-	long curr = ftell(zz->net.buffer);
-
-	// Set size of previous packet
-	fseek(zz->net.buffer, *pos, SEEK_SET);
-	znw4(ftell(zz->net.buffer) - *pos, zz);
-	fseek(zz->net.buffer, curr, SEEK_SET);
-	*pos = curr;
-	znw4(0, zz);				// size of packet, fill in later
-	znw1(contextID, zz);			// context id, see PS3.8 7.1.1.13
-	// Add DICOM data with command header after this
-}
-
-static void PDATA_TF_end(struct zzfile *zz, long pos)
-{
-	// Set size of previous packet
-	znw4at(ftell(zz->net.buffer) - pos, pos, zz);
-
-	// Set the size of entire pdata message
-	znw4at(ftell(zz->net.buffer) - 6, 2, zz);
-	znwsendbuffer(zz);
+	printf("PDATA receipt - not implemented yet\n");
 }
 
 void znwechoreq(struct zzfile *zz)
 {
-	long pos = 0;
-
 	// first presentation context is always verification, and is always accepted, no need to check
-	PDATA_TF_start(zz, &pos, 0);
+	znwstart(zz, 0x04);
 	zzwUL(zz, DCM_CommandGroupLength, 0);		// value to be written later
 	zzwUI(zz, DCM_AffectedSOPClassUID, UID_VerificationSOPClass);
 	zzwUS(zz, DCM_CommandField, 0x0030);
 	zzwUS(zz, DCM_MessageID, zz->net.lastMesID++);
 	zzwUS(zz, DCM_DataSetType, 0x0101);		// "null value"
-	znw4at(ftell(zz->net.buffer) - 8, 8, zz);	// set command length
-	PDATA_TF_end(zz, pos);
+	znw4at(ziwritepos(zz->zi) - 8, 8, zz);		// set command length
+	znwsendbuffer(zz);
 }
 
 void znwechoresp(struct zzfile *zz, long mesID)
 {
-	long pos = 0;
-
 	// first presentation context is always verification, and is always accepted, no need to check
-	PDATA_TF_start(zz, &pos, 0);
+	znwstart(zz, 0x04);
 	zzwUL(zz, DCM_CommandGroupLength, 0);		// value to be written later
 	zzwUI(zz, DCM_AffectedSOPClassUID, UID_VerificationSOPClass);
 	zzwUS(zz, DCM_CommandField, 0x8030);
 	zzwUS(zz, DCM_MessageIDBeingRespondedTo, mesID);
 	zzwUS(zz, DCM_DataSetType, 0x0101);		// "null value"
 	zzwUS(zz, DCM_Status, 0x0000);			// "Success", always
-	znw4at(ftell(zz->net.buffer) - 8, 8, zz);	// set command length
-	PDATA_TF_end(zz, pos);
+	znw4at(ziwritepos(zz->zi) - 8, 8, zz);	// set command length
+	znwsendbuffer(zz);
 }
 
 static void PDU_ReleaseRQ(struct zzfile *zz)
 {
-	rewind(zz->net.buffer);
-	znw1(5, zz);				// PDU type
-	znw1(0, zz);				// reserved, shall be zero
-	znw4(4, zz);				// size of packet
-	znw2(0, zz);				// reserved, shall be zero
+	znwstart(zz, 0x05);
+	znw4(0, zz);				// reserved, shall be zero
 	znwsendbuffer(zz);
 }
 
 static void PDU_ReleaseRP(struct zzfile *zz)
 {
-	rewind(zz->net.buffer);
-	znw1(6, zz);				// PDU type
-	znw1(0, zz);				// reserved, shall be zero
-	znw4(4, zz);				// size of packet
-	znw2(0, zz);				// reserved, shall be zero
+	znwstart(zz, 0x06);
+	znw4(0, zz);				// reserved, shall be zero
 	znwsendbuffer(zz);
 }
 
 static void PDU_Abort(struct zzfile *zz, char source, char diag)
 {
-	rewind(zz->net.buffer);
-	znw1(7, zz);				// PDU type
-	znw1(0, zz);				// reserved, shall be zero
-	znw4(4, zz);				// size of packet
+	znwstart(zz, 0x07);
 	znw1(0, zz);				// reserved, shall be zero
 	znw1(0, zz);				// reserved, shall be zero
 	znw1(source, zz);			// source of abort, see PS 3.8, Table 9-26
@@ -256,10 +222,7 @@ static void PDU_Abort(struct zzfile *zz, char source, char diag)
 
 static void PDU_AssociateRJ(struct zzfile *zz, char result, char source, char diag)
 {
-	rewind(zz->net.buffer);
-	znw1(3, zz);				// PDU type
-	znw1(0, zz);				// reserved, shall be zero
-	znw4(4, zz);				// size of packet
+	znwstart(zz, 0x03);
 	znw2(1, zz);				// version bitfield
 	znw1(0, zz);				// reserved, shall be zero
 	znw1(result, zz);			// result
@@ -277,26 +240,22 @@ static bool PDU_Associate_Accept(struct zzfile *zz)
 	long pos;
 
 	memset(calledaet, 0, sizeof(calledaet));
+	memset(callingaet, 0, sizeof(callingaet));
 
-	// Read input
-	// PDU type already parsed
-	znr1(zz);
-	msize = znr4(zz);
 	zz->net.version = znr2(zz);
-	znrskip(2, zz);
-	fread(calledaet, 16, 1, zz->fp);	// TODO verify
-	fread(callingaet, 16, 1, zz->fp);
+	znr2(zz);
+	ziread(zz->zi, calledaet, 16);		// TODO verify
+	ziread(zz->zi, callingaet, 16);
 	znrskip(32, zz);
 	pdu = znr1(zz);
+	assert(pdu == 0x10);
 	znr1(zz);
 	size = znr2(zz);
+	assert(size < zz->net.pdusize);
 	znrskip(size, zz);				// skip Application Context Item
 
 	// Start writing response
-	rewind(zz->net.buffer);
-	znw1(0x02, zz);				// PDU type
-	znw1(0, zz);				// reserved, shall be zero
-	znw4(0, zz);				// size of packet, fill in later
+	znwstart(zz, 0x02);
 	znw2(1, zz);				// version bitfield
 	znw2(0, zz);				// reserved, shall be zero
 	znwaet(calledaet, zz);			// called AE Title
@@ -329,7 +288,7 @@ static bool PDU_Associate_Accept(struct zzfile *zz)
 		znr1(zz);				// reserved, shall be zero
 		isize = znr2(zz);			// size of packet
 		memset(auid, 0, sizeof(auid));
-		fread(auid, isize, 1, zz->fp);  	// See PS 3.8, section 7.1.1.2.
+		ziread(zz->zi, auid, isize);	  	// See PS 3.8, section 7.1.1.2.
 
 		pdu = znr1(zz);	// loop
 		while (pdu == 0x40)
@@ -339,7 +298,7 @@ static bool PDU_Associate_Accept(struct zzfile *zz)
 			znr1(zz);			// reserved, shall be zero
 			isize = znr2(zz);		// size of packet
 			memset(tuid, 0, sizeof(tuid));
-			fread(tuid, isize, 1, zz->fp);	// See PS 3.8, section 7.1.1.2.
+			ziread(zz->zi, tuid, isize);	// See PS 3.8, section 7.1.1.2.
 			for (i = 0; i < ZZ_TX_LAST; i++)
 			{
 				txsyns[i] = ZZ_TX_LAST;
@@ -355,7 +314,7 @@ static bool PDU_Associate_Accept(struct zzfile *zz)
 		// Now generate a response to this presentation context
 		znw1(0x21, zz);			// PDU type
 		znw1(0, zz);			// reserved, shall be zero
-		pos = ftell(zz->net.buffer);
+		pos = ziwritepos(zz->zi);
 		znw2(0, zz);			// size of packet, fill in later
 		znw1(cid, zz);			// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
 		znw1(0, zz);			// reserved, shall be zero
@@ -383,11 +342,11 @@ static bool PDU_Associate_Accept(struct zzfile *zz)
 		}
 
 		// Set size of this presentation context item
-		znw2at(ftell(zz->net.buffer) - pos - 2, pos, zz);
+		znw2at(ziwritepos(zz->zi) - pos - 2, pos, zz);
 	}
 
 	// Read User Information (fluff)
-	if (pdu != 0x50) printf("wtf=%x\n", pdu);
+	assert(pdu == 0x50);
 	znrskip(7, zz);				// skip to interesting part
 	zz->net.maxpdatasize = znr4(zz);
 
@@ -400,9 +359,6 @@ static bool PDU_Associate_Accept(struct zzfile *zz)
 	znw2(4, zz);				// size of following field
 	znw4(0, zz);				// zero means unlimited size allowed
 
-	// Now set size of entire reply
-	znw4at(ftell(zz->net.buffer) - 6, 2, zz);
-
 	znwsendbuffer(zz);
 	return true;
 }
@@ -412,10 +368,7 @@ static void PDU_AssociateRQ(struct zzfile *zz, const char *calledAET, const char
 {
 	long pos;
 
-	rewind(zz->net.buffer);
-	znw1(0x01, zz);				// PDU type
-	znw1(0, zz);				// reserved, shall be zero
-	znw4(0, zz);				// size of packet, fill in later
+	znwstart(zz, 0x01);
 	znw2(1, zz);				// version bitfield
 	znw2(0, zz);				// reserved, shall be zero
 	znwaet(calledAET, zz);			// called AE Title
@@ -431,7 +384,7 @@ static void PDU_AssociateRQ(struct zzfile *zz, const char *calledAET, const char
 	// note that Abstract Syntax == SOP Class
 	znw1(0x20, zz);				// PDU type
 	znw1(0, zz);				// reserved, shall be zero
-	pos = ftell(zz->net.buffer);
+	pos = ziwritepos(zz->zi);
 	znw2(0, zz);				// size of packet, fill in later
 	znw1(1, zz);				// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
 	znw1(0, zz);				// reserved, shall be zero
@@ -449,7 +402,7 @@ static void PDU_AssociateRQ(struct zzfile *zz, const char *calledAET, const char
 	znwuid(UID_LittleEndianExplicitTransferSyntax, zz);  // See PS 3.8, section 7.1.1.2.
 
 	// Set size of this presentation context item
-	znw2at(ftell(zz->net.buffer) - pos - 4, pos, zz);
+	znw2at(ziwritepos(zz->zi) - pos - 4, pos, zz);
 
 	// User Information Item Fields, see PS 3.8, Table 9-16
 	znw1(0x50, zz);
@@ -461,7 +414,7 @@ static void PDU_AssociateRQ(struct zzfile *zz, const char *calledAET, const char
 	znw4(0, zz);				// zero means unlimited size allowed
 
 	// Now set size of entire message
-	znw4at(ftell(zz->net.buffer) - 6, 2, zz);
+	znw4at(ziwritepos(zz->zi) - 6, 2, zz);
 	znwsendbuffer(zz);
 }
 
@@ -574,15 +527,19 @@ bool zzlisten(struct zzfile *zz, int port, const char *myaetitle, int flags)
 		{
 			// this is the child process
 			close(sockfd); // child doesn't need the listener
-			zz->fp = fdopen(new_fd, "a+");
-			while (true)
+			zz->zi = ziopensocket(new_fd, 0);
+			zisetreader(zz->zi, readbuffer, zz);
+			zisetwriter(zz->zi, headerwrite, 12, zz);
+			while (true) // FIXME -- while (ziconnected(zz->zi))
 			{
-				char type = fgetc(zz->fp);
-				switch (type)
+				printf("Awaiting type\n");
+				zigetc(zz->zi);					// trigger read of packet
+				zisetreadpos(zz->zi, zireadpos(zz->zi) - 1);	// reset read marker
+				switch (zz->net.pdutype)
 				{
 				case 0x01: printf("Associate RQ received\n"); PDU_Associate_Accept(zz); break;
 				case 0x04: printf("PData received\n"); PData_receive(zz); break;
-				default: printf("Unknown type: %x\n", type); abort(); break;
+				default: printf("Unknown type: %x\n", (unsigned)zz->net.pdutype); abort(); break;
 				}
 			}
 			close(new_fd);
@@ -659,6 +616,8 @@ bool zzconnect(struct zzfile *zz, const char *host, int port, const char *theira
 
 	printf("client: received '%s'\n", buf);
 
-	zz->fp = fdopen(sockfd, "a+");
+	zz->zi = ziopensocket(sockfd, 0);
+	zisetreader(zz->zi, readbuffer, zz);
+	zisetwriter(zz->zi, headerwrite, 12, zz);
 	return true;
 }

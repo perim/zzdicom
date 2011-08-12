@@ -11,7 +11,7 @@ bool zzverify(struct zzfile *zz)
 
 	if (zz->current.length > 0 && zz->current.length != UNLIMITED && zz->current.pos + zz->current.length > zz->fileSize)
 	{
-		sprintf(zz->current.warning, "Data size %ld exceeds file end\n", zz->current.length);
+		sprintf(zz->current.warning, "Data size %ld exceeds file end", zz->current.length);
 		zz->current.valid = false;
 		return false;
 	}
@@ -37,9 +37,9 @@ bool zzverify(struct zzfile *zz)
 			long offactual;
 			long curr = zz->current.pos;
 
-			fseek(zz->fp, zz->pxOffsetTable + zz->current.frame * sizeof(offstored), SEEK_SET);
-			fread(&offstored, sizeof(offstored), 1, zz->fp);
-			fseek(zz->fp, curr, SEEK_SET);
+			zisetreadpos(zz->zi, zz->pxOffsetTable + zz->current.frame * sizeof(offstored));
+			ziread(zz->zi, &offstored, sizeof(offstored));
+			zisetreadpos(zz->zi, curr);
 			offactual = curr - (zz->pxOffsetTable + sizeof(offstored) * zz->frames + 8);
 			if ((long)offstored != offactual)
 			{

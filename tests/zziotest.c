@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
+#include <sys/stat.h>
 
 #include "zzio.h"
 
@@ -12,16 +14,27 @@
 #define STEPS 20
 #define FILENAME "/tmp/test.bin"
 
-static void header_write_func(long size, char *buffer, const void *userdata)
+static long header_write_func(long size, char *buffer, const void *userdata)
 {
 	int64_t *header = (int64_t *)buffer;
+	(void)userdata;
 	*header = size;
+	return HEADER_SIZE;
 }
 
-static long header_read_func(char *buffer, void *userdata)
+static long header_read_func(char **buffer, long *len, void *userdata)
 {
-	int64_t *header = (int64_t *)buffer;
-	return *header;
+	struct zzio *zi = (struct zzio *)userdata;
+	int64_t size;
+	int result = read(zifd(zi), &size, 8);
+
+	assert(result == 8);
+	if (!*buffer || size > *len)
+	{
+		*buffer = realloc(*buffer, size);
+	}
+	result = read(zifd(zi), *buffer, size);
+	return size;
 }
 
 static void test1(int packetsize, bool splitter)
@@ -32,7 +45,11 @@ static void test1(int packetsize, bool splitter)
 	// Write
 	zi = ziopenwrite(FILENAME, packetsize, 0);
 	assert(zi);
-	if (splitter) zisplitter(zi, HEADER_SIZE, header_write_func, header_read_func, NULL);
+	if (splitter)
+	{
+		zisetwriter(zi, header_write_func, HEADER_SIZE, zi);
+		zisetreader(zi, header_read_func, zi);
+	}
 	value = 1;
 	for (c = 0; c < STEPS; c++)
 	{
@@ -83,7 +100,11 @@ static void test1(int packetsize, bool splitter)
 	// Read back in
 	zi = ziopenread(FILENAME, packetsize, 0);
 	assert(zi);
-	if (splitter) zisplitter(zi, HEADER_SIZE, header_write_func, header_read_func, NULL);
+	if (splitter)
+	{
+		zisetwriter(zi, header_write_func, HEADER_SIZE, zi);
+		zisetreader(zi, header_read_func, zi);
+	}
 	ziwillneed(zi, 0, 1024);
 	value = 1;
 	for (c = 0; c < STEPS; c++)
@@ -99,7 +120,7 @@ static void test1(int packetsize, bool splitter)
 	assert(zi == NULL);
 }
 
-void test2(int value, int packetsize, bool splitter)
+static void test2(int value, int packetsize, bool splitter)
 {
 	struct zzio *zi;
 	int i, c;
@@ -107,7 +128,11 @@ void test2(int value, int packetsize, bool splitter)
 	// Write
 	zi = ziopenwrite(FILENAME, packetsize, 0);
 	assert(zi);
-	if (splitter) zisplitter(zi, HEADER_SIZE, header_write_func, header_read_func, NULL);
+	if (splitter)
+	{
+		zisetwriter(zi, header_write_func, HEADER_SIZE, zi);
+		zisetreader(zi, header_read_func, zi);
+	}
 	for (c = 0; c < STEPS; c++)
 	{
 		for (i = 0; i < c * PACKET_STEP; i++)
@@ -155,7 +180,11 @@ void test2(int value, int packetsize, bool splitter)
 	// Read back in
 	zi = ziopenread(FILENAME, packetsize, 0);
 	assert(zi);
-	if (splitter) zisplitter(zi, HEADER_SIZE, header_write_func, header_read_func, NULL);
+	if (splitter)
+	{
+		zisetwriter(zi, header_write_func, HEADER_SIZE, zi);
+		zisetreader(zi, header_read_func, zi);
+	}
 	ziwillneed(zi, 0, 1024);
 	for (c = 0; c < STEPS; c++)
 	{
@@ -171,12 +200,13 @@ void test2(int value, int packetsize, bool splitter)
 	assert(zi == NULL);
 }
 
-void test3(int pos, const char *stamp, int packetsize)
+static void test3(int pos, const char *stamp, int packetsize)
 {
 	int i;
 	struct zzio *zi;
 	FILE *fp = fopen(FILENAME, "w");
 
+	(void)pos;
 	for (i = 0; i < 1024; i++) fputc('.', fp);
 	fclose(fp);
 
@@ -198,6 +228,106 @@ void test3(int pos, const char *stamp, int packetsize)
 		assert(value == stamp[i]);	// read it from file
 	}
 	zi = ziclose(zi);
+}
+
+static void test4(int bufsize)
+{
+	const char *srcfile = "samples/tw2.dcm";
+	const char *dstfile = "samples/copy.dcm";
+	struct zzio *src = ziopenfile(srcfile, "r");
+	struct zzio *dst = ziopenfile(dstfile, "w");
+	FILE *cmpsrc = fopen(srcfile, "r");
+	FILE *cmpdst;
+	struct stat st;
+	long size, result;
+	char *mem, *mem2;
+	int i;
+
+	zisetbuffersize(src, bufsize);
+	zisetbuffersize(dst, bufsize);
+
+	stat(srcfile, &st);
+	size = st.st_size;
+	mem = malloc(size);
+	mem2 = malloc(size);
+	result = ziread(src, mem, size);
+	assert(result == size);
+	result = fread(mem2, 1, size, cmpsrc);
+	assert(result == size);
+	for (i = 0; i < size; i++)
+	{
+		if (mem[i] != mem2[i]) fprintf(stderr, "Memory read from file differs at byte %d\n", i);
+		assert(mem[i] == mem2[i]);
+	}
+	fclose(cmpsrc);
+	result = ziwrite(dst, mem, size);
+	assert(result == size);
+	assert(zieof(src));
+	assert(zierror(src) == 0);
+	assert(zierror(dst) == 0);
+	assert(zibyteswritten(dst) == result);
+	assert(zibytesread(src) == result);
+	assert(zibyteswritten(src) == 0);
+	assert(zibytesread(dst) == 0);
+	src = ziclose(src);
+	dst = ziclose(dst);
+	cmpdst = fopen(dstfile, "r");
+	result = fread(mem2, 1, size, cmpdst);
+	assert(result == size);
+	for (i = 0; i < size; i++)
+	{
+		if (mem[i] != mem2[i]) fprintf(stderr, "Memory written to file differs at byte %d\n", i);
+		assert(mem[i] == mem2[i]);
+	}
+	fclose(cmpdst);
+	free(mem);
+}
+
+static void test5(int bufsize)
+{
+	const char *srcfile = "samples/tw2.dcm";
+	const char *dstfile = "samples/copy.dcm";
+	struct zzio *src = ziopenfile(srcfile, "r");
+	struct zzio *dst = ziopenfile(dstfile, "w");
+	FILE *cmpsrc = fopen(srcfile, "r");
+	FILE *cmpdst;
+	struct stat st;
+	long size, result;
+	char *mem, *mem2;
+	int i;
+
+	zisetbuffersize(src, bufsize);
+	zisetbuffersize(dst, bufsize);
+
+	stat(srcfile, &st);
+	size = st.st_size;
+	zicopy(dst, src, size);
+	assert(zieof(src));
+	assert(zierror(src) == 0);
+	assert(zierror(dst) == 0);
+	assert(zibyteswritten(dst) == size);
+	assert(zibytesread(src) == size);
+	assert(zibyteswritten(src) == 0);
+	assert(zibytesread(dst) == 0);
+	zicommit(dst);
+	src = ziclose(src);
+	dst = ziclose(dst);
+
+	cmpdst = fopen(dstfile, "r");
+	mem = malloc(size);
+	mem2 = malloc(size);
+	result = fread(mem, 1, size, cmpsrc);
+	assert(result == size);
+	result = fread(mem2, 1, size, cmpdst);
+	assert(result == size);
+	for (i = 0; i < size; i++)
+	{
+		if (mem[i] != mem2[i]) fprintf(stderr, "Copied files differ at byte %d\n", i);
+		assert(mem[i] == mem2[i]);
+	}
+	fclose(cmpsrc);
+	fclose(cmpdst);
+	free(mem);
 }
 
 int main(void)
@@ -222,6 +352,14 @@ int main(void)
 
 	// Round # 3 - modify
 	test3(128, "DICM", 32);
+
+	// Large copy, manual
+	test4(8192);
+	test4(512);
+
+	// Large copy, zicopy
+	test5(8192);
+	test5(512);
 
 	return 0;
 }

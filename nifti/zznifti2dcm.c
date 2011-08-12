@@ -14,7 +14,7 @@
 
 #define MIN_HEADER_SIZE 348
 
-static bool read_nifti_file(char *hdr_file, char *data_file)
+static int read_nifti_file(char *hdr_file, char *data_file)
 {
 	nifti_1_header *hdr;
 	FILE *fp;
@@ -30,7 +30,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	if (!is_nifti_file(hdr_file))
 	{
 		fprintf(stderr, "%s is not a nifti file\n", hdr_file);
-		return false;
+		return -1;
 	}
 	hdr = nifti_read_header(hdr_file, &wrongendian, 1);
 
@@ -47,14 +47,14 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	if (hdr->dim[0] != 3)
 	{
 		fprintf(stderr, "%s - three dimensions not found (was %d), unsupported Analyze dataset\n", hdr_file, hdr->dim[0]);
-		return false;
+		return -1;
 	}
 
 	fp = fopen(data_file, "r");
 	if (fp == NULL)
 	{
 		fprintf(stderr, "%s - error opening data file: %s\n", hdr_file, strerror(ferror(fp)));
-		return false;
+		return -1;
 	}
 
 	switch (hdr->datatype)
@@ -74,7 +74,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 		break;
 	default:
 		fprintf(stderr, "Unsupported data type %d -- skipped\n", (int)hdr->datatype);
-		return false;
+		return -1;
 	}
 
 	// FIXME instance uid
@@ -83,7 +83,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	{
 		fprintf(stderr, "%s - could not create out file: %s\n", hdr_file, strerror(errno));
 		zw = zzclose(zw);
-		return false;
+		return -1;
 	}
 
 	// just memory map all the data
@@ -94,7 +94,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	{
 		fprintf(stderr, "%s - could not mmap file: %s\n", hdr_file, strerror(errno));
 		zw = zzclose(zw);
-		return false;
+		return -1;
 	}
 	bytes = addr + zw->current.pos - offset;	// increment by page alignment shift
 	madvise(bytes, size, MADV_SEQUENTIAL | MADV_WILLNEED);
@@ -207,7 +207,7 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 		break;
 	default:
 		fprintf(stderr, "Unsupported data type -- skipped\n");
-		return false;
+		return -1;
 	}
 
 	madvise(bytes, size, MADV_DONTNEED);
@@ -222,20 +222,18 @@ static bool read_nifti_file(char *hdr_file, char *data_file)
 	}
 #endif
 
-	return (0);
+	return 0;
 }
 
 int main(int argc, char **argv)
 {
-	zzutil(argc, argv, 2, "<header file> [<data file>]", "nifti to DICOM converter");
+	zzutil(argc, argv, 2, "<header file> [<data file>]", "nifti to DICOM converter", NULL);
 	if (argc == 3)
 	{
-		read_nifti_file(argv[1], argv[2]);
+		return read_nifti_file(argv[1], argv[2]);
 	}
 	else
 	{
-		read_nifti_file(argv[1], argv[1]);
+		return read_nifti_file(argv[1], argv[1]);
 	}
-
-	return 0;
 }

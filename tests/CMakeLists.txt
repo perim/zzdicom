@@ -1,0 +1,38 @@
+set(TEST_FLAGS "-I${PROJECT_SOURCE_DIR} -I${PROJECT_SOURCE_DIR}/tests")
+
+add_executable(zziotest zziotest.c)
+target_link_libraries(zziotest zzdicom)
+set_target_properties(zziotest PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
+add_test(zziotest ${CMAKE_CURRENT_BINARY_DIR}/zziotest)
+
+add_executable(zz1 zz1.c)
+target_link_libraries(zz1 zzdicom)
+set_target_properties(zz1 PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
+add_test(zzw ${CMAKE_CURRENT_BINARY_DIR}/zz1)
+
+add_executable(zzw zzw.c)
+target_link_libraries(zzw zzdicom)
+set_target_properties(zzw PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
+add_test(zzw ${CMAKE_CURRENT_BINARY_DIR}/zzw "Basics")
+
+if(APPLE)
+  # fixme - trouble with charls
+else(APPLE)
+  add_executable(zzt zzt.c)
+  target_link_libraries(zzt zzdicom ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} CharLS)
+  set_target_properties(zzt PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
+  add_test(zzt ${CMAKE_CURRENT_BINARY_DIR}/zzt "${CMAKE_SOURCE_DIR}/samples/spine.dcm")
+  add_test(zzt-ls ${CMAKE_CURRENT_BINARY_DIR}/zzt "${CMAKE_SOURCE_DIR}/samples/spine-ls.dcm")
+endif(APPLE)
+
+add_test(dump-version ${CMAKE_BINARY_DIR}/zzdump "--version")
+add_test(dump-help ${CMAKE_BINARY_DIR}/zzdump "--help")
+add_test(dump-usage ${CMAKE_BINARY_DIR}/zzdump "--usage")
+add_test(dump-confuse ${CMAKE_BINARY_DIR}/zzdump "-v" "samples/confuse.dcm")
+add_test(dump-tw1 ${CMAKE_BINARY_DIR}/zzdump "--" "samples/tw1.dcm")
+add_test(dump-tw2 ${CMAKE_BINARY_DIR}/zzdump "samples/tw2.dcm")
+add_test(dump-broken ${CMAKE_BINARY_DIR}/zzdump "samples/brokensq.dcm")
+add_test(dump-spine ${CMAKE_BINARY_DIR}/zzdump "${CMAKE_SOURCE_DIR}/samples/spine.dcm")
+add_test(dump-spine-ls ${CMAKE_BINARY_DIR}/zzdump "${CMAKE_SOURCE_DIR}/samples/spine-ls.dcm")
+add_test(anon-tw1 ${CMAKE_BINARY_DIR}/zzanon "TEST" "samples/tw1.dcm")
+add_test(anon-tw2 ${CMAKE_BINARY_DIR}/zzanon "TESTILICIOUS" "samples/tw2.dcm")

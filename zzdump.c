@@ -36,18 +36,18 @@ void dump(char *filename)
 	char tmp[MAX_LEN_VALUE], vrstr[MAX_LEN_VR];
 	int i, privoffset = 0, charlen;
 	int header = 0;		// 0 - started, 1 - writing header, 2 - written header
-	char extra[10], pstart[10], pstop[100];
+	char extra[10], pstart[48], pstop[100];
 	bool content;
 
 	zz = zzopen(filename, "r", &szz);
-
-	if (zz)
+	if (!zz)
 	{
-		printf("\n# Dicom-File-Format\n");
+		exit(1);
 	}
 
 	memset(privcreator, 0, sizeof(privcreator));
 	zziterinit(zz);
+	printf("\n# Dicom-File-Format\n");
 	while (zziternext(zz, &group, &element, &len))
 	{
 		// Extra checks
@@ -165,7 +165,7 @@ int main(int argc, char **argv)
 {
 	int i;
 
-	for (i = zzutil(argc, argv, 2, "<filenames>", "DICOM tag dumper"); i < argc; i++)
+	for (i = zzutil(argc, argv, 2, "<filenames>", "DICOM tag dumper", NULL); i < argc; i++)
 	{
 		dump(argv[i]);
 	}

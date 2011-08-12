@@ -1,13 +1,14 @@
-CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -mtune=native -march=native
-COMMON = zz.o
+CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -mtune=native -march=native -Werror
+COMMON = zz.o zzio.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
 COMMONTEXTURE = zztexture.o
 COMMONVERIFY = zzverify.o
 COMMONNET = zznet.o
 PART6 = part6.o
-PROGRAMS = zzanon zzdump zzgroupfix zzread zzstudies zzprune zztojpegls zzmkrandom zzechoscp
-HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h
+# zztojpegls
+PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom
+HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h
 
 all: CFLAGS += -Os -fstack-protector
 all: sqlinit.h $(PROGRAMS)
@@ -29,6 +30,9 @@ zzanon: zzanon.c $(HEADERS) $(COMMON)
 
 zzdump: zzdump.c $(HEADERS) $(COMMON) $(PART6) $(COMMONVERIFY)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONVERIFY)
+
+zzcopy: zzcopy.c $(HEADERS) $(COMMON) $(PART6) $(COMMONWRITE)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONWRITE)
 
 zzgroupfix: zzgroupfix.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
@@ -52,9 +56,12 @@ zzechoscp: zzechoscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONNET)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONNET)
 
 clean:
-	rm -f *.o sqlinit.h $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov
+	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov
 
 check: tests/zz1 tests/zzw tests/zzt tests/zziotest
+	cppcheck -j 4 -q zz.c zzwrite.c zzdump.c zzverify.c zzmkrandom.c
+	cppcheck -j 4 -q zzcopy.c zztexture.c zzsql.c zzio.c
+	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c
 	tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
@@ -70,12 +77,13 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest
 	./zzdump samples/spine.dcm > /dev/null
 	./zzanon TEST samples/tw1.dcm
 	./zzanon TEST samples/tw2.dcm
+	./zzcopy samples/spine.dcm samples/copy.dcm
 
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
 
-tests/zziotest: tests/zziotest.c $(HEADERS) $(COMMON) zzio.o
-	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) zzio.o
+tests/zziotest: tests/zziotest.c $(HEADERS) $(COMMON)
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
 
 tests/zzw: tests/zzw.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONVERIFY)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY)

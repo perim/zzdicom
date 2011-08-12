@@ -2,6 +2,7 @@
 #define ZZ_PRIV_H
 
 #include "zz.h"
+#include "zzio.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -11,7 +12,6 @@ extern "C" {
 #define ZZ_LINUX
 #endif
 
-#include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>
 #include <time.h>
@@ -118,12 +118,19 @@ enum zzsteptype
 	ZZ_ITEM
 };
 
+struct zzopts	// list of command-line options; NULL-terminate it
+{
+	const char *opt;
+	const char *description;
+	bool found;
+};
+
 /// Maximum amount of recursiveness in a DICOM file
 #define MAX_LADDER 24
 
 struct zzfile
 {
-	FILE		*fp;			///< File pointer or network socket
+	struct zzio	*zi;			///< File or network socket
 	long		fileSize;		///< File or current buffer size
 	char		fullPath[PATH_MAX];
 	char		sopClassUid[MAX_LEN_UI];	// TODO convert to enum
@@ -137,13 +144,15 @@ struct zzfile
 
 	struct
 	{
-		FILE		*buffer;	///< Memory buffer disguised as a file
 		char		callingaet[17];	///< Our AE Title
 		char		interface[64];	///< Our network interface
-		void		*mem;		///< Pointer to buffer's memory
 		long		maxpdatasize;	///< Maximum size of other party's pdata payload
 		uint16_t	version;	///< Association version capability bitfield
 		long		lastMesID;	///< Last message ID used, to make it unique
+		char		psctx;		///< Current presentation context
+		bool		endofmessage;	///< We have reached an end of message marker
+		long		pdusize;	///< Size of current PDU
+		long		pdutype;	///< Current PDU type
 		// TODO enum zztxsyn psctxs[PSCTX_LAST];        ///< List of negotiated presentation contexts
 	} net;
 
@@ -216,7 +225,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 struct zzfile *zzclose(struct zzfile *zz);
 
 /// Utility function to process some common command-line arguments. Returns the number of initial arguments to ignore.
-int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help);
+int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help, struct zzopts *opts);
 
 /// Utility iterator that wraps zzread. Passing in a NULL pointer for zz makes it a no-op.
 void zziterinit(struct zzfile *zz);

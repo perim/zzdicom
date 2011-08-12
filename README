@@ -10,24 +10,24 @@ Limitations
 -----------
 zzdicom currently only works with little-endian DICOM data. I have never encountered big-endian 
 DICOM data in the real world (ie hospital settings), so I never saw a need for adding support for 
-this. It compiles out of the box on Linux, but it should also work on other POSIX-y architectures
-like MacOSX and FreeBSD.
+this. It should compile out of the box on Linux and MacOSX.
 
 Dependencies
 ------------
 The core parser has no dependencies than the system C library. The DICOM database functions require
-SQLite. The experimental JPEG-LS code requires CharLS. The OpenGL utility code requires GLEW and
-FreeGLUT (will probably work with the original GLUT as well).
-
-An implementation of ftell() that gives accurate file positions without calling fflush() first is
-required. A strict interpretation of POSIX does not require this. This works on both Linux and
-MacOSX, and so probably on all the free BSD variants as well.
+SQLite. The texture code requires CharLS. The OpenGL utility code tests require GLUT. The sample
+DICOM viewer program requires Qt.
 
 Features
 --------
 The software was written with performance as a high priority, and the little it does, it does far
-faster than any other DICOM software that I have tested. The core parser does not utilize any
-dynamic memory management.
+faster than any other DICOM software that I have tested. Memory management is very simple and
+easy to validate. Unit test coverage of the core code is very high.
+
+Installation
+------------
+Currently two build systems are available, a plain makefile and cmake. Using the cmake based system
+with an out of source build is recommended.
 
 The tools
 ---------
@@ -39,7 +39,8 @@ will parse the file before copying it out again, accidentially fixing several cl
 on the way.
 
 zzdump - will dump a list of tags for each DICOM file given in a format very similar to DCMTK's
-dcmdump. It also runs a number of validation checks on each tag, and prints errors found.
+dcmdump. It also runs a number of validation checks on each tag, and prints errors found line 
+by line.
 
 zzgroupfix - will run fix erroneous group size tags, useful as some software relies on these being
 correct if they are present.
@@ -52,7 +53,8 @@ zzprune - checks and updates all entries in the local DICOM database, removing e
 longer refer to an existing file.
 
 zzmkrandom - generates a pseudo-random DICOM file for use in manual testing or a unit testing 
-framework
+framework. You can pass a random seed on the command line, or let it generate its own random
+seed. The random seed used is saved in the Instance Number tag.
 
 Credits
 -------

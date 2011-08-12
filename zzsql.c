@@ -63,8 +63,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	char patientsName[MAX_LEN_PN];
 	char modality[MAX_LEN_CS];
 	long pos, len;
-
-	fseek(zz->fp, zz->ladder[0].pos, SEEK_SET);	// start position of base group is start of DICOM data
+	bool done = false;
 
 	modified[0] = '\0';
 	memset(studyInstanceUid, 0, sizeof(studyInstanceUid));
@@ -72,28 +71,25 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	memset(modality, 0, sizeof(modality));
 
 	zziterinit(zz);
-	while (zziternext(zz, &group, &element, &len))
+	while (zziternext(zz, &group, &element, &len) && !done)
 	{
-		// Abort early, skip loading pixel data into memory if possible
-		if (ftell(zz->fp) + len == zz->fileSize)
-		{
-			break;
-		}
-
-		pos = ftell(zz->fp);
+		pos = zireadpos(zz->zi);
 		switch (ZZ_KEY(group, element))
 		{
 		case DCM_StudyInstanceUID:
-			fread(studyInstanceUid, 1, MIN((long)sizeof(studyInstanceUid) - 1, len), zz->fp);
+			zzgetstring(zz, studyInstanceUid, sizeof(studyInstanceUid));
 			break;
 		case DCM_SeriesInstanceUID:
-			fread(seriesInstanceUid, 1, MIN((long)sizeof(seriesInstanceUid) - 1, len), zz->fp);
+			zzgetstring(zz,	seriesInstanceUid, sizeof(seriesInstanceUid));
 			break;
 		case DCM_PatientsName:
-			fread(patientsName, 1, MIN((long)sizeof(patientsName) - 1, len), zz->fp);
+			zzgetstring(zz,	patientsName, sizeof(patientsName));
 			break;
 		case DCM_Modality:
-			fread(modality, 1, MIN((long)sizeof(modality) - 1, len), zz->fp);
+			zzgetstring(zz,	modality, sizeof(modality));
+			break;
+		case DCM_PixelData:
+			done = true;
 			break;
 		default:
 			break;
