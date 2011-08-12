@@ -149,6 +149,10 @@ struct zzfile
 		long		maxpdatasize;	///< Maximum size of other party's pdata payload
 		uint16_t	version;	///< Association version capability bitfield
 		long		lastMesID;	///< Last message ID used, to make it unique
+		char		psctx;		///< Current presentation context
+		bool		endofmessage;	///< We have reached an end of message marker
+		long		pdusize;	///< Size of current PDU
+		long		pdutype;	///< Current PDU type
 		// TODO enum zztxsyn psctxs[PSCTX_LAST];        ///< List of negotiated presentation contexts
 	} net;
 

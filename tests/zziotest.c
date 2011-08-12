@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 #include <sys/stat.h>
 
 #include "zzio.h"
@@ -13,16 +14,27 @@
 #define STEPS 20
 #define FILENAME "/tmp/test.bin"
 
-static void header_write_func(long size, char *buffer, const void *userdata)
+static long header_write_func(long size, char *buffer, const void *userdata)
 {
 	int64_t *header = (int64_t *)buffer;
+	(void)userdata;
 	*header = size;
+	return HEADER_SIZE;
 }
 
-static long header_read_func(char *buffer, void *userdata)
+static long header_read_func(char **buffer, long *len, void *userdata)
 {
-	int64_t *header = (int64_t *)buffer;
-	return *header;
+	struct zzio *zi = (struct zzio *)userdata;
+	int64_t size;
+	int result = read(zifd(zi), &size, 8);
+
+	assert(result == 8);
+	if (!*buffer || size > *len)
+	{
+		*buffer = realloc(*buffer, size);
+	}
+	result = read(zifd(zi), *buffer, size);
+	return size;
 }
 
 static void test1(int packetsize, bool splitter)
@@ -33,7 +45,11 @@ static void test1(int packetsize, bool splitter)
 	// Write
 	zi = ziopenwrite(FILENAME, packetsize, 0);
 	assert(zi);
-	if (splitter) zisplitter(zi, HEADER_SIZE, header_write_func, header_read_func, NULL);
+	if (splitter)
+	{
+		zisetwriter(zi, header_write_func, HEADER_SIZE, zi);
+		zisetreader(zi, header_read_func, zi);
+	}
 	value = 1;
 	for (c = 0; c < STEPS; c++)
 	{
@@ -84,7 +100,11 @@ static void test1(int packetsize, bool splitter)
 	// Read back in
 	zi = ziopenread(FILENAME, packetsize, 0);
 	assert(zi);
-	if (splitter) zisplitter(zi, HEADER_SIZE, header_write_func, header_read_func, NULL);
+	if (splitter)
+	{
+		zisetwriter(zi, header_write_func, HEADER_SIZE, zi);
+		zisetreader(zi, header_read_func, zi);
+	}
 	ziwillneed(zi, 0, 1024);
 	value = 1;
 	for (c = 0; c < STEPS; c++)
@@ -108,7 +128,11 @@ static void test2(int value, int packetsize, bool splitter)
 	// Write
 	zi = ziopenwrite(FILENAME, packetsize, 0);
 	assert(zi);
-	if (splitter) zisplitter(zi, HEADER_SIZE, header_write_func, header_read_func, NULL);
+	if (splitter)
+	{
+		zisetwriter(zi, header_write_func, HEADER_SIZE, zi);
+		zisetreader(zi, header_read_func, zi);
+	}
 	for (c = 0; c < STEPS; c++)
 	{
 		for (i = 0; i < c * PACKET_STEP; i++)
@@ -156,7 +180,11 @@ static void test2(int value, int packetsize, bool splitter)
 	// Read back in
 	zi = ziopenread(FILENAME, packetsize, 0);
 	assert(zi);
-	if (splitter) zisplitter(zi, HEADER_SIZE, header_write_func, header_read_func, NULL);
+	if (splitter)
+	{
+		zisetwriter(zi, header_write_func, HEADER_SIZE, zi);
+		zisetreader(zi, header_read_func, zi);
+	}
 	ziwillneed(zi, 0, 1024);
 	for (c = 0; c < STEPS; c++)
 	{
@@ -178,6 +206,7 @@ static void test3(int pos, const char *stamp, int packetsize)
 	struct zzio *zi;
 	FILE *fp = fopen(FILENAME, "w");
 
+	(void)pos;
 	for (i = 0; i < 1024; i++) fputc('.', fp);
 	fclose(fp);
 

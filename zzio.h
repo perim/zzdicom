@@ -23,12 +23,15 @@ struct zzio;
 #define ZZIO_ZLIB         8
 
 /// Header write function. First parameter is number of bytes to be written in next packet.
-/// Second parameter is the buffer to write into. Third parameter is user supplied.
-typedef void headerwritefunc(long, char *, const void*);
+/// Second parameter is the buffer to write into. Third parameter is user supplied. Returns
+/// size of written header.
+typedef long headerwritefunc(long, char *, const void*);
 
-/// Header read function. First parameter is buffer to read from. Second parameter is user
-/// supplied. Returns number of bytes in next packet.
-typedef long headerreadfunc(char *, void *);
+/// User supplied fill buffer function. First parameter is buffer to store into. Second 
+/// parameter is size of buffer. Third is user supplied. Returns number of bytes in buffer.
+/// The function is responsible for memory allocation, and the first time it is called, the
+/// first parameter may point to a NULL pointer.
+typedef long readbufferfunc(char **, long *, void *);
 
 /// Open a zzio buffer on a socket. It must already be opened and connected.
 struct zzio *ziopensocket(int sock, int flags);
@@ -39,9 +42,16 @@ struct zzio *ziopenfile(const char *path, const char *mode);
 /// Change buffer size. This may flush the existing buffer.
 void zisetbuffersize(struct zzio *zi, long buffersize);
 
-/// Set up packet splitter that turns a stream of data into neat packets with custom headers. Max length of packet
-/// must be equal to size of buffer as told earlier to ziopen*().
-void zisplitter(struct zzio *zi, long headersize, headerwritefunc writefunc, headerreadfunc readfunc, void *userdata);
+/// Set up packet splitter that turns a stream of data into neat packets with custom headers. Once amount of data
+/// equal to size of buffer as told earlier to open function is written, or ziflush() is called, it is preceeded
+/// by a header and flushed to disk or network, as appropriate. The writer function is passed an empty buffer
+/// of buffersize size to fill with data, and returns the size of the buffer used.
+void zisetwriter(struct zzio *zi, headerwritefunc writefunc, long buffersize, void *userdata);
+
+/// Set up a user defined function that reads data into our read buffer. It is passed a pointer to our buffer
+/// pointer, so it is allowed to reallocate it. This allows zzio to read very exoticly packeted formats as a
+/// unified stream. This function clears the read buffer and resets the file position.
+void zisetreader(struct zzio *zi, readbufferfunc readfunc, void *userdata);
 
 /// Return last error in human readable format.
 const char *zistrerror(const struct zzio *zi);
@@ -81,7 +91,7 @@ void ziwillneed(struct zzio *zi, long offset, long length);
 /// Close a buffer. Will also close the socket or file it operates on. Always returns NULL.
 struct zzio *ziclose(struct zzio *zi);
 
-/// Returns true if read position is at end of file.
+/// Returns true if read position is at end of file or stream.
 bool zieof(const struct zzio *zi);
 
 /// Flushes the write buffer to file. Note that this does not force the OS to flush its write
@@ -124,6 +134,16 @@ long zibyteswritten(struct zzio *zi);
 
 /// Number of bytes read from file
 long zibytesread(struct zzio *zi);
+
+/// Set eof flag. This useful for network streaming protocols, and can be called from within a reader function to indicate
+/// that we are at the end of the stream. The eof flag must be cleared by zicleareof().
+void ziseteof(struct zzio *zi);
+
+/// Clear the eof flag. See ziseteof().
+void zicleareof(struct zzio *zi);
+
+// Return current file descriptor
+int zifd(struct zzio *zi);
 
 /* --------------------------------------------------------------------- */
 // Private functions below - only for unit testing
