@@ -59,6 +59,9 @@ clean:
 	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov
 
 check: tests/zz1 tests/zzw tests/zzt tests/zziotest
+	cppcheck -j 4 -q zz.c zzwrite.c zzdump.c zzverify.c zzmkrandom.c
+	cppcheck -j 4 -q zzcopy.c zztexture.c zzsql.c zzio.c
+	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c
 	tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
@@ -74,6 +77,7 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest
 	./zzdump samples/spine.dcm > /dev/null
 	./zzanon TEST samples/tw1.dcm
 	./zzanon TEST samples/tw2.dcm
+	./zzcopy samples/spine.dcm samples/copy.dcm
 
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
