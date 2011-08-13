@@ -1,10 +1,5 @@
 set(TEST_FLAGS "-I${PROJECT_SOURCE_DIR} -I${PROJECT_SOURCE_DIR}/tests")
 
-add_executable(zziotest zziotest.c)
-target_link_libraries(zziotest zzdicom)
-set_target_properties(zziotest PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
-add_test(zziotest ${CMAKE_CURRENT_BINARY_DIR}/zziotest)
-
 add_executable(zz1 zz1.c)
 target_link_libraries(zz1 zzdicom)
 set_target_properties(zz1 PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
@@ -14,6 +9,11 @@ add_executable(zzw zzw.c)
 target_link_libraries(zzw zzdicom)
 set_target_properties(zzw PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
 add_test(zzw ${CMAKE_CURRENT_BINARY_DIR}/zzw "Basics")
+
+add_executable(zziotest zziotest.c)
+target_link_libraries(zziotest zzdicom)
+set_target_properties(zziotest PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
+add_test(zziotest ${CMAKE_CURRENT_BINARY_DIR}/zziotest)
 
 if(APPLE)
   # fixme - trouble with charls
