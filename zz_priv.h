@@ -144,7 +144,7 @@ struct zzfile
 
 	struct
 	{
-		char		callingaet[17];	///< Our AE Title
+		char		aet[17];	///< Our AE Title
 		char		interface[64];	///< Our network interface
 		long		maxpdatasize;	///< Maximum size of other party's pdata payload
 		uint16_t	version;	///< Association version capability bitfield

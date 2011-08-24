@@ -139,7 +139,7 @@ struct zzfile *zznetwork(const char *interface, const char *myaetitle, struct zz
 	{
 		strcpy(zz->net.interface, interface);	// TODO use sstrcpy
 	}
-	strcpy(zz->net.callingaet, myaetitle);
+	strcpy(zz->net.aet, myaetitle);
 	zz->ladder[0].item = -1;
 	zz->current.frame = -1;
 	zz->frames = -1;
@@ -162,11 +162,6 @@ static void C_ECHO_req_recv(struct zzfile *zz)
 		default: break;	// ignore
 		}
 	}
-}
-
-static void PData_receive(struct zzfile *zz)
-{
-	printf("PDATA receipt - not implemented yet\n");
 }
 
 void znwechoreq(struct zzfile *zz)
@@ -259,7 +254,7 @@ static bool PDU_Associate_Accept(struct zzfile *zz)
 	znw2(1, zz);				// version bitfield
 	znw2(0, zz);				// reserved, shall be zero
 	znwaet(calledaet, zz);			// called AE Title
-	znwaet(zz->net.callingaet, zz);		// calling AE Title
+	znwaet(zz->net.aet, zz);		// calling AE Title
 	znwpad(32, zz);				// reserved, shall be zero
 
 	// Application Context Item (useless fluff)
@@ -372,7 +367,7 @@ static void PDU_AssociateRQ(struct zzfile *zz, const char *calledAET, const char
 	znw2(1, zz);				// version bitfield
 	znw2(0, zz);				// reserved, shall be zero
 	znwaet(calledAET, zz);			// called AE Title
-	znwaet(zz->net.callingaet, zz);		// calling AE Title
+	znwaet(zz->net.aet, zz);		// calling AE Title
 	znwpad(32, zz);				// reserved, shall be zero
 
 	// Application Context Item (useless fluff)
@@ -538,7 +533,7 @@ bool zzlisten(struct zzfile *zz, int port, const char *myaetitle, int flags)
 				switch (zz->net.pdutype)
 				{
 				case 0x01: printf("Associate RQ received\n"); PDU_Associate_Accept(zz); break;
-				case 0x04: printf("PData received\n"); PData_receive(zz); break;
+				case 0x04: printf("PData received\n"); break;
 				default: printf("Unknown type: %x\n", (unsigned)zz->net.pdutype); abort(); break;
 				}
 			}

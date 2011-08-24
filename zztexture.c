@@ -56,10 +56,12 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			break;
 		case DCM_ImageOrientationPatient:	// DS, 6 values
 			// Require multi-frame type DICOM here
-			if (zzt->pixelsize.z == 0)
+			if (zzt->pixelsize.z == 0) // single-frame DICOM
 			{
-				fprintf(stderr, "Number of frames not found before positions -- old style DICOM file?\n");
-				return NULL;
+				zzt->pixelsize.z = 1;	// a single frame
+				// Reserve memory on the GPU here, since we apparently did not do it below
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, zzt->pixelsize.z, 64, 0, GL_LUMINANCE, GL_FLOAT, NULL);
+				checkError();
 			}
 			zzrDS(zz, 6, tmpd);
 			volinfo[0] = tmpd[0];
@@ -86,11 +88,6 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 		case DCM_NumberOfFrames:
 			zzgetstring(zz, value, sizeof(value) - 1);
 			zzt->pixelsize.z = atoi(value);
-			if (zzt->pixelsize.z <= 3)
-			{
-				fprintf(stderr, "Only multiframe images supported at this time.\n");
-				return NULL;
-			}
 			// Reserve memory on the GPU
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, zzt->pixelsize.z, 64, 0, GL_LUMINANCE, GL_FLOAT, NULL);
 			checkError();
@@ -144,9 +141,9 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			break;
 		case DCM_Item:
 		case DCM_PixelData:
-			// Upload info from previous frame
 			if (zz->current.frame > 0 && zz->current.pxstate == ZZ_PIXELITEM)
 			{
+				// Upload info from previous frame
 				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, zz->current.frame - 1, 64, 1, GL_LUMINANCE, GL_FLOAT, volinfo);
 				checkError();
 			}
