@@ -1,6 +1,7 @@
 #ifndef ZZ_PART6_H
 #define ZZ_PART6_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
