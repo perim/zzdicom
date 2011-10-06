@@ -9,10 +9,16 @@
 
 #define MAX_LEN_VALUE 200
 
-ImageViewer::ImageViewer(QWidget *parent) : QGLWidget(parent), shader(parent)
+/*******************************/
+/**** --- ImageViewer2D --- ****/
+/*******************************/
+
+static QGLWidget *original = NULL;
+
+ImageViewer::ImageViewer(QWidget *parent) : QGLWidget(parent, original), shader(parent)
 {
 	zzt = NULL;
-	initialized = false;
+	if (!original) original = this;
 }
 
 ImageViewer::~ImageViewer()
@@ -33,25 +39,9 @@ void ImageViewer::resizeGL(int width, int height)
 	glLoadIdentity();
 }
 
-void ImageViewer::reload()
+void ImageViewer::setVolume(struct zztexture *src)
 {
-	if (initialized && !dcm.isEmpty() && isValid())
-	{
-		struct zzfile szz;
-
-		if (zzt)
-		{
-			zzt = zztexturefree(zzt);
-		}
-		struct zzfile *zz = zzopen(dcm.toAscii().constData(), "r", &szz);
-		zzt = zzcopytotexture(zz, &szzt);
-		zz = zzclose(zz);
-	}
-}
-
-void ImageViewer::setFile(QString filename)
-{
-	dcm = filename;
+	zzt = src;
 }
 
 void ImageViewer::setDepth(qreal value)
@@ -66,8 +56,6 @@ void ImageViewer::initializeGL()
 
 	glShadeModel(GL_SMOOTH);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	initialized = true;
-	reload();
 }
 
 void ImageViewer::paintGL()
@@ -89,6 +77,72 @@ void ImageViewer::paintGL()
 		shader.release();
 	}
 }
+
+/*******************************/
+/**** --- ImageViewer3D --- ****/
+/*******************************/
+
+ImageViewer3D::ImageViewer3D(QWidget *parent) : QGLWidget(parent, original), shader(parent)
+{
+	zzt = NULL;
+	if (!original) original = this;
+}
+
+ImageViewer3D::~ImageViewer3D()
+{
+}
+
+void ImageViewer3D::resizeGL(int width, int height)
+{
+	if (height == 0)
+	{
+		height = 1;
+	}
+	glViewport(0, 0, width, height);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glOrtho(-1.0, 1.0, -1.0, 1.0, 0.0, 1.0);
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+}
+
+void ImageViewer3D::setVolume(struct zztexture *src)
+{
+	zzt = src;
+}
+
+void ImageViewer3D::initializeGL()
+{
+	shader.addShaderFromSourceFile(QGLShader::Fragment, "shader.frag");
+	shader.link();
+
+	glShadeModel(GL_SMOOTH);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+}
+
+void ImageViewer3D::paintGL()
+{
+	if (zzt)
+	{
+		shader.bind();
+		glEnable(GL_TEXTURE_3D);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glLoadIdentity();
+		glBindTexture(GL_TEXTURE_3D, zzt->volume);
+		glBegin(GL_QUADS);
+		glTexCoord3f(0.0f, 1.0f, 0.0f);	glVertex3f(-1.0f, 1.0f, 0.0f);
+		glTexCoord3f(1.0f, 1.0f, 0.0f);	glVertex3f( 1.0f, 1.0f, 0.0f);
+		glTexCoord3f(1.0f, 0.0f, 0.0f);	glVertex3f( 1.0f,-1.0f, 0.0f);
+		glTexCoord3f(0.0f, 0.0f, 0.0f);	glVertex3f(-1.0f, -1.0f, 0.0f);
+		glEnd();
+		assert(glGetError() == 0);
+		shader.release();
+	}
+}
+
+/****************************/
+/**** --- MainWindow --- ****/
+/****************************/
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -121,10 +175,18 @@ void MainWindow::openFile(QString filename)
 	int nesting;
 	QList<QStandardItem *> hierarchy;
 	const struct part6 *tag;
+	struct zzfile szz;
+	struct zzfile *zz = zzopen(filename.toAscii().constData(), "r", &szz);
 
-	ui->glviewer->setFile(filename);
+	if (zzt)
+	{
+		zzt = zztexturefree(zzt);
+	}
+	zzt = zzcopytotexture(zz, &szzt);
+	zz = zzclose(zz);
+	ui->glviewer->setVolume(zzt);
 	ui->glviewer->setDepth(0.0);
-	ui->glviewer->reload();
+	ui->glviewer3D->setVolume(zzt);
 
 	tags->clear();
 	tags->setColumnCount(4);
@@ -279,11 +341,11 @@ void MainWindow::tagclicked(const QModelIndex &idx)
 
 void MainWindow::setframe(int value)
 {
-	const struct zztexture *zzt = ui->glviewer->volume();
 	if (zzt && value >= 0 && value < zzt->pixelsize.z)
 	{
 		ui->glviewer->setDepth((1.0 / zzt->pixelsize.z) * value);
 		ui->glviewer->updateGL();
+		ui->glviewer3D->updateGL();
 	}
 }
 

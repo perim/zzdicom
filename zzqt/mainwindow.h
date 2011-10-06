@@ -18,10 +18,8 @@ class ImageViewer : public QGLWidget
 public:
 	ImageViewer(QWidget *parent = NULL);
 	~ImageViewer();
-	void reload();
-	void setFile(QString filename);
+	void setVolume(struct zztexture *src);
 	void setDepth(qreal value);
-	const struct zztexture *volume() { return zzt; }
 
 protected:
 	void paintGL();
@@ -29,11 +27,26 @@ protected:
 	void initializeGL();
 
 private:
-	struct zztexture szzt, *zzt;
-	QString dcm;	///< DICOM file name
+	struct zztexture *zzt;
 	QGLShaderProgram shader;
 	GLfloat depth;
-	bool initialized;
+};
+
+class ImageViewer3D : public QGLWidget
+{
+public:
+	ImageViewer3D(QWidget *parent = NULL);
+	~ImageViewer3D();
+	void setVolume(struct zztexture *src);
+
+protected:
+	void paintGL();
+	void resizeGL(int width, int height);
+	void initializeGL();
+
+private:
+	struct zztexture *zzt;
+	QGLShaderProgram shader;
 };
 
 class MainWindow : public QMainWindow
@@ -61,6 +74,7 @@ private:
 	int numFiles;
 	struct zzfile szz, *zz;
 	int frame;
+	struct zztexture szzt, *zzt;
 };
 
 #endif // MAINWINDOW_H
