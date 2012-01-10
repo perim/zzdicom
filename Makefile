@@ -5,17 +5,18 @@ COMMONWRITE = zzwrite.o
 COMMONTEXTURE = zztexture.o
 COMMONVERIFY = zzverify.o
 COMMONNET = zznet.o
+COMMONDINET = zzdinetwork.o
 PART6 = part6.o
 # zztojpegls
-PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom
-HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h
+PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom zzdiscp zzdiscu
+HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h zzdinetwork.h zzditags.h
 
-all: CFLAGS += -Os -fstack-protector
+all: CFLAGS += -Os -fstack-protector -g
 all: sqlinit.h $(PROGRAMS)
 
 debug: clean
-debug: CFLAGS += -O0 -g -DDEBUG -fprofile-arcs -ftest-coverage -fstack-protector-all
-debug: sqlinit.h $(PROGRAMS) check
+debug: CFLAGS += -O0 -g -DDEBUG -fstack-protector-all
+debug: sqlinit.h $(PROGRAMS)
 
 %.o : %.c
 	$(CC) -o $@ $< -c $(CFLAGS)
@@ -55,14 +56,21 @@ zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON) $(COMMONWRITE)
 zzechoscp: zzechoscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONNET)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONNET)
 
+zzdiscp: zzdiscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONDINET)
+
+zzdiscu: zzdiscu.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONDINET)
+
 clean:
 	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov
 
 check: tests/zz1 tests/zzw tests/zzt tests/zziotest
 	cppcheck -j 4 -q zz.c zzwrite.c zzdump.c zzverify.c zzmkrandom.c
 	cppcheck -j 4 -q zzcopy.c zztexture.c zzsql.c zzio.c
-	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c
-	tests/zz1 2> /dev/null
+	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c zznetwork.c
+	cppcheck -j 4 -q zzdiscp.c zzdiscu.c zzdinetwork.c
+	#tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
 	tests/zzt samples/spine-ls.dcm

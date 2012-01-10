@@ -69,27 +69,45 @@ struct zzio
 // Convenience functions for setting error. Currently no way to clear them. We also do not check if flag is set on function entry.
 // FIXME: Wrap printf behind an #ifdef DEBUG conditional
 #define ASSERT_OR_RETURN(zi, retval, expr, ...) \
-	do { if (!(expr)) { if (zi) { snprintf(zi->errstr, sizeof(zi->errstr) - 1,  __VA_ARGS__); fprintf(stderr, "%s\n", zi->errstr); } assert(#expr); return retval; } } while(0)
+	do { if (!(expr)) { if (zi) { snprintf(zi->errstr, sizeof(zi->errstr) - 1,  __VA_ARGS__); fprintf(stderr, "%s\n", zi->errstr); } assert(!#expr); return retval; } } while(0)
 #define ASSERT(zi, expr, ...) \
-	do { if (!(expr)) { if (zi) { snprintf(zi->errstr, sizeof(zi->errstr) - 1,  __VA_ARGS__); fprintf(stderr, "%s\n", zi->errstr); } assert(#expr); } } while(0)
+	do { if (!(expr)) { if (zi) { snprintf(zi->errstr, sizeof(zi->errstr) - 1,  __VA_ARGS__); fprintf(stderr, "%s\n", zi->errstr); } assert(!#expr); } } while(0)
 
 /// Base read function that interfaces with the kernel. The aim is to call this function as few times as possible
-/// to reduce context switches. TODO add zlib support, add while loop
-static inline long zi_read_raw(struct zzio *zi, void *buf, long len, bool sendblock)	// zi->readpos must be updated before calling
+/// to reduce context switches. reqlen may be -1 if there is no required size. TODO add zlib support
+// TODO -- split len into req_len and desired_len...
+// zi->readpos must be updated before calling
+// FIXME - MSG_DONTWAIT does not work on *BSD! need to set socket to non-blocking...
+static inline long zi_read_raw(struct zzio *zi, void *buf, long len, long reqlen)
 {
-	long result;
+	long result, sum;
 	if (zi->flags & ZZIO_SOCKET)
 	{
-		// TODO MSG_DONTWAIT does not work on *BSD! need to set socket to non-blocking...
-		result = recv(zi->fd, buf, len, sendblock ? MSG_WAITALL : MSG_DONTWAIT);
+		errno = 0;
+		sum = recv(zi->fd, buf, len, MSG_DONTWAIT);
+		if (sum < reqlen) // we did not get the amount required, so block until we do
+		{
+			sum = 0;
+			do // we MUST get at least reqlen, so block until we have this amount
+			{
+				errno = 0;
+				result = recv(zi->fd, buf, reqlen - sum, MSG_WAITALL);
+				sum += MAX(0, result);
+				// it is now possible that we exited recv above without
+				// getting all the required data, even if we blocked
+				// and even if there is no actual error; in  this case,
+				// errno is set to EAGAIN or EWOULDBLOCK
+			} while (sum < reqlen && (errno == EAGAIN || errno == EWOULDBLOCK));
+			ASSERT_OR_RETURN(zi, result, result >= 0, "Read error: %s", strerror(errno));
+		}
 	}
 	else
 	{
-		result = pread(zi->fd, buf, len, zi->readpos);
+		sum = pread(zi->fd, buf, len, zi->readpos);
+		ASSERT_OR_RETURN(zi, sum, sum >= 0, "Read error: %s", strerror(errno));
 	}
-	ASSERT_OR_RETURN(zi, result, result != -1, "Read error: %s", strerror(errno));
-	zi->bytesread += result;
-	return result;
+	zi->bytesread += sum;
+	return sum;
 }
 
 /// Base write function that interfaces with the kernel. See zi_read_raw().
@@ -120,7 +138,7 @@ struct zzio *ziopenread(const char *path, int bufsize, int flags)
 #else
 	fd = open(path, O_RDONLY);
 #endif
-	ASSERT_OR_RETURN(zi, NULL, fd != -1, "Open error: %s", strerror(errno));
+	//ASSERT_OR_RETURN(zi, NULL, fd != -1, "Open error: %s", strerror(errno));
 	zi = calloc(1, sizeof(*zi));
 	zi->readbuf = calloc(1, bufsize);
 	zi->flags = flags | ZZIO_READABLE;
@@ -290,6 +308,7 @@ void ziflush(struct zzio *zi)
 	    || (zi->readbufpos < zi->writebufpos && zi->readbufpos + zi->readbuflen > zi->writebufpos + zi->writebuflen))
 	{
 		zi->readbuflen = 0;
+		zi->readbufpos = 0;
 	}
 
 	// commit write buffer
@@ -364,7 +383,7 @@ void ziputc(struct zzio *zi, int ch)
 }
 
 // Flush for the read buffer
-static inline bool zi_reposition_read(struct zzio *zi, long pos)
+static inline bool zi_reposition_read(struct zzio *zi, long pos, long reqlen)
 {
 	zi->readpos = pos;
 	zi->readbufpos = 0;
@@ -375,7 +394,7 @@ static inline bool zi_reposition_read(struct zzio *zi, long pos)
 	}
 	else
 	{
-		zi->readbuflen = zi_read_raw(zi, zi->readbuf, zi->readbufsize, zi->reader);	// Read next buffer
+		zi->readbuflen = zi_read_raw(zi, zi->readbuf, zi->readbufsize, reqlen);	// Read next buffer
 	}
 	return zi->readbuflen != 0; // TODO also return false if pos outsize bounds
 }
@@ -388,7 +407,7 @@ int zigetc(struct zzio *zi)
 	}
 	else
 	{
-		zi_reposition_read(zi, zi->readpos + zi->readbufpos);
+		zi_reposition_read(zi, zi->readpos + zi->readbufpos, 1);
 		return (unsigned char)zi->readbuf[zi->readbufpos++];
 	}
 }
@@ -400,7 +419,7 @@ bool zisetreadpos(struct zzio *zi, long pos)
 	{
 		// Seeking outside of buffer
 		if ((zi->flags & ZZIO_SOCKET) || zi->reader) { assert(false); return false; }	// TODO make error message
-		return zi_reposition_read(zi, pos);
+		return zi_reposition_read(zi, pos, -1);
 	}
 	else
 	{
@@ -429,10 +448,14 @@ long ziread(struct zzio *zi, void *buf, long count)
 {
 	long len, remaining = count;
 
+	assert(zi->readbuflen >= zi->readbufpos);
+	assert(zi->readbuflen >= 0);
 	do
 	{
 		// Read as much as we can from buffer
+		assert(count >= remaining);
 		len = MIN(remaining, zi->readbuflen - zi->readbufpos);
+		assert(len >= 0);
 		memcpy(buf + (count - remaining), zi->readbuf + zi->readbufpos, len);
 		zi->readbufpos += len;
 		// Is buffer empty now and we need more?
@@ -440,7 +463,7 @@ long ziread(struct zzio *zi, void *buf, long count)
 		assert(remaining >= 0);
 		if (remaining > 0)	// yes, read in more
 		{
-			zi_reposition_read(zi, zi->readpos + zi->readbufpos);
+			zi_reposition_read(zi, zi->readpos + zi->readbufpos, MIN(zi->readbufsize, remaining));
 			// TODO - optimize if no packetizer, by reading remainder raw? see ziwrite
 			if (zi->readbuflen <= 0) return 0;
 		}

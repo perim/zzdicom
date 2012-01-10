@@ -113,7 +113,7 @@ void ImageViewer3D::setVolume(struct zztexture *src)
 
 void ImageViewer3D::initializeGL()
 {
-	shader.addShaderFromSourceFile(QGLShader::Fragment, "shader.frag");
+	shader.addShaderFromSourceFile(QGLShader::Fragment, "raycast.frag");
 	shader.link();
 
 	glShadeModel(GL_SMOOTH);

@@ -42,6 +42,11 @@ void zzdinegotiation(struct zzfile *zz)
 	uint16_t group, element;
 	long len;
 
+	//strcpy(zz->characterSet, utf-8
+	zz->utf8 = true;
+	zz->ladder[0].txsyn = ZZ_EXPLICIT;
+	zz->ladder[0].type = ZZ_BASELINE;
+
 printf("writing basics\n");
 	zzwCS(zz, DCM_DiProtocolIdentification, "DICOMDIRECT1");
 	zzwLO(zz, DCM_DiPeerName, zz->net.aet);
@@ -56,9 +61,10 @@ printf("reading basics\n");
 	{
 		switch (ZZ_KEY(group, element))
 		{
+		case DCM_DiProtocolIdentification: printf("Protocol identified\n"); break;
 		case DCM_DiPeerName: printf("Connected to %s\n", zzgetstring(zz, str, sizeof(str) - 1)); break;
 		case DCM_DiPeerCurrentDateTime: loop = false; break;
-		default: printf("."); break;	// ignore
+		default: printf("(%04x,%04x) ignored\n", (unsigned)group, (unsigned)element); break;	// ignore
 		}
 	}
 
