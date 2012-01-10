@@ -125,9 +125,13 @@ struct zzopts	// list of command-line options; NULL-terminate it
 	bool found;
 };
 
-/// Maximum amount of recursiveness in a DICOM file
+/// Maximum amount of recursiveness in a DICOM file. Note that this includes
+/// all of groups, sequences and items, but not private groups.
 #define MAX_LADDER 24
 
+/// The state data of a DICOM file being parsed. Almost 8kb in size,
+/// most of which is spent on handling private groups. If worried about
+/// memory/stack usage, comment out the creator field.
 struct zzfile
 {
 	struct zzio	*zi;			///< File or network socket
@@ -139,6 +143,8 @@ struct zzfile
 	bool		acrNema, part10;
 	time_t		modifiedTime;
 	int		currNesting, nextNesting, ladderidx;
+	int		prividx;		///< index to current private group definition
+	int		privmax;		///< index to highest group definition
 	long		pxOffsetTable, frames;
 	bool		utf8;
 
@@ -176,6 +182,7 @@ struct zzfile
 		int		ladderidx;
 	} previous;
 
+	/// The ladder is the primary stack for keeping track of DICOM state
 	struct
 	{
 		long		pos;		// file position where group begins, this - 4 is value position (except for group zero)
@@ -186,6 +193,17 @@ struct zzfile
 		enum zzsteptype	type;		// type of group
 		int		item;		// item number in sequence, or -1 if not in a sequence, zero indexed
 	} ladder[MAX_LADDER];
+
+	/// While almost all DICOM state can be maintained using a single stack,
+	/// this is not the case with private group definitions, which are not
+	/// last in, first out (ie a stack).
+	struct
+	{
+		uint16_t	group;		// general group we are in
+		uint16_t	offset;		// private group offset (group defined in 0x010 comes in range 0x1000...0x11ff)
+		char		creator[MAX_LEN_LO];	// private creator
+		int		ladderidx;	// which ladder level we are defined for, if we drop below this, we drop too
+	} privgroup[MAX_LADDER];
 };
 
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))

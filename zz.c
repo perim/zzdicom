@@ -98,6 +98,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 
 	zz->ladder[0].pos = zireadpos(zz->zi);
 	zz->ladder[0].item = -1;
+	zz->ladder[0].size = UNLIMITED;
 	zz->current.frame = -1;
 	zz->frames = -1;
 	zz->pxOffsetTable = -1;
@@ -411,6 +412,37 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	}
 	key = ZZ_KEY(header.group, header.element);	// restore key
 
+	// Having possibly reduced the ladder stack, now reduce private group stack to fit, if necessary.
+	while (zz->privmax >= 0
+	       && (zz->privgroup[zz->privmax].ladderidx > zz->ladderidx
+	           || (zz->privgroup[zz->privmax].ladderidx == zz->ladderidx && zz->privgroup[zz->privmax].group != zz->current.group && zz->current.group != 0xfffe)))
+	{
+		zz->privmax--;
+		zz->prividx = MIN(zz->privmax, zz->prividx);
+	}
+
+	// Is it a private group tag? If so, a new one? If so, do we have a creator for it?
+	if (zz->privmax >= 0 && zz->privmax > zz->prividx && zz->current.group % 2 > 0
+	    && zz->current.element >= 0x1000
+	    && (zz->prividx == -1 || (zz->current.element >> 8) << 8 != zz->privgroup[zz->prividx].offset
+	        || zz->privgroup[zz->prividx].ladderidx != zz->ladderidx))
+	{
+		int i;
+		for (i = 0; i <= zz->privmax; i++)
+		{
+			if ((zz->current.element >> 8) << 8 == zz->privgroup[i].offset && zz->privgroup[i].ladderidx == zz->ladderidx)
+			{
+				zz->prividx = i;
+				break;
+			}
+		}
+	}
+	// Not a private group?
+	else if (zz->current.group % 2 == 0)
+	{
+		zz->prividx = -1;
+	}
+
 	// Try explicit VR
 	if (zz->ladder[zz->ladderidx].txsyn != ZZ_IMPLICIT && key != DCM_Item && key != DCM_ItemDelimitationItem && key != DCM_SequenceDelimitationItem)
 	{
@@ -600,6 +632,20 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		}
 	}
 
+	// Is it a private group creator?
+	if (zz->privmax < MAX_LADDER && zz->current.group % 2 > 0 && zz->current.element < 0x1000 && zz->current.vr == LO)
+	{
+		zz->privmax++;
+		zz->privgroup[zz->privmax].offset = zz->current.element << 8;
+		memset(zz->privgroup[zz->privmax].creator, 0, sizeof(zz->privgroup[zz->privmax].creator));
+		if (!zzgetstring(zz, zz->privgroup[zz->privmax].creator, sizeof(zz->privgroup[zz->privmax].creator) - 1))
+		{
+			strncpy(zz->privgroup[zz->privmax].creator, "(Error)", MAX_LEN_LO - 1);
+		}
+		zz->privgroup[zz->privmax].ladderidx = zz->ladderidx;
+		zz->privgroup[zz->privmax].group = zz->current.group;
+	}
+
 	return true;
 }
 
@@ -691,6 +737,8 @@ void zziterinit(struct zzfile *zz)
 		zz->currNesting = 0;
 		zz->nextNesting = 0;
 		zz->ladderidx = 0;
+		zz->prividx = -1;
+		zz->privmax = -1;
 		zz->current.group = 0;
 		zz->current.element = 0;
 		zz->current.length = 0;
