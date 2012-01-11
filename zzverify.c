@@ -28,7 +28,7 @@ bool zzverify(struct zzfile *zz)
 			strcpy(zz->current.warning, "Out of order group");
 		}
 	}
-	if (zz->current.group % 2 > 0 && zz->current.element < 0x1000 && zz->current.vr != LO)
+	if (zz->current.group % 2 > 0 && zz->current.element < 0x1000 && zz->current.element > 0x0010 && zz->current.vr != LO)
 	{
 		sprintf(zz->current.warning, "Private creator tag must be value representation LO");
 		zz->current.valid = false;
