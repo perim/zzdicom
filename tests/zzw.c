@@ -279,6 +279,7 @@ int main(int argc, char **argv)
 		ziwrite(zz->zi, &zero, 2);
 		ziwrite(zz->zi, &length, 4);
 	}
+	zzwUL(zz, ZZ_KEY(0x0031, 0x0012), 1); // check that warning for bad private creator is triggered
 	addCheck(zz);
 	zz = zzclose(zz);
 
