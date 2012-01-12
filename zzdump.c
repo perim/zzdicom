@@ -23,6 +23,82 @@ static const char *txsyn2str(enum zztxsyn syn)
 	return "Internal Error";
 }
 
+// Dump CSA1 or CSA2 private format
+void dumpcsa(struct zzfile *zz)
+{
+	int i, k;
+
+	char val[4];
+	if (zz->current.length >= 4 && zisetreadpos(zz->zi, zz->current.pos) && ziread(zz->zi, &val, 4))
+	{
+		uint32_t ntags, unused32, pos;
+		uint8_t unused8;
+		char str[65], vr[5], c;
+		uint32_t csavm, syngodt, nitems, xx, j, itemsize[4];
+
+		for (i = 0; i < zz->currNesting + 1; i++) printf("  ");
+		if (val[0] == 'S' && val[1] == 'V' && val[2] == '1' && val[3] == '0')
+		{
+			printf("\033[1m\033[31m^^ SIEMENS CSA DATA v2:\033[0m\n");
+			ziread(zz->zi, &val, 4);
+			if (val[0] != '\4' || val[1] != '\3' || val[2] != '\2' || val[3] != '\1')
+			{
+				printf("Bad CSA2 signature\n");
+				return;
+			}
+			ziread(zz->zi, &ntags, 4);
+		}
+		else
+		{
+			printf("\033[1m\033[31m^^ SIEMENS CSA DATA v1:\033[0m\n");
+			ntags = *(uint32_t *)&val;
+		}
+		ziread(zz->zi, &unused32, 4);
+		if (unused32 != 77)
+		{
+			printf("Bad magic header value! (was %u)\n", unused32);
+			return;
+		}
+		memset(str, 0, sizeof(str));
+		memset(vr, 0, sizeof(vr));
+		for (i = 0; i < (int)ntags; i++)
+		{
+			ziread(zz->zi, str, 64);
+			ziread(zz->zi, &csavm, 4);
+			ziread(zz->zi, vr, 4);
+			ziread(zz->zi, &syngodt, 4);
+			ziread(zz->zi, &nitems, 4);
+			ziread(zz->zi, &xx, 4);
+			if (xx != 77 && xx != 205)
+			{
+				printf("Bad magic tag value! (was %u)\n", xx);
+				return;
+			}
+			for (j = 0; j < (unsigned)zz->currNesting + 2; j++) printf("  "); // indent
+			printf("%d : items=%d, (%s) %s\n", i, nitems, vr, str);    // ugly for now
+			memset(str, 0, sizeof(str));
+			memset(vr, 0, sizeof(vr));
+			for (j = 0; j < nitems; j++)
+			{
+				ziread(zz->zi, itemsize, 4 * 4);
+				if (itemsize[2] != 77 && itemsize[2] != 205) // someone in Siemens must have a number fetish...
+				{
+					printf("Bad magic item value! (was %u) [%u,%u,%u,%u]\n", itemsize[2], itemsize[0], itemsize[1], itemsize[2], itemsize[3]); 
+					return;
+				}
+				pos = zireadpos(zz->zi) + itemsize[1];
+				if (pos - zireadpos(zz->zi) > zz->current.length)
+				{
+					printf("Ran out of buffer while parsing!\n");
+					return;
+				}
+				zisetreadpos(zz->zi, pos);
+				ziread(zz->zi, itemsize, (4 - itemsize[1] % 4) % 4); // discard padded garbage
+			}
+		}
+	}
+}
+
 void dump(char *filename)
 {
 	struct zzfile szz, *zz;
@@ -122,9 +198,9 @@ void dump(char *filename)
 			description = "Generic Group Length";
 			vm = "1";
 		}
-		else if (group % 2 > 0 && element < 0x1000 && len != UNLIMITED)
+		else if (group % 2 > 0 && element < 0x1000 && element > 0x0010 && len != UNLIMITED)
 		{
-			zz->current.vr = LO;
+			if (zz->current.vr == NO) zz->current.vr = LO; // educated guess
 			description = "Private Creator";
 			vm = "1";
 		}
@@ -151,6 +227,12 @@ void dump(char *filename)
 		{
 			for (i = 0; i < zz->currNesting; i++) printf("  ");
 			printf("\033[1m\033[31m^^ Warning: %s\033[0m\n", zz->current.warning);
+		}
+
+		if (zz->current.group == 0x0029 && (zz->current.element >> 8) == 0x0010 && zz->prividx >= 0
+		    && zz->current.vr == OB && strcmp(zz->privgroup[zz->prividx].creator, "SIEMENS CSA HEADER") == 0)
+		{
+			dumpcsa(zz);
 		}
 	}
 	zz = zzclose(zz);
