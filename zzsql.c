@@ -67,6 +67,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 
 	modified[0] = '\0';
 	memset(studyInstanceUid, 0, sizeof(studyInstanceUid));
+	memset(seriesInstanceUid, 0, sizeof(seriesInstanceUid));
 	memset(patientsName, 0, sizeof(patientsName));
 	memset(modality, 0, sizeof(modality));
 
