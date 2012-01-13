@@ -22,7 +22,8 @@ Features
 --------
 The software was written with performance as a high priority, and the little it does, it does far
 faster than any other DICOM software that I have tested. Memory management is very simple and
-easy to validate. Unit test coverage of the core code is very high.
+easy to validate. Unit test coverage of the core code is very high. The parser is very robust,
+and when it encounters problems it shall always fail gently.
 
 Installation
 ------------
@@ -60,7 +61,7 @@ Credits
 -------
 This project would not have been possible without reusing some content from the DCMTK and GDCM
 toolkits. Headers were adapted from DCMTK, and data definitions XML files were copied from GDCM.
-Inspiration was drawn from both, as well as from the dicom3tools toolkit. 
+Inspiration and knowledge were drawn from both, as well as from the dicom3tools toolkit. 
 
 Copyright
 ---------

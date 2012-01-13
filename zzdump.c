@@ -48,11 +48,15 @@ void dumpcsa(struct zzfile *zz)
 			}
 			ziread(zz->zi, &ntags, 4);
 		}
-		else
+		else if (val[0] != 00 || val[1] != 0)
 		{
 			printf("\033[1m\033[31m^^ SIEMENS CSA DATA v1:\033[0m\n");
 			zisetreadpos(zz->zi, zz->current.pos);
 			ziread(zz->zi, &ntags, 4);
+		}
+		else // neither CSA1 nor CSA2, some older(?) format
+		{
+			return; // pass
 		}
 		ziread(zz->zi, &unused32, 4);
 		if (unused32 != 77)
