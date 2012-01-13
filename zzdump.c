@@ -23,6 +23,63 @@ static const char *txsyn2str(enum zztxsyn syn)
 	return "Internal Error";
 }
 
+bool checkCSA(struct zzfile *zz, const char **str)
+{
+	char val[4];
+	if (zz->current.length >= 4 && zisetreadpos(zz->zi, zz->current.pos) && ziread(zz->zi, &val, 4))
+	{
+		if (val[0] == 'S' && val[1] == 'V' && val[2] == '1' && val[3] == '0')
+		{
+			ziread(zz->zi, &val, 4);
+			if (val[0] != '\4' || val[1] != '\3' || val[2] != '\2' || val[3] != '\1')
+			{
+				*str = "Bad CSA2 signature";
+				return false;
+			}
+			*str = "SIEMENS CSA DATA v2";
+			return true;
+		}
+		else if (val[0] != 00 || val[1] != 0)
+		{
+			*str = "SIEMENS CSA DATA v1";
+			return true;
+		}
+		else // neither CSA1 nor CSA2, some older(?) format
+		{
+			*str = "SIEMENS CSA DATASET";
+			return false; // pass for now
+		}
+	}
+	return false;
+}
+
+char *getstring(struct zzfile *zz, char *input, long strsize, long datasize, const char *v)
+{
+	const long desired = MIN(datasize, strsize - 1);
+	int result, last;
+	memset(input, 0, strsize);
+	result = last = ziread(zz->zi, input, desired);
+	if ((v[0] == 'I' && v[1] == 'S') || (v[0] =='L' && v[1] == 'O') || (v[0] == 'S' && v[1] == 'H')
+	    || (v[0] == 'D' && v[1] =='S') || (v[0] == 'U' && v[1] == 'I'))
+	{
+		input[result] = '\0'; // make sure we zero terminate
+		while (last-- > 0 && (input[last] == ' ' || input[last] == '\0'
+		       || input[last] == '\t' || input[last] == '\n')) // remove trailing whitespace
+		{
+			if (input[last] == '\n')
+				input[last] = '\\';
+			else
+				input[last] = '\0';
+		}
+		return (result == desired) ? input : NULL;
+	}
+	else if (v[0] == 'F' && v[1] == 'F')
+	{
+		
+	}
+	return NULL;
+}
+
 // Dump CSA1 or CSA2 private format
 void dumpcsa(struct zzfile *zz)
 {
@@ -32,31 +89,31 @@ void dumpcsa(struct zzfile *zz)
 	if (zz->current.length >= 4 && zisetreadpos(zz->zi, zz->current.pos) && ziread(zz->zi, &val, 4))
 	{
 		uint32_t ntags, unused32, pos;
+		int charlen, sum;
 		uint8_t unused8;
 		char str[65], vr[5], c;
 		uint32_t csavm, syngodt, nitems, xx, j, itemsize[4];
+		char value[MAX_LEN_VALUE];
+		char pstart[48], pstop[100];
 
-		for (i = 0; i < zz->currNesting + 1; i++) printf("  ");
+		memset(value, 0, sizeof(value));
 		if (val[0] == 'S' && val[1] == 'V' && val[2] == '1' && val[3] == '0')
 		{
-			printf("\033[1m\033[31m^^ SIEMENS CSA DATA v2:\033[0m\n");
 			ziread(zz->zi, &val, 4);
 			if (val[0] != '\4' || val[1] != '\3' || val[2] != '\2' || val[3] != '\1')
 			{
-				printf("Bad CSA2 signature\n");
-				return;
+				return; // give up for now
 			}
 			ziread(zz->zi, &ntags, 4);
 		}
 		else if (val[0] != 00 || val[1] != 0)
 		{
-			printf("\033[1m\033[31m^^ SIEMENS CSA DATA v1:\033[0m\n");
 			zisetreadpos(zz->zi, zz->current.pos);
 			ziread(zz->zi, &ntags, 4);
 		}
 		else // neither CSA1 nor CSA2, some older(?) format
 		{
-			return; // pass
+			return; // pass for now
 		}
 		ziread(zz->zi, &unused32, 4);
 		if (unused32 != 77)
@@ -79,10 +136,9 @@ void dumpcsa(struct zzfile *zz)
 				printf("Bad magic tag value! (was %u)\n", xx);
 				return;
 			}
-			for (j = 0; j < (unsigned)zz->currNesting + 2; j++) printf("  "); // indent
-			printf("%d : items=%d, (%s) %s\n", i, nitems, vr, str);    // ugly for now
-			memset(str, 0, sizeof(str));
-			memset(vr, 0, sizeof(vr));
+			for (j = 0; j < (unsigned)zz->currNesting + 1; j++) printf("  "); // indent
+
+			sum = 0;
 			for (j = 0; j < nitems; j++)
 			{
 				ziread(zz->zi, itemsize, 4 * 4);
@@ -91,15 +147,42 @@ void dumpcsa(struct zzfile *zz)
 					printf("Bad magic item value! (was %u) [%u,%u,%u,%u]\n", itemsize[2], itemsize[0], itemsize[1], itemsize[2], itemsize[3]); 
 					return;
 				}
-				pos = zireadpos(zz->zi) + itemsize[1];
-				if (pos - zireadpos(zz->zi) > zz->current.length)
+				sum += itemsize[1];
+				if (zz->current.pos - zireadpos(zz->zi) + itemsize[1] > zz->current.length)
 				{
 					printf("Ran out of buffer while parsing!\n");
 					return;
 				}
+				pos = zireadpos(zz->zi) + itemsize[1];
+				if (j == 0) // only try first item
+				{
+					if (!getstring(zz, value, sizeof(value) - 1, itemsize[1], vr))
+					{
+						memset(value, 0, sizeof(value));
+					}
+				}
 				zisetreadpos(zz->zi, pos);
 				ziread(zz->zi, itemsize, (4 - itemsize[1] % 4) % 4); // discard padded garbage
 			}
+
+			// Presenting in pseudo-DCMTK syntax
+			if (sum > 0)
+			{
+				charlen = strlen(value);
+				strcpy(pstart, "[");
+				snprintf(pstop, sizeof(pstop) - 1, "]%*s", (int)(PADLEN - charlen - 2), "");
+			}
+			else
+			{
+				strcpy(value, "no value available");
+				charlen = strlen(value);
+				strcpy(pstart, "\033[22m\033[33m(");
+				snprintf(pstop, sizeof(pstop) - 1, ")\033[0m%*s", (int)(PADLEN - charlen - 2), "");
+			}
+			printf("\033[22m\033[32m(----,----)\033[0m %s %s%s%s # %4d, %d %s\n",
+			       vr, pstart, value, pstop, sum, nitems, str);
+			memset(str, 0, sizeof(str));
+			memset(vr, 0, sizeof(vr));
 		}
 	}
 }
@@ -109,7 +192,7 @@ void dump(char *filename)
 	struct zzfile szz, *zz;
 	uint16_t group, element;
 	long len;
-	const char *vm, *description;
+	const char *vm, *description, *csa = NULL;
 	const struct part6 *tag;
 	const struct privatedic *privtag;
 	char value[MAX_LEN_VALUE];
@@ -186,10 +269,20 @@ void dump(char *filename)
 		memset(pstop, 0, sizeof(pstop));
 		content = zztostring(zz, value, sizeof(value) - 2, PADLEN - 2);
 		charlen = (strcmp(zz->characterSet, "ISO_IR 192") == 0) ? strlen_utf8(value) : strlen(value);
+		csa = NULL;
 		if (content)
 		{
 			strcpy(pstart, "[");
 			snprintf(pstop, sizeof(pstop) - 1, "]%*s", (int)(PADLEN - charlen - 2), "");
+		}
+		else if (zz->current.group == 0x0029 && (zz->current.element >> 8) == 0x0010 && zz->prividx >= 0
+		         && zz->current.vr == OB && strcmp(zz->privgroup[zz->prividx].creator, "SIEMENS CSA HEADER") == 0
+		         && checkCSA(zz, &csa))
+		{
+			strcpy(value, csa);
+			charlen = strlen(csa);
+			strcpy(pstart, "\033[22m\033[33m(");
+			snprintf(pstop, sizeof(pstop) - 1, ")\033[0m%*s", (int)(PADLEN - charlen - 2), "");
 		}
 		else
 		{
@@ -234,8 +327,7 @@ void dump(char *filename)
 			printf("\033[1m\033[31m^^ Warning: %s\033[0m\n", zz->current.warning);
 		}
 
-		if (zz->current.group == 0x0029 && (zz->current.element >> 8) == 0x0010 && zz->prividx >= 0
-		    && zz->current.vr == OB && strcmp(zz->privgroup[zz->prividx].creator, "SIEMENS CSA HEADER") == 0)
+		if (csa)
 		{
 			dumpcsa(zz);
 		}
