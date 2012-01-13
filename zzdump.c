@@ -281,6 +281,19 @@ void dump(char *filename)
 
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
 
+		if (group > 0x0002 && element == 0x0000)	// generic group length
+		{
+			if (zz->current.vr == NO) zz->current.vr = UL; // has to be
+			description = "Generic Group Length";
+			vm = "1";
+		}
+		else if (group % 2 > 0 && element < 0x1000 && element > 0x0010 && len != UNLIMITED)
+		{
+			if (zz->current.vr == NO) zz->current.vr = LO; // educated guess
+			description = "Private Creator";
+			vm = "1";
+		}
+
 		memset(pstart, 0, sizeof(pstart));
 		memset(pstop, 0, sizeof(pstop));
 		content = zztostring(zz, value, sizeof(value) - 2, PADLEN - 2);
@@ -304,19 +317,6 @@ void dump(char *filename)
 		{
 			strcpy(pstart, "\033[22m\033[33m");
 			snprintf(pstop, sizeof(pstop) - 1, "\033[0m%*s", (int)(PADLEN - charlen), "");
-		}
-
-		if (group > 0x0002 && element == 0x0000)	// generic group length
-		{
-			zz->current.vr = UL;
-			description = "Generic Group Length";
-			vm = "1";
-		}
-		else if (group % 2 > 0 && element < 0x1000 && element > 0x0010 && len != UNLIMITED)
-		{
-			if (zz->current.vr == NO) zz->current.vr = LO; // educated guess
-			description = "Private Creator";
-			vm = "1";
 		}
 
 		if (len == UNLIMITED)
