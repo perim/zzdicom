@@ -57,11 +57,14 @@ char *getstring(struct zzfile *zz, char *input, long strsize, long datasize, con
 {
 	const long desired = MIN(datasize, strsize - 1);
 	int result, last;
+	char temp[MAX_LEN_VALUE];
 	memset(input, 0, strsize);
-	result = last = ziread(zz->zi, input, desired);
+	memset(temp, 0, sizeof(temp));
+	result = last = ziread(zz->zi, temp, desired);
 	if ((v[0] == 'I' && v[1] == 'S') || (v[0] =='L' && v[1] == 'O') || (v[0] == 'S' && v[1] == 'H')
 	    || (v[0] == 'D' && v[1] =='S') || (v[0] == 'U' && v[1] == 'I'))
 	{
+		memcpy(input, temp, desired);
 		input[result] = '\0'; // make sure we zero terminate
 		while (last-- > 0 && (input[last] == ' ' || input[last] == '\0'
 		       || input[last] == '\t' || input[last] == '\n')) // remove trailing whitespace
@@ -73,9 +76,22 @@ char *getstring(struct zzfile *zz, char *input, long strsize, long datasize, con
 		}
 		return (result == desired) ? input : NULL;
 	}
-	else if (v[0] == 'F' && v[1] == 'F')
+	else if (v[0] == 'F' && v[1] == 'D')
 	{
-		
+		// CSA uses 4-byte floating point for FD, which is really logical since DICOM uses 8-byte
+		int i, asize = datasize / 4; // size of array
+		for (i = 0; i < asize; i++)
+		{
+			char temp2[MAX_LEN_VALUE];
+			float f;
+			memcpy(&f, &temp[i * 2], 2);
+			snprintf(temp2, MAX_LEN_VALUE, "%s%f", (i == 0) ? "" : "\\", f);
+			if (strlen(temp2) + strlen(input) < (unsigned)strsize)
+			{
+				strcat(input, temp2);
+			}
+		}
+		return (asize > 0) ? input : NULL;
 	}
 	return NULL;
 }
