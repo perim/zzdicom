@@ -15,7 +15,7 @@ bool zzverify(struct zzfile *zz)
 		zz->current.valid = false;
 		return false;
 	}
-	if (zz->current.group != 0xfffe && zz->previous.group != 0xfffe && zz->previous.ladderidx == zz->ladderidx)
+	if (zz->current.group != 0xfffe && zz->previous.group != 0xffff && zz->previous.group != 0xfffe && zz->previous.ladderidx == zz->ladderidx)
 	{
 		if (zz->current.group == zz->previous.group && zz->current.element <= zz->previous.element)
 		{

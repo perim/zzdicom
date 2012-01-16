@@ -33,8 +33,7 @@ bool checkCSA(struct zzfile *zz, const char **str)
 			ziread(zz->zi, &val, 4);
 			if (val[0] != '\4' || val[1] != '\3' || val[2] != '\2' || val[3] != '\1')
 			{
-				*str = "Bad CSA2 signature";
-				return false;
+				return false; // Bad CSA2 signature
 			}
 			*str = "SIEMENS CSA DATA v2";
 			return true;
@@ -44,10 +43,11 @@ bool checkCSA(struct zzfile *zz, const char **str)
 			*str = "SIEMENS CSA DATA v1";
 			return true;
 		}
-		else // neither CSA1 nor CSA2, some older(?) format
+		else if (val[0] == '\0' && val[1] == '\0' && val[2] != '\0')
 		{
+			// neither CSA1 nor CSA2 nor INTERFILE, some older(?) format based on DICOM
 			*str = "SIEMENS CSA DATASET";
-			return false; // pass for now
+			return true;
 		}
 	}
 	return false;
@@ -127,9 +127,24 @@ void dumpcsa(struct zzfile *zz)
 			zisetreadpos(zz->zi, zz->current.pos);
 			ziread(zz->zi, &ntags, 4);
 		}
-		else // neither CSA1 nor CSA2, some older(?) format
+		else // format loosely based on DICOM, fake a sequence of it
 		{
-			return; // pass for now
+			zisetreadpos(zz->zi, zz->current.pos);
+			zz->current.vr = SQ;
+			zz->ladderidx++;
+			zz->ladder[zz->ladderidx].group = zz->current.group;
+			zz->ladder[zz->ladderidx].element = zz->current.element;
+			zz->ladder[zz->ladderidx].size = UNLIMITED;
+			zz->ladder[zz->ladderidx].type = ZZ_SEQUENCE;
+			zz->ladder[zz->ladderidx + 0].item = -1;
+			zz->ladder[zz->ladderidx + 1].item = -1;
+			zz->ladder[zz->ladderidx].txsyn = ZZ_EXPLICIT;
+			zz->ladder[zz->ladderidx].pos = zz->current.pos;
+			zz->nextNesting += 1;
+			zz->current.length = UNLIMITED; // force parsing
+			zz->current.group = 0x000; // silence verify warning
+			zz->current.element = 0x000; // silence verify warning
+			return;
 		}
 		ziread(zz->zi, &unused32, 4);
 		if (unused32 != 77)
@@ -304,7 +319,7 @@ void dump(char *filename)
 			strcpy(pstart, "[");
 			snprintf(pstop, sizeof(pstop) - 1, "]%*s", (int)(PADLEN - charlen - 2), "");
 		}
-		else if (zz->current.group == 0x0029 && (zz->current.element >> 8) == 0x0010 && zz->prividx >= 0
+		else if (zz->current.group == 0x0029 && (zz->current.element & 0xff) == 0x0010 && zz->prividx >= 0
 		         && zz->current.vr == OB && strcmp(zz->privgroup[zz->prividx].creator, "SIEMENS CSA HEADER") == 0
 		         && checkCSA(zz, &csa))
 		{

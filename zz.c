@@ -388,8 +388,9 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			continue;
 		}
 		else if (zz->ladder[zz->ladderidx].type == ZZ_SEQUENCE
-		         && (bytesread > size || key == DCM_SequenceDelimitationItem))
+		         && (bytesread > size || key == DCM_SequenceDelimitationItem || (header.group == 0xffff && header.element == 0xffff)))
 		{
+			// ^^ (0xffff,0xffff) is a Siemens CSA abomination pretending to be a sequence delimination item
 			if (key == DCM_SequenceDelimitationItem && bytesread < size && zz->ladder[zz->ladderidx].size != UNLIMITED)
 			{
 				sprintf(zz->current.warning, "Sequence has wrong size (%ld, ended at %ld)", size, bytesread);
