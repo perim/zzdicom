@@ -17,9 +17,5 @@ General:
   gdcmData/PET-cardio-Multiframe-Papyrus.dcm), we should check the tag table
   and set value to 'SQ' before calling zziternext()
 
-zzdump:
-* Newlines in string values not handled gracefully (see DX_GE_FALCON_SNOWY-VOI.dcm
-  in gdcmData for test)
-
 zzmkrandom:
 * Seed 1312930337 generates two SQ with same group:element

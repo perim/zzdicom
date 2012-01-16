@@ -108,6 +108,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 
 bool zztostring(struct zzfile *zz, char *input, int strsize, int charsize)
 {
+	int i;
 	memset(input, 0, strsize);
 	if (zz->current.length == 0)
 	{
@@ -145,6 +146,13 @@ bool zztostring(struct zzfile *zz, char *input, int strsize, int charsize)
 			input[charsize - 2] = '.';
 			input[charsize - 3] = '.';
 			input[charsize - 4] = '.';
+		}
+		for (i = strlen(input); i >= 0; i--) // strip control chars
+		{
+			if (input[i] < 32 && input[i] > 0)
+			{
+				input[i] = ' ';
+			}
 		}
 		break;
 	case AT:
