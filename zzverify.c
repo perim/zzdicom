@@ -53,7 +53,7 @@ bool zzverify(struct zzfile *zz)
 				zz->current.valid = false;
 			}
 		}
-		else if (zz->current.frame >= 0 && zz->current.frame >= zz->frames)	// inside a per-frame sequence
+		else if (zz->current.frame >= 0 && zz->current.frame >= zz->frames && zz->frames >= 0)	// inside a per-frame sequence
 		{
 			sprintf(zz->current.warning, "More per-frame sequence items than frames (item %ld, %ld frames)", zz->current.frame, zz->frames);
 			zz->current.valid = false;

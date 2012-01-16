@@ -120,12 +120,10 @@ void dumpcsa(struct zzfile *zz)
 			{
 				return; // give up for now
 			}
-			ziread(zz->zi, &ntags, 4);
 		}
 		else if (val[0] != 00 || val[1] != 0)
 		{
 			zisetreadpos(zz->zi, zz->current.pos);
-			ziread(zz->zi, &ntags, 4);
 		}
 		else // format loosely based on DICOM, fake a sequence of it
 		{
@@ -146,6 +144,7 @@ void dumpcsa(struct zzfile *zz)
 			zz->current.element = 0x000; // silence verify warning
 			return;
 		}
+		ziread(zz->zi, &ntags, 4);
 		ziread(zz->zi, &unused32, 4);
 		if (unused32 != 77)
 		{
