@@ -23,9 +23,10 @@ static const char *txsyn2str(enum zztxsyn syn)
 	return "Internal Error";
 }
 
-bool checkCSA(struct zzfile *zz, const char **str)
+bool checkCSA(struct zzfile *zz, const char **str, const char **vm)
 {
-	char val[4];
+	static char val[4];
+	uint32_t ntags = 0;
 	if (zz->current.length >= 4 && zisetreadpos(zz->zi, zz->current.pos) && ziread(zz->zi, &val, 4))
 	{
 		if (val[0] == 'S' && val[1] == 'V' && val[2] == '1' && val[3] == '0')
@@ -35,11 +36,17 @@ bool checkCSA(struct zzfile *zz, const char **str)
 			{
 				return false; // Bad CSA2 signature
 			}
+			ziread(zz->zi, &ntags, 4);
+			snprintf(val, 4, "%u", ntags);
+			*vm = val;
 			*str = "SIEMENS CSA DATA v2";
 			return true;
 		}
 		else if (val[0] != 00 || val[1] != 0)
 		{
+			ziread(zz->zi, &ntags, 4);
+			snprintf(val, 4, "%u", ntags);
+			*vm = val;
 			*str = "SIEMENS CSA DATA v1";
 			return true;
 		}
@@ -320,7 +327,7 @@ void dump(char *filename)
 		}
 		else if (zz->current.group == 0x0029 && (zz->current.element & 0xff) == 0x0010 && zz->prividx >= 0
 		         && zz->current.vr == OB && strcmp(zz->privgroup[zz->prividx].creator, "SIEMENS CSA HEADER") == 0
-		         && checkCSA(zz, &csa))
+		         && checkCSA(zz, &csa, &vm))
 		{
 			strcpy(value, csa);
 			charlen = strlen(csa);
