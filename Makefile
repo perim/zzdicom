@@ -63,7 +63,7 @@ zzdiscu: zzdiscu.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONDINET)
 
 clean:
-	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov
+	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov gmon.out
 
 check: tests/zz1 tests/zzw tests/zzt tests/zziotest
 	cppcheck -j 4 -q zz.c zzwrite.c zzdump.c zzverify.c zzmkrandom.c
@@ -86,6 +86,10 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest
 	./zzanon TEST samples/tw1.dcm
 	./zzanon TEST samples/tw2.dcm
 	./zzcopy samples/spine.dcm samples/copy.dcm
+	valgrind --leak-check=yes -q tests/zzw
+	valgrind --leak-check=yes -q ./tests/zziotest
+	valgrind --leak-check=yes -q ./zzanon ANON samples/tw1.dcm
+	valgrind --leak-check=yes -q ./zzcopy samples/spine.dcm samples/copy.dcm
 
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
