@@ -60,7 +60,7 @@ bool checkCSA(struct zzfile *zz, const char **str, const char **vm)
 	return false;
 }
 
-char *getstring(struct zzfile *zz, char *input, long strsize, long datasize, const char *v)
+char *getstring(struct zzfile *zz, char *input, long strsize, long datasize)
 {
 	const long desired = MIN(datasize, strsize - 1);
 	int result, last;
@@ -68,39 +68,17 @@ char *getstring(struct zzfile *zz, char *input, long strsize, long datasize, con
 	memset(input, 0, strsize);
 	memset(temp, 0, sizeof(temp));
 	result = last = ziread(zz->zi, temp, desired);
-	if ((v[0] == 'I' && v[1] == 'S') || (v[0] =='L' && v[1] == 'O') || (v[0] == 'S' && v[1] == 'H')
-	    || (v[0] == 'D' && v[1] =='S') || (v[0] == 'U' && v[1] == 'I'))
+	memcpy(input, temp, desired);
+	input[result] = '\0'; // make sure we zero terminate
+	while (last-- > 0 && (input[last] == ' ' || input[last] == '\0'
+	       || input[last] == '\t' || input[last] == '\n')) // remove trailing whitespace
 	{
-		memcpy(input, temp, desired);
-		input[result] = '\0'; // make sure we zero terminate
-		while (last-- > 0 && (input[last] == ' ' || input[last] == '\0'
-		       || input[last] == '\t' || input[last] == '\n')) // remove trailing whitespace
-		{
-			if (input[last] == '\n')
-				input[last] = '\\';
-			else
-				input[last] = '\0';
-		}
-		return (result == desired) ? input : NULL;
+		if (input[last] == '\n')
+			input[last] = '\\';
+		else
+			input[last] = '\0';
 	}
-	else if (v[0] == 'F' && v[1] == 'D')
-	{
-		// CSA uses 4-byte floating point for FD, which is really logical since DICOM uses 8-byte
-		int i, asize = datasize / 4; // size of array
-		for (i = 0; i < asize; i++)
-		{
-			char temp2[MAX_LEN_VALUE];
-			float f;
-			memcpy(&f, &temp[i * 2], 2);
-			snprintf(temp2, MAX_LEN_VALUE, "%s%f", (i == 0) ? "" : "\\", f);
-			if (strlen(temp2) + strlen(input) < (unsigned)strsize)
-			{
-				strcat(input, temp2);
-			}
-		}
-		return (asize > 0) ? input : NULL;
-	}
-	return NULL;
+	return (result == desired) ? input : NULL;
 }
 
 // Dump CSA1 or CSA2 private format
@@ -112,11 +90,11 @@ void dumpcsa(struct zzfile *zz)
 	if (zz->current.length >= 4 && zisetreadpos(zz->zi, zz->current.pos) && ziread(zz->zi, &val, 4))
 	{
 		uint32_t ntags, unused32, pos;
-		int charlen, sum;
+		unsigned charlen, sum;
 		uint8_t unused8;
 		char str[65], vr[5], c;
 		uint32_t csavm, syngodt, nitems, xx, j, itemsize[4];
-		char value[MAX_LEN_VALUE];
+		char value[PADLEN];
 		char pstart[48], pstop[100];
 
 		memset(value, 0, sizeof(value));
@@ -176,6 +154,8 @@ void dumpcsa(struct zzfile *zz)
 			for (j = 0; j < (unsigned)zz->currNesting + 1; j++) printf("  "); // indent
 
 			sum = 0;
+			charlen = 0;
+			memset(value, 0, sizeof(value));
 			for (j = 0; j < nitems; j++)
 			{
 				ziread(zz->zi, itemsize, 4 * 4);
@@ -191,11 +171,22 @@ void dumpcsa(struct zzfile *zz)
 					return;
 				}
 				pos = zireadpos(zz->zi) + itemsize[1];
-				if (j == 0) // only try first item
+				if (charlen < sizeof(value) - 1)
 				{
-					if (!getstring(zz, value, sizeof(value) - 1, itemsize[1], vr))
+					if (j > 0 && itemsize[1] > 0 && j < nitems - 1 && charlen < sizeof(value) - 2)
 					{
-						memset(value, 0, sizeof(value));
+						value[charlen + 0] = '\\';
+						value[charlen + 1] = '\0';
+						charlen++;
+					}
+					getstring(zz, value + charlen, sizeof(value) - charlen - 1, itemsize[1]);
+					charlen = strlen(value);
+					if (charlen >= sizeof(value) - 3)
+					{
+						value[sizeof(value) - 2] = '\0';
+						value[sizeof(value) - 3] = '.';
+						value[sizeof(value) - 4] = '.';
+						value[sizeof(value) - 5] = '.';
 					}
 				}
 				zisetreadpos(zz->zi, pos);
