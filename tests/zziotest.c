@@ -281,6 +281,7 @@ static void test4(int bufsize)
 	}
 	fclose(cmpdst);
 	free(mem);
+	free(mem2);
 }
 
 static void test5(int bufsize)
@@ -328,6 +329,7 @@ static void test5(int bufsize)
 	fclose(cmpsrc);
 	fclose(cmpdst);
 	free(mem);
+	free(mem2);
 }
 
 int main(void)

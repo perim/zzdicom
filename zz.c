@@ -42,6 +42,11 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 		fprintf(stderr, "%s could not be found: %s\n", filename, strerror(errno));
 		return NULL;
 	}
+	if (!S_ISREG(st.st_mode))
+	{
+		fprintf(stderr, "%s is not a file\n", filename);
+		return NULL;
+	}
 	zz->zi = ziopenfile(filename, mode);
 	if (!zz->zi || !realpath(filename, zz->fullPath))
 	{
@@ -796,6 +801,7 @@ void zz_c_test()
 
 	assert(zzopen(NULL, NULL, NULL) == NULL);
 	assert(zzopen("/nonexistent", "r", &szz) == NULL);
+	assert(zzopen("/tmp", "r", &szz) == NULL);
 	strcpy(filename, "/tmp/XXXXXX");
 	fd = mkstemp(filename);
 	fchmod(fd, 0);	// make inaccessible

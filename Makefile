@@ -70,7 +70,7 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest
 	cppcheck -j 4 -q zzcopy.c zztexture.c zzsql.c zzio.c
 	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c zznetwork.c
 	cppcheck -j 4 -q zzdiscp.c zzdiscu.c zzdinetwork.c
-	#tests/zz1 2> /dev/null
+	tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
 	tests/zzt samples/spine-ls.dcm

@@ -138,7 +138,10 @@ struct zzio *ziopenread(const char *path, int bufsize, int flags)
 #else
 	fd = open(path, O_RDONLY);
 #endif
-	//ASSERT_OR_RETURN(zi, NULL, fd != -1, "Open error: %s", strerror(errno));
+	if (fd == -1)
+	{
+		return NULL;
+	}
 	zi = calloc(1, sizeof(*zi));
 	zi->readbuf = calloc(1, bufsize);
 	zi->flags = flags | ZZIO_READABLE;
@@ -156,7 +159,10 @@ struct zzio *ziopenwrite(const char *path, int bufsize, int flags)
 	int fd;
 
 	fd = creat(path, S_IRUSR | S_IWUSR | S_IRGRP);
-	ASSERT_OR_RETURN(zi, NULL, fd != -1, "Open error: %s", strerror(errno));
+	if (fd == -1)
+	{
+		return NULL;
+	}
 	zi = calloc(1, sizeof(*zi));
 	zi->fd = fd;
 	zi->writebuf = calloc(1, bufsize);
@@ -173,7 +179,10 @@ struct zzio *ziopenmodify(const char *path, int bufsize, int flags)
 	int fd;
 
 	fd = open(path, O_RDWR);
-	ASSERT_OR_RETURN(zi, NULL, fd != -1, "Open error: %s", strerror(errno));
+	if (fd == -1)
+	{
+		return NULL;
+	}
 	zi = calloc(1, sizeof(*zi));
 	zi->readbuf = calloc(1, bufsize);
 	zi->writebuf = calloc(1, bufsize);
