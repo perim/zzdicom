@@ -230,9 +230,8 @@ static void test3(int pos, const char *stamp, int packetsize)
 	zi = ziclose(zi);
 }
 
-static void test4(int bufsize)
+static void test4(int bufsize, const char *srcfile)
 {
-	const char *srcfile = "samples/tw2.dcm";
 	const char *dstfile = "samples/copy.dcm";
 	struct zzio *src = ziopenfile(srcfile, "r");
 	struct zzio *dst = ziopenfile(dstfile, "w");
@@ -246,6 +245,7 @@ static void test4(int bufsize)
 	zisetbuffersize(src, bufsize);
 	zisetbuffersize(dst, bufsize);
 
+	// Copy
 	stat(srcfile, &st);
 	size = st.st_size;
 	mem = malloc(size);
@@ -271,6 +271,8 @@ static void test4(int bufsize)
 	assert(zibytesread(dst) == 0);
 	src = ziclose(src);
 	dst = ziclose(dst);
+
+	// Test
 	cmpdst = fopen(dstfile, "r");
 	result = fread(mem2, 1, size, cmpdst);
 	assert(result == size);
@@ -284,9 +286,8 @@ static void test4(int bufsize)
 	free(mem2);
 }
 
-static void test5(int bufsize)
+static void test5(int bufsize, const char *srcfile)
 {
-	const char *srcfile = "samples/tw2.dcm";
 	const char *dstfile = "samples/copy.dcm";
 	struct zzio *src = ziopenfile(srcfile, "r");
 	struct zzio *dst = ziopenfile(dstfile, "w");
@@ -300,6 +301,7 @@ static void test5(int bufsize)
 	zisetbuffersize(src, bufsize);
 	zisetbuffersize(dst, bufsize);
 
+	// Copy
 	stat(srcfile, &st);
 	size = st.st_size;
 	zicopy(dst, src, size);
@@ -314,6 +316,7 @@ static void test5(int bufsize)
 	src = ziclose(src);
 	dst = ziclose(dst);
 
+	// Test
 	cmpdst = fopen(dstfile, "r");
 	mem = malloc(size);
 	mem2 = malloc(size);
@@ -334,6 +337,9 @@ static void test5(int bufsize)
 
 int main(void)
 {
+	const char *srcfile = "samples/tw2.dcm";
+	const char *srcfile2 = "samples/spine.dcm";
+
 	// Round # 1 - getc, putc
 	test1(128, true);
 	test1(1024, true);
@@ -356,12 +362,14 @@ int main(void)
 	test3(128, "DICM", 32);
 
 	// Large copy, manual
-	test4(8192);
-	test4(512);
+	test4(8192, srcfile);
+	test4(512, srcfile);
+	test4(8192, srcfile2);
 
 	// Large copy, zicopy
-	test5(8192);
-	test5(512);
+	test5(8192, srcfile); // buffer > srcfile
+	test5(512, srcfile); // buffer < srcfile
+	test5(8192, srcfile2); // buffer < srcfile
 
 	return 0;
 }

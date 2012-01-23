@@ -70,7 +70,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 
 	if (ziread(zz->zi, &endianbuf, 6) != 6 || !zisetreadpos(zz->zi, zz->part10 ? 128 + 4 : 0))
 	{
-		return NULL;	// not big enough to be a DICOM file
+		return zzclose(zz); // not big enough to be a DICOM file
 	}
 
 	// Safety check - are we really reading a part 10 file? First tag MUST be (0x0002, 0x0000)
@@ -790,27 +790,4 @@ struct zzfile *zzclose(struct zzfile *zz)
 		ziclose(zz->zi);
 	}
 	return NULL;
-}
-
-void zz_c_test()
-{
-	char filename[12];
-	struct zzfile szz;
-	int fd, i;
-	char value;
-
-	assert(zzopen(NULL, NULL, NULL) == NULL);
-	assert(zzopen("/nonexistent", "r", &szz) == NULL);
-	assert(zzopen("/tmp", "r", &szz) == NULL);
-	strcpy(filename, "/tmp/XXXXXX");
-	fd = mkstemp(filename);
-	fchmod(fd, 0);	// make inaccessible
-	assert(zzopen(filename, "r", &szz) == NULL);
-	fchmod(fd, S_IWUSR | S_IRUSR);	// make accessible
-	value = 0; write(fd, &value, 1);
-	value = 1; write(fd, &value, 1);
-	assert(zzopen(filename, "r", &szz) == NULL);	// too small
-	for (i = 0; i < 128; i++) write(fd, &value, 1);	// filler
-	assert(zzopen(filename, "r", &szz) == NULL);	// pretends to be big-endian
-	close(fd);
 }
