@@ -1,4 +1,4 @@
-CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -mtune=native -march=native -Werror
+CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -Werror
 COMMON = zz.o zzio.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o

@@ -117,7 +117,7 @@ static long readbuffer(char **bufptr, long *buflen, void *data)
 			uint32_t *size2 = (uint32_t *)(buf + 1);	// PDV size
 			uint8_t msgctrlhdr = buf[5];			// message control header
 			result = read(fd, modptr, *size2);
-			assert(result == *size2);
+			assert(result == (long)*size2);
 			count += result;
 			if (msgctrlhdr & 0x02) // if second bit is set, this is the last PDV
 			{
@@ -246,7 +246,7 @@ static bool PDU_Associate_Accept(struct zzfile *zz)
 	assert(pdu == 0x10);
 	znr1(zz);
 	size = znr2(zz);
-	assert(size < zz->net.pdusize);
+	assert((long)size < zz->net.pdusize);
 	znrskip(size, zz);				// skip Application Context Item
 
 	// Start writing response

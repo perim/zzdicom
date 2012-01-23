@@ -165,7 +165,7 @@ void dumpcsa(struct zzfile *zz)
 					return;
 				}
 				sum += itemsize[1];
-				if (zz->current.pos - zireadpos(zz->zi) + itemsize[1] > zz->current.length)
+				if (zz->current.pos - zireadpos(zz->zi) + (long)itemsize[1] > zz->current.length)
 				{
 					printf("Ran out of buffer while parsing!\n");
 					return;
