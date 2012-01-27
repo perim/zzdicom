@@ -62,8 +62,7 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	memset(dicm, 0, sizeof(dicm));
 	if (!zisetreadpos(zz->zi, 128) || ziread(zz->zi, dicm, 4) != 4 || strncmp(dicm, "DICM", 4) != 0)
 	{
-		fprintf(stderr, "%s does not have a valid part 10 DICOM header (header=%s %c%c%c%c) pos=%ld\n", 
-		        filename, dicm, dicm[0], dicm[1], dicm[2], dicm[3], zireadpos(zz->zi));
+		fprintf(stderr, "%s does not have a valid part 10 DICOM header\n", filename);
 		zisetreadpos(zz->zi, 0);	// try anyway
 		zz->part10 = false;
 	}

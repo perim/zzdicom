@@ -49,8 +49,11 @@ static inline void writetag(struct zzfile *zz, zzKey key, enum VR vr, uint32_t s
 		{
 		case OB: case OW: case OF: case SQ: case UT: case UN:
 			explicit2(zz->zi, group, element, zzvr2str(vr, dest), size); break;
-		default:
+		case AE: case AS: case AT: case CS: case DA: case DS: case DT: case FL: case FD: case IS: case LO:
+		case LT: case PN: case SH: case SL: case SS: case ST: case TM: case UI: case UL: case US: case HACK_VR:
 			explicit1(zz->zi, group, element, zzvr2str(vr, dest), size); break;
+		default: // unknown VR, always 32-bit length
+			explicit2(zz->zi, group, element, zzvr2str(vr, dest), size); break;
 		}
 	}
 }
@@ -58,7 +61,7 @@ static inline void writetag(struct zzfile *zz, zzKey key, enum VR vr, uint32_t s
 void zzwCopy(struct zzfile *zz, const struct zzfile *orig)
 {
 	writetag(zz, ZZ_KEY(orig->current.group, orig->current.element), orig->current.vr, orig->current.length);
-	if (orig->current.length != UNLIMITED && orig->current.length > 0 && orig->current.vr != SQ)
+	if (orig->current.length != UNLIMITED && orig->current.length > 0 && orig->current.vr != SQ && orig->current.group != 0xfffe)
 	{
 		zisetreadpos(orig->zi, orig->current.pos);	// reposition read marker to beginning of data
 		zicopy(zz->zi, orig->zi, orig->current.length);

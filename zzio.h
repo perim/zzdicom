@@ -127,7 +127,7 @@ void *zireadbuf(struct zzio *zi, long pos, long size);
 void zifreebuf(struct zzio *zi, void *buf, long size);
 
 /// Fast copy between the read position of one to write position of another zzio handle.
-void zicopy(struct zzio *dst, struct zzio *src, long length);
+long zicopy(struct zzio *dst, struct zzio *src, long length);
 
 /// Number of bytes written to file
 long zibyteswritten(struct zzio *zi);

@@ -1,4 +1,4 @@
-CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -Werror
+CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -Werror -g
 COMMON = zz.o zzio.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
@@ -11,11 +11,11 @@ PART6 = part6.o
 PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom zzdiscp zzdiscu
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h zzdinetwork.h zzditags.h
 
-all: CFLAGS += -Os -fstack-protector -g
+all: CFLAGS += -Os -fstack-protector
 all: sqlinit.h $(PROGRAMS)
 
 debug: clean
-debug: CFLAGS += -O0 -g -DDEBUG -fstack-protector-all
+debug: CFLAGS += -O0 -DDEBUG -fstack-protector-all
 debug: sqlinit.h $(PROGRAMS)
 
 %.o : %.c
@@ -65,16 +65,21 @@ zzdiscu: zzdiscu.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET)
 clean:
 	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov gmon.out
 
-check: tests/zz1 tests/zzw tests/zzt tests/zziotest
+check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy
 	cppcheck -j 4 -q zz.c zzwrite.c zzdump.c zzverify.c zzmkrandom.c
 	cppcheck -j 4 -q zzcopy.c zztexture.c zzsql.c zzio.c
 	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c zznetwork.c
 	cppcheck -j 4 -q zzdiscp.c zzdiscu.c zzdinetwork.c
+	cppcheck -j 4 -q tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
 	tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
 	tests/zzt samples/spine-ls.dcm
 	tests/zziotest
+	./zzmkrandom 5466 samples/random.dcm
+	tests/zzwcopy
+	./zzmkrandom 54632 samples/random.dcm
+	tests/zzwcopy
 	./zzdump --version > /dev/null
 	./zzdump --help > /dev/null
 	./zzdump --usage > /dev/null
@@ -102,6 +107,9 @@ tests/zzw: tests/zzw.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONVERIFY)
 
 tests/zzt: tests/zzt.c $(HEADERS) $(COMMON) $(COMMONTEXTURE)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONTEXTURE) -lGL -lglut -lCharLS
+
+tests/zzwcopy: tests/zzwcopy.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONVERIFY) $(PART6)
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY) $(PART6)
 
 install:
 	install -t /usr/local/bin $(PROGRAMS)

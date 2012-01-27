@@ -558,7 +558,7 @@ void zifreebuf(struct zzio *zi, void *buf, long size)
 	munmap(addr, realsize);
 }
 
-void zicopy(struct zzio *dst, struct zzio *src, long length)
+long zicopy(struct zzio *dst, struct zzio *src, long length)
 {
 	// SLOW test version -- to use as benchmark
 	char *buffer = malloc(length);
@@ -566,6 +566,7 @@ void zicopy(struct zzio *dst, struct zzio *src, long length)
 	ziread(src, buffer, length);
 	ziwrite(dst, buffer, length);
 	free(buffer);
+	return length;
 }
 
 void ziseteof(struct zzio *zi)

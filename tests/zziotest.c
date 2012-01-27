@@ -286,7 +286,7 @@ static void test4(int bufsize, const char *srcfile)
 	free(mem2);
 }
 
-static void test5(int bufsize, const char *srcfile)
+static void test5(int bufsize, const char *srcfile, int padding)
 {
 	const char *dstfile = "samples/copy.dcm";
 	struct zzio *src = ziopenfile(srcfile, "r");
@@ -304,11 +304,18 @@ static void test5(int bufsize, const char *srcfile)
 	// Copy
 	stat(srcfile, &st);
 	size = st.st_size;
+	if (padding)
+	{
+		char *buf = calloc(1, padding);
+		ziwrite(dst, buf, padding);
+		free(buf);
+	}
+	lseek(zifd(src), 10, SEEK_SET); // access should be pos independent
 	zicopy(dst, src, size);
 	assert(zieof(src));
 	assert(zierror(src) == 0);
 	assert(zierror(dst) == 0);
-	assert(zibyteswritten(dst) == size);
+	assert(zibyteswritten(dst) == size + padding);
 	assert(zibytesread(src) == size);
 	assert(zibyteswritten(src) == 0);
 	assert(zibytesread(dst) == 0);
@@ -319,15 +326,20 @@ static void test5(int bufsize, const char *srcfile)
 	// Test
 	cmpdst = fopen(dstfile, "r");
 	mem = malloc(size);
-	mem2 = malloc(size);
+	mem2 = malloc(size + padding);
 	result = fread(mem, 1, size, cmpsrc);
 	assert(result == size);
-	result = fread(mem2, 1, size, cmpdst);
-	assert(result == size);
+	result = fread(mem2, 1, size + padding, cmpdst);
+	assert(result == size + padding);
+	for (i = 0; i < padding; i++)
+	{
+		if (mem2[i] != 0) fprintf(stderr, "Padding differs at byte %d\n", i);
+		assert(mem2[i] == 0);
+	}
 	for (i = 0; i < size; i++)
 	{
-		if (mem[i] != mem2[i]) fprintf(stderr, "Copied files differ at byte %d\n", i);
-		assert(mem[i] == mem2[i]);
+		if (mem[i] != mem2[i + padding]) fprintf(stderr, "Copied files differ at byte %d\n", i);
+		assert(mem[i] == mem2[i + padding]);
 	}
 	fclose(cmpsrc);
 	fclose(cmpdst);
@@ -367,9 +379,14 @@ int main(void)
 	test4(8192, srcfile2);
 
 	// Large copy, zicopy
-	test5(8192, srcfile); // buffer > srcfile
-	test5(512, srcfile); // buffer < srcfile
-	test5(8192, srcfile2); // buffer < srcfile
+	test5(8192, srcfile, 0); // buffer > srcfile
+	test5(512, srcfile, 0); // buffer < srcfile
+	test5(8192, srcfile2, 0); // buffer < srcfile
+
+	// Prepend padding
+	test5(8192, srcfile, 512); // buffer > srcfile
+	test5(512, srcfile, 20); // buffer < srcfile
+	test5(8192, srcfile2, 200); // buffer < srcfile
 
 	return 0;
 }
