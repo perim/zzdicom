@@ -310,6 +310,8 @@ static void test5(int bufsize, const char *srcfile, int padding)
 		ziwrite(dst, buf, padding);
 		free(buf);
 	}
+	assert(ziwritepos(dst) == padding);
+	assert(zireadpos(src) == 0);
 	lseek(zifd(src), 10, SEEK_SET); // access should be pos independent
 	zicopy(dst, src, size);
 	assert(zieof(src));
