@@ -560,13 +560,112 @@ void zifreebuf(struct zzio *zi, void *buf, long size)
 
 long zicopy(struct zzio *dst, struct zzio *src, long length)
 {
-	// SLOW test version -- to use as benchmark
-	char *buffer = malloc(length);
-	memset(buffer, 0, length);
-	ziread(src, buffer, length);
-	ziwrite(dst, buffer, length);
-	free(buffer);
-	return length;
+	long result;
+	if (length <= dst->writebufsize)  // fast track solution, read directly into write buffer
+	{
+		if (length > dst->writebufsize - dst->writebufpos)
+		{
+			ziflush(dst);	// flush write buffer to make space
+		}
+		result = ziread(src, dst->writebuf + dst->writebufpos, length);
+		if (result > 0)
+		{
+			dst->writebuflen += result;
+			dst->writebufpos += result;
+		}
+		return result;
+	}
+	else // lots of data, break out the big tools
+	{
+#ifdef ZZ_LINUX
+		// This implements kernel side "zero-copy" of data between file descriptors,
+		// allowing higher theoretical throughput, and quite real reduced CPU usage.
+		int pipefd[2];
+		long total_sent = 0, bytes_in_pipe, remainder;
+		unsigned baseflags = 0, flags = 0;
+
+		if (src->writebuflen > 0)
+		{
+			ziflush(src); // commit writes before reading (although caller should have done this)
+		}
+		if (dst->writebuflen > 0)
+		{
+			ziflush(dst); // commit writes before writing, when bypassing buffer
+		}
+		lseek(src->fd, src->readpos + src->readbufpos, SEEK_SET);
+		lseek(dst->fd, dst->writepos, SEEK_SET);
+		if (!(dst->flags & ZZIO_SOCKET))
+		{
+			posix_fallocate(dst->fd, dst->writepos, length);
+		}
+		if (src->flags & ZZIO_SOCKET)
+		{
+			baseflags |= SPLICE_F_MOVE;
+		}
+		result = pipe(pipefd);
+		if (result < 0)
+		{
+			fprintf(stderr, "Failed to make pipe: %s\n", strerror(errno));
+			return -1;
+		}
+		while (total_sent < length)
+		{
+			remainder = length - total_sent;
+			result = splice(src->fd, NULL, pipefd[1], NULL, remainder, baseflags);
+			if (result < 0)
+			{
+				if (errno == EINTR || errno == EAGAIN)
+				{
+					continue; // interrupted, try again
+				}
+				fprintf(stderr, "Failed to write to pipe: %s\n", strerror(errno));
+				close(pipefd[0]);
+				close(pipefd[1]);
+				return -1;
+			}
+			bytes_in_pipe = result;
+			total_sent += result;
+			flags = baseflags;
+			if (total_sent < length)
+			{
+				flags |= SPLICE_F_MORE; // tell kernel that more is coming
+			}
+			while (bytes_in_pipe > 0)
+			{
+				result = splice(pipefd[0], NULL, dst->fd, NULL, bytes_in_pipe, flags);
+				if (result < 0)
+				{
+					if (errno == EINTR || errno == EAGAIN)
+					{
+						continue; // interrupted, try again
+					}
+					fprintf(stderr, "Failed to read from pipe: %s\n", strerror(errno));
+					close(pipefd[0]);
+					close(pipefd[1]);
+					return -1;
+				}
+				bytes_in_pipe -= result;
+			}
+		}
+		close(pipefd[0]);
+		close(pipefd[1]);
+		src->readpos += total_sent;
+		src->readbuflen = 0;
+		src->readbufpos = 0;
+		src->bytesread += total_sent;
+		dst->writepos += total_sent;
+		dst->byteswritten += total_sent;
+		return total_sent;
+#else
+		// SLOW test version -- to use as benchmark, and for non-linux versions for now
+		char *buffer = malloc(length);
+		memset(buffer, 0, length);
+		ziread(src, buffer, length);
+		ziwrite(dst, buffer, length);
+		free(buffer);
+		return length;
+#endif
+	}
 }
 
 void ziseteof(struct zzio *zi)
