@@ -525,23 +525,32 @@ int zierror(const struct zzio *zi)
 	return (zi->errstr[0] != '\0');
 }
 
-void *zireadbuf(struct zzio *zi, long pos, long size)
+void *zireadbuf(struct zzio *zi, long size)
 {
 	void *addr, *bytes;
-	long offset = pos & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
 
 	if ((zi->flags & ZZIO_SOCKET) || zi->reader)
 	{
 		bytes = malloc(size);
-		zisetreadpos(zi, pos);
-		ziread(zi, bytes, size);
-		return bytes;
+		if (zi->readbuflen - zi->readbufpos > 0) // save whatever lies unconsumed in the buffer already
+		{
+			memcpy(bytes, zi->readbuf, zi->readbuflen - zi->readbufpos);
+		}
+		ziread(zi, bytes, size - zi->readbufpos);
 	}
-	// else -- fast path
-	addr = mmap(NULL, size + pos - offset, PROT_READ, MAP_SHARED, zi->fd, offset);
-	ASSERT_OR_RETURN(zi, NULL, addr != MAP_FAILED, "Memory map failed: %s", strerror(errno));
-	bytes = addr + pos - offset;	// increment by page alignment shift
-	madvise(bytes, size + pos - offset, MADV_SEQUENTIAL);
+	else
+	{
+		long pos = zi->readpos + zi->readbufpos;
+		long offset = pos & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
+		addr = mmap(NULL, size + pos - offset, PROT_READ, MAP_SHARED, zi->fd, offset);
+		ASSERT_OR_RETURN(zi, NULL, addr != MAP_FAILED, "Memory map failed: %s", strerror(errno));
+		bytes = addr + pos - offset;	// increment by page alignment shift
+		madvise(bytes, size + pos - offset, MADV_SEQUENTIAL);
+	}
+	zi->readpos += size;
+	zi->readbuflen = 0;
+	zi->readbufpos = 0;
+	zi->bytesread += size;
 	return bytes;
 }
 
@@ -582,7 +591,7 @@ long zicopy(struct zzio *dst, struct zzio *src, long length)
 		// allowing higher theoretical throughput, and quite real reduced CPU usage.
 		int pipefd[2];
 		long total_sent = 0, bytes_in_pipe, remainder;
-		unsigned baseflags = 0, flags = 0;
+		unsigned baseflags = SPLICE_F_NONBLOCK, flags = 0;
 
 		if (src->writebuflen > 0)
 		{

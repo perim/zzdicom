@@ -163,7 +163,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			checkError();
 			// TODO - check actual pixel length against length of pixel data in file before reading
 			length = zz->fileSize - zz->current.pos;
-			bytes = zireadbuf(zz->zi, zz->current.pos, length);
+			bytes = zireadbuf(zz->zi, length);
 			if (zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT_JPEGLS)
 			{
 				enum JLS_ERROR err;

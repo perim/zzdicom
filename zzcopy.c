@@ -138,7 +138,7 @@ void copy(const char *destination, const char *source)
 					srcsize = x * y * z;
 					dstsize = srcsize * 3;
 					rgb = malloc(dstsize);
-					mono = zireadbuf(src->zi, src->current.pos, srcsize * 2);
+					mono = zireadbuf(src->zi, srcsize * 2);
 					// Copy pixels, make highest intensity red
 					for (i = 0; i < srcsize; i++)
 					{

@@ -120,8 +120,9 @@ bool ziwriteu16at(struct zzio *zi, uint16_t value, long pos);
 /// current buffer. Returns true on success.
 bool ziwriteu32at(struct zzio *zi, uint32_t value, long pos);
 
-/// Highly optimized buffer read function (implemented with memory mapping where possible) meant for sequential access patterns
-void *zireadbuf(struct zzio *zi, long pos, long size);
+/// Highly optimized buffer read function (implemented with memory mapping where possible) 
+/// meant for sequential access patterns. 
+void *zireadbuf(struct zzio *zi, long size);
 
 /// Deallocate memory buffer created with zireadbuf
 void zifreebuf(struct zzio *zi, void *buf, long size);

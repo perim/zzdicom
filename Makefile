@@ -72,6 +72,7 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet
 	cppcheck -j 4 -q zzdiscp.c zzdiscu.c zzdinetwork.c
 	cppcheck -j 4 -q zznetwork.c
 	cppcheck -j 4 -q tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
+	cppcheck -j 4 -q tests/testnet.c
 	tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
