@@ -5,7 +5,7 @@ COMMONWRITE = zzwrite.o
 COMMONTEXTURE = zztexture.o
 COMMONVERIFY = zzverify.o
 COMMONNET = zznet.o zznetwork.o
-COMMONDINET = zzdinetwork.o
+COMMONDINET = zzdinetwork.o zznetwork.o
 PART6 = part6.o
 # zztojpegls
 PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom zzdiscp zzdiscu

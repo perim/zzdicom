@@ -11,14 +11,6 @@
 #include <string.h>
 #include <sys/time.h>
 
-// UID_LittleEndianExplicitTransferSyntax
-// UID_JPEGLSLosslessTransferSyntax
-
-static inline void znwsendbuffer(struct zzfile *zz)
-{
-	ziflush(zz->zi);
-}
-
 struct zzfile *zzdinetwork(const char *interface, const char *myaetitle, struct zzfile *zz)
 {
 	memset(zz, 0, sizeof(*zz));
@@ -42,7 +34,6 @@ void zzdinegotiation(struct zzfile *zz)
 	uint16_t group, element;
 	long len;
 
-	//strcpy(zz->characterSet, utf-8
 	zz->utf8 = true;
 	zz->ladder[0].txsyn = ZZ_EXPLICIT;
 	zz->ladder[0].type = ZZ_BASELINE;
@@ -52,12 +43,13 @@ void zzdinegotiation(struct zzfile *zz)
 	zzwLO(zz, DCM_DiPeerKeyHash, "");	// TODO
 	gettimeofday(&tv, NULL);
 	zzwDT(zz, DCM_DiPeerCurrentDateTime, tv);
-	znwsendbuffer(zz);
+	ziflush(zz->zi);
 
-	loop = true;
 	zziterinit(zz);
+
 	// FIXME: use zziternext() here instead of zzread directly, otherwise we have to read
 	// every value to the full
+	loop = true;
 	while (loop && zzread(zz, &group, &element, &len))
 	{
 		switch (ZZ_KEY(group, element))
@@ -72,10 +64,10 @@ void zzdinegotiation(struct zzfile *zz)
 
 	zzwCS(zz, DCM_DiPeerStatus, "ACCEPTED"); // TODO, no checking... should at least check datetime for testing
 	zzwOB(zz, DCM_DiKeyChallenge, 0, "");
-	znwsendbuffer(zz);
+	ziflush(zz->zi);
 
 	loop = true;
-	while (zzread(zz, &group, &element, &len))
+	while (loop && zzread(zz, &group, &element, &len))
 	{
 		switch (ZZ_KEY(group, element))
 		{
@@ -85,10 +77,10 @@ void zzdinegotiation(struct zzfile *zz)
 		}
 	}
 	zzwOB(zz, DCM_DiKeyResponse, 0, "");	// TODO
-	znwsendbuffer(zz);
+	ziflush(zz->zi);
 
 	loop = true;
-	while (zzread(zz, &group, &element, &len))
+	while (loop && zzread(zz, &group, &element, &len))
 	{
 		switch (ZZ_KEY(group, element))
 		{
@@ -97,10 +89,10 @@ void zzdinegotiation(struct zzfile *zz)
 		}
 	}
 	zzwCS(zz, DCM_DiKeyStatus, "ACCEPTED");
-	znwsendbuffer(zz);
+	ziflush(zz->zi);
 
 	loop = true;
-	while (zzread(zz, &group, &element, &len))
+	while (loop && zzread(zz, &group, &element, &len))
 	{
 		switch (ZZ_KEY(group, element))
 		{
