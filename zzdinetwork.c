@@ -11,21 +11,6 @@
 #include <string.h>
 #include <sys/time.h>
 
-struct zzfile *zzdinetwork(const char *interface, const char *myaetitle, struct zzfile *zz)
-{
-	memset(zz, 0, sizeof(*zz));
-	if (interface)
-	{
-		strcpy(zz->net.interface, interface);	// TODO use sstrcpy
-	}
-	strcpy(zz->net.aet, myaetitle);
-	zz->ladder[0].item = -1;
-	zz->current.frame = -1;
-	zz->frames = -1;
-	zz->pxOffsetTable = -1;
-	return zz;
-}
-
 void zzdinegotiation(struct zzfile *zz)
 {
 	struct timeval tv;
