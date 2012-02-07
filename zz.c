@@ -18,6 +18,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <uuid/uuid.h>
 
 const char *versionString =
 #include "VERSION"
@@ -789,4 +790,27 @@ struct zzfile *zzclose(struct zzfile *zz)
 		ziclose(zz->zi);
 	}
 	return NULL;
+}
+
+// See http://www.itu.int/rec/T-REC-X.667-200808-I/en
+// TODO, when uuid_generate_time_safe() support gets widespread, consider
+// that instead.
+char *zzmakeuid(char *input, int size)
+{
+	uuid_t uuid;
+	memset(input, 0, size);
+	strcpy(input, "2.25.");
+	uuid_generate_time(uuid); // based on MAC address
+	uuid_unparse_lower(uuid, input + strlen(input));
+	return input;
+}
+
+char *zzanonuid(char *input, int size)
+{
+	uuid_t uuid;
+	memset(input, 0, size);
+	strcpy(input, "2.25.");
+	uuid_generate_random(uuid); // completely random
+	uuid_unparse_lower(uuid, input + strlen(input));
+	return input;
 }

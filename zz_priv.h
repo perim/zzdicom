@@ -252,6 +252,14 @@ bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len
 /// Extra low-level verification of current tag. Resides in zzverify.c
 bool zzverify(struct zzfile *zz);
 
+/// Generate a valid UID using version 1 of IETF RFC 4122 / ITU-T Rec. RX.667 UUID / ISO/IEC 9834-8 
+/// UUID support added in DICOM CP1156.
+char *zzmakeuid(char *input, int size);
+
+/// Generate a valid, anonymized UID using version 4 of IETF RFC 4122 / ITU-T Rec. RX.667 UUID /
+/// ISO/IEC 9834-8 UUID support added in DICOM CP1156.
+char *zzanonuid(char *input, int size);
+
 //
 // -- Utility functions --
 // 

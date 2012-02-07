@@ -57,10 +57,13 @@ static void implicit(struct zzio *zi, uint16_t group, uint16_t element, uint32_t
 
 static void genericfile(struct zzfile *zz)
 {
+	char str[MAX_LEN_UI];
 	const double axial[] = { 1.0, 0.0, 0.0, 0.0, 1.0, 0.0 };
 
+	memset(str, 0, sizeof(str));
+
 	zzwUI(zz, DCM_SOPClassUID, UID_SecondaryCaptureImageStorage);
-	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.0");
+	zzwUI(zz, DCM_SOPInstanceUID, zzanonuid(str, sizeof(str) - 1));
 	zzwEmpty(zz, DCM_StudyDate, DA);
 	zzwEmpty(zz, DCM_StudyTime, TM);
 	zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
@@ -69,8 +72,8 @@ static void genericfile(struct zzfile *zz)
 	zzwEmpty(zz, DCM_PatientID, LO);
 	zzwEmpty(zz, DCM_PatientsBirthDate, DA);
 	zzwEmpty(zz, DCM_PatientsSex, CS);
-	zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.1");
-	zzwUI(zz, DCM_SeriesInstanceUID, "1.2.3.4.2");
+	zzwUI(zz, DCM_StudyInstanceUID, zzanonuid(str, sizeof(str) - 1));
+	zzwUI(zz, DCM_SeriesInstanceUID, zzmakeuid(str, sizeof(str) - 1));
 	zzwEmpty(zz, DCM_StudyID, SH);
 	zzwEmpty(zz, DCM_SeriesNumber, IS);
 	zzwEmpty(zz, DCM_InstanceNumber, IS);
@@ -119,6 +122,7 @@ int main(int argc, char **argv)
 	struct zzfile szz, *zz = &szz;
 	bool result;
 	long val;
+	char str[MAX_LEN_UI];
 
 	(void)argc;
 	(void)argv;
@@ -127,6 +131,7 @@ int main(int argc, char **argv)
 	// Set # 1 -- Deliberately confuse DICOM readers with this tiny, valid file with "DCM" in the wrong place
 
 	memset(zz, 0, sizeof(*zz));
+	memset(str, 0, sizeof(str));
 	mkdir("samples", 0754);
 	zz->zi = ziopenfile("samples/confuse.dcm", "w");
 	if (!zz->zi)
@@ -134,7 +139,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Could not open output file: %s\n", strerror(errno));
 	}
 	zz->ladder[0].txsyn = ZZ_IMPLICIT;	// no header, implicit
-	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.0");
+	zzwUI(zz, DCM_SOPInstanceUID, zzmakeuid(str, sizeof(str) - 1));
 	zzwEmpty(zz, DCM_StudyDate, DA);
 	zzwEmpty(zz, DCM_StudyTime, TM);
 	zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
