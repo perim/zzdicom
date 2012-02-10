@@ -26,8 +26,7 @@ union socketfamily
 
 static void setzz(struct zzfile *zz, const char *interface)
 {
-	memset(zz->net.interface, 0, sizeof(zz->net.interface));
-	memset(zz->net.aet, 0, sizeof(zz->net.aet));
+	memset(zz, 0, sizeof(*zz));
 	if (interface)
 	{
 		strncpy(zz->net.interface, interface, sizeof(zz->net.interface) - 1);
