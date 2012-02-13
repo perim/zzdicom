@@ -50,7 +50,7 @@ bool checkCSA(struct zzfile *zz, const char **str, const char **vm)
 			*str = "SIEMENS CSA DATA v1";
 			return true;
 		}
-		else if (val[0] == '\0' && val[1] == '\0' && val[2] != '\0')
+		else if ((val[0] == '\0' || val[0] == '\6') && val[1] == '\0' && val[2] != '\0')
 		{
 			// neither CSA1 nor CSA2 nor INTERFILE, some older(?) format based on DICOM
 			*str = "SIEMENS CSA DATASET";
