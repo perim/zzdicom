@@ -18,4 +18,4 @@ General:
   and set value to 'SQ' before calling zziternext()
 
 zzmkrandom:
-* Seed 1312930337 generates two SQ with same group:element
+* Seed 1312930337 does not nest correctly

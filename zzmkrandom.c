@@ -101,7 +101,12 @@ void addSQ(struct zzfile *zz)
 		zzwItem_end(zz, pos2);
 		if (pos2 != NULL && rand() % 10 > 8) implicit(zz->zi, 0xfffe, 0xe00d, 0); // this crashed dicom3tools; not really legal dicom
 	}
-	if (rand() % 5 == 0) addSQ(zz);
+	if (rand() % 5 == 0)
+	{
+		zzwItem_begin(zz, NULL);
+		addSQ(zz);
+		zzwItem_end(zz, NULL);
+	}
 	zzwSQ_end(zz, pos);
 }
 
