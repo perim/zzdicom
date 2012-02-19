@@ -418,8 +418,9 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 				zz->current.frame = -1;	// out of frames scope
 			}
 			zz->nextNesting--;
+			// do not react twice on the same sequence delimiter
+			if (key == DCM_SequenceDelimitationItem && zz->ladder[zz->ladderidx].size != UNLIMITED) key = 0;
 			zz->ladderidx--;	// end parsing this sequence now
-			key = 0;		// do not react twice on the same sequence delimiter
 			continue;
 		}
 		break;		// no further cause for regress found
