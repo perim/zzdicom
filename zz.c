@@ -793,6 +793,72 @@ struct zzfile *zzclose(struct zzfile *zz)
 	return NULL;
 }
 
+// Convert 128bit value to string
+// Adapted from http://stackoverflow.com/questions/4361441/c-print-a-biginteger-in-base-10
+static char *u128tostr(uint64_t hi, uint64_t lo, char *str)
+{
+	char *ptr = str;
+	int d[39], i, j;
+
+	memset(d, 0, sizeof(d));
+	for (i = 63; i > -1; i--)
+	{
+		if ((hi >> i) & 1) d[0]++;
+		for (j = 0; j < 39; j++) d[j] *= 2;
+		for (j = 0; j < 38; j++)
+		{
+			d[j+1] += d[j]/10;
+			d[j] %= 10;
+		}
+	}
+	for (i = 63; i > -1; i--)
+	{
+		if ((lo >> i) & 1) d[0]++;
+		if (i > 0) for (j = 0; j < 39; j++) d[j] *= 2;
+		for (j = 0; j < 38; j++)
+		{
+			d[j+1] += d[j]/10;
+			d[j] %= 10;
+		}
+	}
+	for (i = 38; i > 0; i--) if (d[i] > 0) break; // skip initial zeroes
+	for (; i > -1; i--) *ptr++ = '0' + d[i]; // copy & reverse string
+	return str;
+}
+
+// input must be at least max UI length
+void uuid_unparse_dicom(uuid_t uuid, char *str)
+{
+	uint64_t hi;
+	uint64_t lo;
+	const uint8_t *ptr = uuid;
+	uint64_t tmp;
+	char buf[40];
+
+	tmp = *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	hi = tmp;
+
+	tmp = *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	tmp = (tmp << 8) | *ptr++;
+	lo = tmp;
+
+	memset(buf, 0, sizeof(buf));
+	sprintf(str, "2.25.%s", u128tostr(hi, lo, buf));
+}
+
 // See http://www.itu.int/rec/T-REC-X.667-200808-I/en
 // TODO, when uuid_generate_time_safe() support gets widespread, consider
 // that instead.
@@ -802,7 +868,7 @@ char *zzmakeuid(char *input, int size)
 	memset(input, 0, size);
 	strcpy(input, "2.25.");
 	uuid_generate_time(uuid); // based on MAC address
-	uuid_unparse_lower(uuid, input + strlen(input));
+	uuid_unparse_dicom(uuid, input + strlen(input));
 	return input;
 }
 
@@ -812,6 +878,6 @@ char *zzanonuid(char *input, int size)
 	memset(input, 0, size);
 	strcpy(input, "2.25.");
 	uuid_generate_random(uuid); // completely random
-	uuid_unparse_lower(uuid, input + strlen(input));
+	uuid_unparse_dicom(uuid, input + strlen(input));
 	return input;
 }

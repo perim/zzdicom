@@ -2,7 +2,37 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <uuid/uuid.h>
+
 #include "zz_priv.h"
+
+extern void uuid_unparse_dicom(uuid_t uuid, char *str);
+
+static void testuuid(void)
+{
+	uuid_t uuid;
+	char str[64 + 1];
+
+	memset(str, 0, sizeof(str));
+	uuid[0] = 0xba; // using test sequence from DCMTK
+	uuid[1] = 0xa0;
+	uuid[2] = 0x05;
+	uuid[3] = 0x5e;
+	uuid[4] = 0x20;
+	uuid[5] = 0xd4;
+	uuid[6] = 0x01;
+	uuid[7] = 0xe1;
+	uuid[8] = 0x80;
+	uuid[9] = 0x4a;
+	uuid[10] = 0x67;
+	uuid[11] = 0xc6;
+	uuid[12] = 0x69;
+	uuid[13] = 0x73;
+	uuid[14] = 0x51;
+	uuid[15] = 0xff;
+	uuid_unparse_dicom(uuid, str);
+	assert(strcmp(str, "2.25.248067283583015040850042404479733813759") == 0);
+}
 
 int main(void)
 {
@@ -40,6 +70,8 @@ int main(void)
 	zz = zzopen(filename, "r", &szz);
 	assert(zz == NULL);	// above created file pretends to be big-endian
 	close(fd);
+
+	testuuid();
 
 	return 0;
 }
