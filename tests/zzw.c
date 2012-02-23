@@ -42,6 +42,7 @@ static bool checkContents(const char *testfile, bool reqperfection)
 		assert(zz->current.valid || zz->current.warning[0] != '\0');	// check that warning is set when invalid
 	}
 	assert(zz->currNesting == 0);
+	assert(zz->ladderidx == 0);
 	zz = zzclose(zz);
 	return retval;
 }

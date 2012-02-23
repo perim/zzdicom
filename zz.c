@@ -130,7 +130,7 @@ bool zztostring(struct zzfile *zz, char *input, int strsize, int charsize)
 		}
 		else
 		{
-			strncpy(input, "(Sequence in limited UN - not parsed)", strsize - 1);
+			strncpy(input, "(Unknown type - not parsed)", strsize - 1);
 		}
 		return false;
 	case OB: case OW: case OF: case UT:
@@ -335,32 +335,8 @@ int16_t zzgetint16(struct zzfile *zz, int idx)
 	return 0;
 }
 
-bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
+static void ladder_reduce(struct zzfile *zz, zzKey key)
 {
-	char transferSyntaxUid[MAX_LEN_UI];
-	// Represent the three different variants of tag headers in one union
-	struct
-	{
-		uint16_t group;
-		uint16_t element;
-		union { uint32_t len; struct { char vr[2]; uint16_t len; } evr; } buffer;
-	} header;
-	zzKey key;
-
-	if (ziread(zz->zi, &header, 8) != 8)		// group+element then either VR + 0, VR+VL, or just VL
-	{
-		return false;
-	}
-	zz->current.valid = true;
-	zz->current.warning[0] = '\0';
-	zz->previous.group = zz->current.group;
-	zz->previous.element = zz->current.element;
-	zz->previous.ladderidx = zz->ladderidx;
-	zz->current.group = *group = header.group;
-	zz->current.element = *element = header.element;
-	zz->currNesting = zz->nextNesting;
-	key = ZZ_KEY(header.group, header.element);
-
 	// Did we leave a group, sequence or item? We can drop out of multiple at the same time.
 	while (zz->ladderidx > 0)
 	{
@@ -401,7 +377,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			continue;
 		}
 		else if (zz->ladder[zz->ladderidx].type == ZZ_SEQUENCE
-		         && (bytesread > size || key == DCM_SequenceDelimitationItem || (header.group == 0xffff && header.element == 0xffff)))
+		         && (bytesread > size || key == DCM_SequenceDelimitationItem || (zz->current.group == 0xffff && zz->current.element == 0xffff)))
 		{
 			// ^^ (0xffff,0xffff) is a Siemens CSA abomination pretending to be a sequence delimination item
 			if (key == DCM_SequenceDelimitationItem && bytesread < size && zz->ladder[zz->ladderidx].size != UNLIMITED)
@@ -425,7 +401,36 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		}
 		break;		// no further cause for regress found
 	}
-	key = ZZ_KEY(header.group, header.element);	// restore key
+}
+
+bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
+{
+	char transferSyntaxUid[MAX_LEN_UI];
+	// Represent the three different variants of tag headers in one union
+	struct
+	{
+		uint16_t group;
+		uint16_t element;
+		union { uint32_t len; struct { char vr[2]; uint16_t len; } evr; } buffer;
+	} header;
+	zzKey key;
+
+	if (ziread(zz->zi, &header, 8) != 8)		// group+element then either VR + 0, VR+VL, or just VL
+	{
+		return false;
+	}
+	zz->current.valid = true;
+	zz->current.warning[0] = '\0';
+	zz->previous.group = zz->current.group;
+	zz->previous.element = zz->current.element;
+	zz->previous.ladderidx = zz->ladderidx;
+	zz->current.group = *group = header.group;
+	zz->current.element = *element = header.element;
+	zz->currNesting = zz->nextNesting;
+	key = ZZ_KEY(header.group, header.element);
+
+	// Check if we should reduce ladder depth
+	ladder_reduce(zz, key);
 
 	// Having possibly reduced the ladder stack, now reduce private group stack to fit, if necessary.
 	while (zz->privmax >= 0
@@ -766,7 +771,8 @@ bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len
 {
 	// Check if we should read the next tag -- try to iterate over as many tags as possible, even if data is totally fubar
 	if (zz && !zieof(zz->zi) && !zierror(zz->zi)
-	    && (zz->current.length == UNLIMITED || (zz->current.pos + zz->current.length < zz->fileSize) || zz->current.vr == SQ || zz->current.group == 0xfffe))
+	    && (zz->current.length == UNLIMITED || (zz->current.pos + zz->current.length < zz->fileSize)
+	        || zz->current.vr == SQ || zz->current.group == 0xfffe))
 	{
 		if (zz->current.pos > 0 && zz->current.length > 0 && zz->current.length != UNLIMITED
 		    && !(zz->current.group == 0xfffe && zz->current.element == 0xe000 && zz->current.pxstate == ZZ_NOT_PIXEL)
@@ -779,6 +785,15 @@ bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len
 		{
 			return true;
 		}
+	}
+	// Final check for ladder depth reductions
+	if (zz)
+	{
+		zz->previous.group = zz->current.group;
+		zz->previous.element = zz->current.element;
+		zz->current.group = 0xffff;
+		zz->current.element = 0xffff;
+		ladder_reduce(zz, ZZ_KEY(0xffff, 0xffff));
 	}
 	*len = 0;
 	return false;	// do NOT use any other returned data in this case!
