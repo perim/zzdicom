@@ -16,6 +16,3 @@ General:
   implicit mode, since we do not know what is inside (see impl.dcm, and
   gdcmData/PET-cardio-Multiframe-Papyrus.dcm), we should check the tag table
   and set value to 'SQ' before calling zziternext()
-
-zzmkrandom:
-* Seed 1312930337 does not nest correctly

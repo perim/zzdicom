@@ -395,7 +395,7 @@ static void ladder_reduce(struct zzfile *zz, zzKey key)
 			}
 			zz->nextNesting--;
 			// do not react twice on the same sequence delimiter
-			if (key == DCM_SequenceDelimitationItem && zz->ladder[zz->ladderidx].size != UNLIMITED) key = 0;
+			if (key == DCM_SequenceDelimitationItem && zz->ladder[zz->ladderidx].size == UNLIMITED) key = 0;
 			zz->ladderidx--;	// end parsing this sequence now
 			continue;
 		}

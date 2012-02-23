@@ -26,8 +26,9 @@ static void implicit(struct zzio *zi, uint16_t group, uint16_t element, uint32_t
 
 static void genericfile(struct zzfile *zz, const char *sopclass)
 {
+	char uid[MAX_LEN_UI];
 	zzwUI(zz, DCM_SOPClassUID, sopclass);
-	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.0");
+	zzwUI(zz, DCM_SOPInstanceUID, zzanonuid(uid, sizeof(uid)));
 	if (rand() % 2 == 0) zzwEmpty(zz, DCM_StudyDate, DA);
 	if (rand() % 2 == 0) zzwEmpty(zz, DCM_StudyTime, TM);
 	if (rand() % 2 == 0) zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
@@ -47,7 +48,7 @@ static void genericfile(struct zzfile *zz, const char *sopclass)
 	if (rand() % 3 == 0)
 		zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17.18.19.20.21.22.23.24.25.26");
 	else
-		zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.1");
+		zzwUI(zz, DCM_StudyInstanceUID, zzanonuid(uid, sizeof(uid)));
 	zzwUI(zz, DCM_SeriesInstanceUID, "1.2.3.4.2");
 	zzwEmpty(zz, DCM_StudyID, SH);
 	if (rand() % 2 == 0)
@@ -92,20 +93,24 @@ void addSQ(struct zzfile *zz)
 {
 	long i, loops, val, *pos = (rand() % 2) == 0 ? NULL : &val;
 	zzwSQ_begin(zz, ZZ_KEY(0x0020, 0x1115), pos);
-	loops = rand() % 6;
+	loops = rand() % 8;
 	for (i = 0; i < loops; i++)
 	{
 		long val2, *pos2 = (rand() % 2) == 0 ? NULL : &val2;
 		zzwItem_begin(zz, pos2);
 			if (rand() % 5 > 2) garbfill(zz);
 		zzwItem_end(zz, pos2);
-		if (pos2 != NULL && rand() % 10 > 8) implicit(zz->zi, 0xfffe, 0xe00d, 0); // this crashed dicom3tools; not really legal dicom
+		if (pos2 != NULL && rand() % 10 > 8)
+		{
+			implicit(zz->zi, 0xfffe, 0xe00d, 0); // this crashed dicom3tools; not really legal dicom
+		}
 	}
-	if (rand() % 5 == 0)
+	if (rand() % 3 == 0)
 	{
-		zzwItem_begin(zz, NULL);
+		long val2, *pos2 = (rand() % 2) == 0 ? NULL : &val2;
+		zzwItem_begin(zz, pos2);
 		addSQ(zz);
-		zzwItem_end(zz, NULL);
+		zzwItem_end(zz, pos2);
 	}
 	zzwSQ_end(zz, pos);
 }
@@ -215,7 +220,7 @@ int main(int argc, char **argv)
 		ziwrite(zz->zi, &length, 4);
 	}
 
-	if (rand() % 10 > 2) zzwOBnoise(zz, DCM_PixelData, rand() % 9999);
+	if (rand() % 10 > 3) zzwOBnoise(zz, DCM_PixelData, rand() % 9999);
 	if (rand() % 10 > 7) zzwOBnoise(zz, DCM_DataSetTrailingPadding, rand() % 9999);
 
 	ziclose(zz->zi);
