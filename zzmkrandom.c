@@ -36,13 +36,12 @@ static void genericfile(struct zzfile *zz, const char *sopclass)
 	if (rand() % 2 == 0)
 	{
 		zzwEmpty(zz, DCM_PatientsName, PN);
-		zzwLO(zz, DCM_PatientID, "zzmkrandom");
 	}
 	else
 	{
 		zzwPN(zz, DCM_PatientsName, "random^zzmk");
-		zzwEmpty(zz, DCM_PatientID, LO);
 	}
+	zzwLO(zz, DCM_PatientID, "zzmkrandom"); // marker used for testing
 	zzwEmpty(zz, DCM_PatientsBirthDate, DA);
 	zzwEmpty(zz, DCM_PatientsSex, CS);
 	if (rand() % 3 == 0)
