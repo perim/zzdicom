@@ -74,7 +74,8 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	}
 
 	// Safety check - are we really reading a part 10 file? First tag MUST be (0x0002, 0x0000)
-	if (endianbuf[0] != 2 || endianbuf[1] != 0 || endianbuf[2] != 0 || endianbuf[3] != 0)
+	// (but also allow (0x0002, 0x0001) since some crazy DICOM implementation uses that)
+	if (endianbuf[0] != 2 || endianbuf[1] != 0 || (endianbuf[2] != 0 && endianbuf[2] != 1) || endianbuf[3] != 0)
 	{
 		zisetreadpos(zz->zi, 0);		// rewind and try over without the part10
 		ziread(zz->zi, &endianbuf, 6);
