@@ -18,8 +18,11 @@ bool zzquery(struct zzdb *zdb, const char *statement, int (*callback)(void*,int,
 	rc = sqlite3_exec(zdb->sqlite, statement, callback, cbdata, &zErrMsg);
 	if (rc != SQLITE_OK)
 	{
-		fprintf(stderr, "SQL error from %s: %s\n", statement, zErrMsg);
-		sqlite3_free(zErrMsg);
+		if (zErrMsg)
+		{
+			fprintf(stderr, "SQL error from %s: %s\n", statement, zErrMsg);
+			sqlite3_free(zErrMsg);
+		}
 		exit(-1);	// for now...
 		return false;
 	}
