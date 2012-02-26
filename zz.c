@@ -122,20 +122,18 @@ bool zztostring(struct zzfile *zz, char *input, int strsize, int charsize)
 	}
 	switch (zz->current.vr)
 	{
-	case UN:
 	case SQ:
-		if ((zz->current.vr == UN && zz->current.length == UNLIMITED) || zz->current.vr == SQ)
-		{
-			strncpy(input, "(Sequence)", strsize - 1);
-		}
-		else
-		{
-			strncpy(input, "(Unknown type - not parsed)", strsize - 1);
-		}
+		strncpy(input, "(Sequence)", strsize - 1);
 		return false;
 	case OB: case OW: case OF: case UT:
 		strncpy(input, "...", strsize - 1);
 		return false;
+	case UN:
+		if (zz->current.length == UNLIMITED)
+		{
+			strncpy(input, "(Sequence)", strsize - 1);
+			return false;
+		} // else fallthrough
 	case AE: case AS: case CS: case DA: case DS: case DT: case IS:
 	case LT: case PN: case SH: case ST: case TM: case UI: case LO:
 		if (!zzgetstring(zz, input, strsize))
@@ -152,11 +150,16 @@ bool zztostring(struct zzfile *zz, char *input, int strsize, int charsize)
 			input[charsize - 3] = '.';
 			input[charsize - 4] = '.';
 		}
-		for (i = strlen(input); i >= 0; i--) // strip control chars
+		for (i = strlen(input) - 1; i >= 0; i--) // strip control chars
 		{
-			if (input[i] < 32 && input[i] > 0)
+			if (zz->current.vr == UN && ((uint8_t)input[i] < 32 || (uint8_t)input[i] >= 127))
 			{
-				input[i] = ' ';
+				strncpy(input, "(Unknown)", strsize - 1);
+				return false; // gave up parsing this UN
+			}
+			if ((uint8_t)input[i] < 32)
+			{
+				input[i] = ' '; // make sure we do not print commands
 			}
 		}
 		break;
