@@ -1,4 +1,4 @@
-CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -Werror -g -luuid
+CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -Werror -g -luuid -march=native -mtune=native
 COMMON = zz.o zzio.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
@@ -65,7 +65,7 @@ zzdiscu: zzdiscu.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET)
 clean:
 	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov gmon.out
 
-check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet
+cppcheck:
 	cppcheck -j 4 -q zz.c zzwrite.c zzdump.c zzverify.c zzmkrandom.c
 	cppcheck -j 4 -q zzcopy.c zztexture.c zzsql.c zzio.c
 	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c zznetwork.c
@@ -73,6 +73,8 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet
 	cppcheck -j 4 -q zznetwork.c
 	cppcheck -j 4 -q tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
 	cppcheck -j 4 -q tests/testnet.c
+
+check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet
 	tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
@@ -94,10 +96,16 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet
 	./zzanon TEST samples/tw1.dcm
 	./zzanon TEST samples/tw2.dcm
 	./zzcopy samples/spine.dcm samples/copy.dcm
+
+memcheck:
 	valgrind --leak-check=yes -q tests/zzw
 	valgrind --leak-check=yes -q ./tests/zziotest
 	valgrind --leak-check=yes -q ./zzanon ANON samples/tw1.dcm
 	valgrind --leak-check=yes -q ./zzcopy samples/spine.dcm samples/copy.dcm
+	valgrind --leak-check=yes -q ./zzdump -- samples/tw1.dcm > /dev/null
+	valgrind --leak-check=yes -q ./zzdump -v samples/tw2.dcm > /dev/null
+
+checkall: cppcheck check memcheck
 
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
