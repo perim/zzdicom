@@ -10,6 +10,7 @@ int main(int argc, char **argv)
 {
 	struct zzfile szz, *zz;
 	struct zztexture stx, *tx;
+	int win;
 
 	if (argc != 2)
 	{
@@ -20,7 +21,7 @@ int main(int argc, char **argv)
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA);
 	glutInitWindowPosition(0, 0);
 	glutInitWindowSize(640, 480);
-	glutCreateWindow("DICOM texture test");
+	win = glutCreateWindow("DICOM texture test");
 	glutReportErrors();
 
 	tx = zzcopytotexture(NULL, NULL);
@@ -35,6 +36,8 @@ int main(int argc, char **argv)
 	assert(tx->pixelsize.y == 448);
 	assert(tx->pixelsize.z == 15);
 	glutReportErrors();
+	glutDestroyWindow(win);
+	zz = zzclose(zz);
 
 	return 0;
 }
