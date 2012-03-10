@@ -35,6 +35,7 @@ static void setzz(struct zzfile *zz, const char *interface)
 	zz->current.frame = -1;
 	zz->frames = -1;
 	zz->pxOffsetTable = -1;
+	zz->fileSize = UNLIMITED;
 }
 
 /// Reap dead child processes
@@ -51,8 +52,8 @@ struct zzfile *zznetlisten(const char *interface, int port, struct zzfile *zz, i
 	struct addrinfo hints, *servinfo, *p;
 	socklen_t sin_size;
 	struct sigaction sa;
-	int yes = 1;
 	char s[INET6_ADDRSTRLEN];
+	int yes = 1;
 	int rv;
 	char portstr[10];
 	union socketfamily their_addr; // connector's address information
@@ -127,14 +128,17 @@ struct zzfile *zznetlisten(const char *interface, int port, struct zzfile *zz, i
 			perror("accept");
 			continue;
 		}
+		memset(zz->net.address, 0, sizeof(zz->net.address));
 		if (their_addr.sa.sa_family == AF_INET)
 		{
 			inet_ntop(their_addr.sa_stor.ss_family, &their_addr.sa_in.sin_addr, s, sizeof(s));	// ipv4
+			strncpy(zz->net.address, s, sizeof(zz->net.address) - 1);
 			//printf("server: got ipv4 connection from %s\n", s);
 		}
 		else
 		{
 			inet_ntop(their_addr.sa_stor.ss_family, &their_addr.sa_in6.sin6_addr, s, sizeof(s));	// ipv6
+			strncpy(zz->net.address, s, sizeof(zz->net.address) - 1);
 			//printf("server: got ipv6 connection from %s\n", s);
 		}
 
@@ -198,6 +202,8 @@ struct zzfile *zznetconnect(const char *interface, const char *host, int port, s
 	}
 
 	inet_ntop(p->ai_family, p->ai_addr, s, sizeof(s));
+	memset(zz->net.address, 0, sizeof(zz->net.address));
+	strncpy(zz->net.address, s, sizeof(zz->net.address) - 1);
 	//printf("client: connecting to %s\n", s);
 
 	freeaddrinfo(servinfo); // all done with this structure

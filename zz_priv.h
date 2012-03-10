@@ -159,6 +159,7 @@ struct zzfile
 		bool		endofmessage;	///< We have reached an end of message marker
 		long		pdusize;	///< Size of current PDU
 		long		pdutype;	///< Current PDU type
+		char		address[47];	///< Network address of opposing side
 		// TODO enum zztxsyn psctxs[PSCTX_LAST];        ///< List of negotiated presentation contexts
 	} net;
 
@@ -259,6 +260,9 @@ char *zzmakeuid(char *input, int size);
 /// Generate a valid, anonymized UID using version 4 of IETF RFC 4122 / ITU-T Rec. RX.667 UUID /
 /// ISO/IEC 9834-8 UUID support added in DICOM CP1156.
 char *zzanonuid(char *input, int size);
+
+/// Are we operating in verbose mode? Set as part of zzutil processing.
+bool zzisverbose(void);
 
 //
 // -- Utility functions --

@@ -4,6 +4,7 @@
 #include "zzio.h"
 #include "zzwrite.h"
 #include "zzditags.h"
+#include "zzdinetwork.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -11,7 +12,33 @@
 #include <string.h>
 #include <sys/time.h>
 
-void zzdinegotiation(struct zzfile *zz)
+void zzdisending(struct zzfile *zz)
+{
+	if (zzisverbose())
+	{
+		printf("\033[22m\033[33mSENDING -> %s: \033[0m\n", zz->net.address);
+	}
+}
+
+void zzdireceiving(struct zzfile *zz)
+{
+	if (zzisverbose())
+	{
+		printf("\033[22m\033[33mRECEIVING <- %s: \033[0m\n", zz->net.address);
+	}
+}
+
+void zzdiprint(struct zzfile *zz, const char *str)
+{
+	if (zzisverbose())
+	{
+		char vrstr[MAX_LEN_VR];
+		printf("  \033[22m\033[32m(%04x,%04x)\033[0m %s [%s]\n",
+		       zz->current.group, zz->current.element, zzvr2str(zz->current.vr, vrstr), str);
+	}
+}
+
+void zzdinegotiation(struct zzfile *zz, bool server)
 {
 	struct timeval tv;
 	char str[80];
@@ -19,10 +46,13 @@ void zzdinegotiation(struct zzfile *zz)
 	uint16_t group, element;
 	long len;
 
+	(void)server; // FIXME
+
 	zz->utf8 = true;
 	zz->ladder[0].txsyn = ZZ_EXPLICIT;
 	zz->ladder[0].type = ZZ_BASELINE;
 
+	zzdisending(zz);
 	zzwCS(zz, DCM_DiProtocolIdentification, "DICOMDIRECT1");
 	zzwLO(zz, DCM_DiPeerName, zz->net.aet);
 	zzwLO(zz, DCM_DiPeerKeyHash, "");	// TODO
@@ -32,58 +62,71 @@ void zzdinegotiation(struct zzfile *zz)
 
 	zziterinit(zz);
 
-	// FIXME: use zziternext() here instead of zzread directly, otherwise we have to read
-	// every value to the full
 	loop = true;
-	while (loop && zzread(zz, &group, &element, &len))
+	zzdireceiving(zz);
+	while (loop && zziternext(zz, &group, &element, &len))
 	{
+		memset(str, 0, sizeof(str));
 		switch (ZZ_KEY(group, element))
 		{
-		case DCM_DiProtocolIdentification: printf("Protocol identified: %s\n", zzgetstring(zz, str, sizeof(str) - 1)); break;
-		case DCM_DiPeerName: printf("Connected to %s\n", zzgetstring(zz, str, sizeof(str) - 1)); break;
+		case DCM_DiProtocolIdentification: break;
+		case DCM_DiPeerName: break;
 		case DCM_DiPeerCurrentDateTime: loop = false; break;
-		case DCM_DiPeerKeyHash: printf("KeyHash received\n"); break; // TODO
+		case DCM_DiPeerKeyHash: break;
 		default: printf("(%04x,%04x) ignored\n", (unsigned)group, (unsigned)element); break;	// ignore
 		}
+		zzdiprint(zz, zzgetstring(zz, str, sizeof(str) - 1));
 	}
 
+	zzdisending(zz);
 	zzwCS(zz, DCM_DiPeerStatus, "ACCEPTED"); // TODO, no checking... should at least check datetime for testing
 	zzwOB(zz, DCM_DiKeyChallenge, 0, "");
 	ziflush(zz->zi);
 
 	loop = true;
-	while (loop && zzread(zz, &group, &element, &len))
+	zzdireceiving(zz);
+	while (loop && zziternext(zz, &group, &element, &len))
 	{
+		memset(str, 0, sizeof(str));
 		switch (ZZ_KEY(group, element))
 		{
-		case DCM_DiPeerStatus: printf("Peer status = %s\n", zzgetstring(zz, str, sizeof(str) - 1)); break;
+		case DCM_DiPeerStatus: break;
 		case DCM_DiKeyChallenge: loop = false; break;
 		default: break;	// ignore
 		}
+		zzdiprint(zz, zzgetstring(zz, str, sizeof(str) - 1));
 	}
+	zzdisending(zz);
 	zzwOB(zz, DCM_DiKeyResponse, 0, "");	// TODO
 	ziflush(zz->zi);
 
 	loop = true;
-	while (loop && zzread(zz, &group, &element, &len))
+	zzdireceiving(zz);
+	while (loop && zziternext(zz, &group, &element, &len))
 	{
+		memset(str, 0, sizeof(str));
 		switch (ZZ_KEY(group, element))
 		{
 		case DCM_DiKeyResponse: loop = false; break;
 		default: break;	// ignore
 		}
+		zzdiprint(zz, zzgetstring(zz, str, sizeof(str) - 1));
 	}
+	zzdisending(zz);
 	zzwCS(zz, DCM_DiKeyStatus, "ACCEPTED");
 	ziflush(zz->zi);
 
 	loop = true;
-	while (loop && zzread(zz, &group, &element, &len))
+	zzdireceiving(zz);
+	while (loop && zziternext(zz, &group, &element, &len))
 	{
+		memset(str, 0, sizeof(str));
 		switch (ZZ_KEY(group, element))
 		{
-		case DCM_DiKeyStatus: printf("Key status = %s\n", zzgetstring(zz, str, sizeof(str) - 1)); loop = false; break;
+		case DCM_DiKeyStatus: loop = false; break;
 		default: break;	// ignore
 		}
+		zzdiprint(zz, zzgetstring(zz, str, sizeof(str) - 1));
 	}
 	// We are now connected and operational
 }

@@ -773,19 +773,25 @@ void zziterinit(struct zzfile *zz)
 
 bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 {
+	bool doread = true;
+
 	// Check if we should read the next tag -- try to iterate over as many tags as possible, even if data is totally fubar
 	if (zz && !zieof(zz->zi) && !zierror(zz->zi)
 	    && (zz->current.length == UNLIMITED || (zz->current.pos + zz->current.length < zz->fileSize)
-	        || zz->current.vr == SQ || zz->current.group == 0xfffe))
+	        || zz->current.vr == SQ || zz->current.group == 0xfffe || zz->fileSize == UNLIMITED))
 	{
 		if (zz->current.pos > 0 && zz->current.length > 0 && zz->current.length != UNLIMITED
 		    && !(zz->current.group == 0xfffe && zz->current.element == 0xe000 && zz->current.pxstate == ZZ_NOT_PIXEL)
 		    && zz->current.vr != SQ)
 		{
-			zisetreadpos(zz->zi, zz->current.pos + zz->current.length);	// go to start of next tag
+			// go to start of next tag
+			if (!zisetreadpos(zz->zi, zz->current.pos + zz->current.length))
+			{
+				doread = false;
+			}
 			// note if this conditional is not entered, we will try to parse the contents of the tag
 		}
-		if (zzread(zz, group, element, len))
+		if (doread && zzread(zz, group, element, len))
 		{
 			return true;
 		}
@@ -899,4 +905,9 @@ char *zzanonuid(char *input, int size)
 	uuid_generate_random(uuid); // completely random
 	uuid_unparse_dicom(uuid, input + strlen(input));
 	return input;
+}
+
+bool zzisverbose()
+{
+	return verbose;
 }

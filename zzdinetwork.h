@@ -4,6 +4,6 @@
 #include "zz_priv.h"
 
 /// Negotiate a Direct DICOM network connection
-void zzdinegotiation(struct zzfile *zz);
+void zzdinegotiation(struct zzfile *zz, bool server);
 
 #endif

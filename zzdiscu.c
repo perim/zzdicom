@@ -26,7 +26,7 @@ static void zzdiserviceprovider(struct zzfile *zz)
 	long len;
 	bool loop = true;
 
-	while (loop && zzread(zz, &group, &element, &len))
+	while (loop && zziternext(zz, &group, &element, &len))
 	{
 		switch (ZZ_KEY(group, element))
 		{
@@ -44,12 +44,17 @@ static void zzdiserviceprovider(struct zzfile *zz)
 }
 #endif
 
-int main(void)
+int main(int argc, char **argv)
 {
 	struct zzfile szz, *zz;
+
+	(void) zzutil(argc, argv, 0, "", "DICOM experimental network client", NULL);
+
 	zz = zznetconnect("", "127.0.0.1", 5104, &szz, 0);
-	strcpy(zz->net.aet, "TESTCLIENT");
-	printf("Starting negotiation\n");
-	zzdinegotiation(zz);
+	if (zz)
+	{
+		strcpy(zz->net.aet, "TESTCLIENT");
+		zzdinegotiation(zz, false);
+	}
 	return 0;
 }

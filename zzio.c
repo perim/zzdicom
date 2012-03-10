@@ -427,7 +427,7 @@ bool zisetreadpos(struct zzio *zi, long pos)
 	if (pos > zi->readpos + zi->readbuflen || pos <  zi->readpos)
 	{
 		// Seeking outside of buffer
-		if ((zi->flags & ZZIO_SOCKET) || zi->reader) { assert(false); return false; }	// TODO make error message
+		if ((zi->flags & ZZIO_SOCKET) || zi->reader) { return false; }	// TODO make error message
 		return zi_reposition_read(zi, pos, -1);
 	}
 	else

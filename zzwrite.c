@@ -6,6 +6,22 @@
 #include "byteorder.h"
 #include "zzwrite.h"
 
+#ifdef DEBUG
+#define verboseprint(_zz, ...) \
+{ \
+	if (zzisverbose()) \
+	{ \
+		char vrstr[MAX_LEN_VR]; \
+		fprintf(stdout, "  \033[22m\033[32m(%04x,%04x)\033[0m %s ", \
+		        _zz->current.group, _zz->current.element, zzvr2str(zz->current.vr, vrstr)); \
+		fprintf(stdout, __VA_ARGS__); \
+		fprintf(stdout, "\n"); \
+	} \
+}
+#else
+#define verboseprint(...)
+#endif
+
 static inline bool explicit(struct zzfile *zz) { return zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT; }
 
 static inline void implicit(struct zzio *zi, uint16_t group, uint16_t element, uint32_t length)
@@ -56,6 +72,10 @@ static inline void writetag(struct zzfile *zz, zzKey key, enum VR vr, uint32_t s
 			explicit2(zz->zi, group, element, zzvr2str(vr, dest), size); break;
 		}
 	}
+	zz->current.element = element;
+	zz->current.group = group;
+	zz->current.vr = vr;
+	zz->current.length = size;
 }
 
 void zzwCopy(struct zzfile *zz, const struct zzfile *orig)
@@ -71,11 +91,14 @@ void zzwCopy(struct zzfile *zz, const struct zzfile *orig)
 void zzwSQ(struct zzfile *zz, zzKey key, uint32_t size)
 {
 	writetag(zz, key, SQ, size);
+	verboseprint(zz, "\033[22m\033[33m(Sequence)\033[0m");
 }
 
 void zzwUN(struct zzfile *zz, zzKey key, uint32_t size)
 {
 	writetag(zz, key, UN, size);
+	if (size == UNLIMITED) verboseprint(zz, "\033[22m\033[33m(Sequence)\033[0m")
+	else verboseprint(zz, "\033[22m\033[33m(Unknown)\033[0m");
 }
 
 void zzwUN_begin(struct zzfile *zz, zzKey key, long *pos)
@@ -106,6 +129,7 @@ void zzwUN_end(struct zzfile *zz, long *pos)
 void zzwItem_begin(struct zzfile *zz, long *pos)
 {
 	implicit(zz->zi, 0xfffe, 0xe000, UNLIMITED);
+	verboseprint(zz, " ");
 	if (pos) *pos = ziwritepos(zz->zi) - 4;	// position of length value
 }
 
@@ -118,6 +142,7 @@ void zzwItem_end(struct zzfile *zz, long *pos)
 	else
 	{
 		implicit(zz->zi, 0xfffe, 0xe00d, 0);	// add end item tag
+		verboseprint(zz, " ");
 	}
 }
 
@@ -163,6 +188,7 @@ void zzwPixelData_begin(struct zzfile *zz, long frames, int bits, long size)
 		zz->pxOffsetTable = -1;			// no index table
 	}
 	zz->frames = frames;
+	verboseprint(zz, " ");
 }
 
 void zzwPixelData_frame(struct zzfile *zz, int frame, const void *data, uint32_t size)
@@ -192,12 +218,14 @@ void zzwAT(struct zzfile *zz, zzKey key, zzKey key2)
 	writetag(zz, key, AT, sizeof(group2) + sizeof(element2));
 	ziwrite(zz->zi, &group2, sizeof(group2));
 	ziwrite(zz->zi, &element2, sizeof(element2));
+	verboseprint(zz, "[%04x,%04x]", group2, element2);
 }
 
 void zzwUL(struct zzfile *zz, zzKey key, uint32_t value)
 {
 	writetag(zz, key, UL, sizeof(value));
 	ziwrite(zz->zi, &value, sizeof(value));
+	verboseprint(zz, "[%u]", value);
 }
 
 void zzwULv(struct zzfile *zz, zzKey key, int len, const uint32_t *value)
@@ -205,36 +233,42 @@ void zzwULv(struct zzfile *zz, zzKey key, int len, const uint32_t *value)
 	const int size = sizeof(*value) * len;
 	writetag(zz, key, UL, size);
 	ziwrite(zz->zi, value, size);
+	verboseprint(zz, "[%u...]", value[0]);
 }
 
 void zzwSL(struct zzfile *zz, zzKey key, int32_t value)
 {
 	writetag(zz, key, SL, sizeof(value));
 	ziwrite(zz->zi, &value, sizeof(value));
+	verboseprint(zz, "[%d]", value);
 }
 
 void zzwSS(struct zzfile *zz, zzKey key, int16_t value)
 {
 	writetag(zz, key, SS, sizeof(value));
 	ziwrite(zz->zi, &value, sizeof(value));
+	verboseprint(zz, "[%d]", value);
 }
 
 void zzwUS(struct zzfile *zz, zzKey key, uint16_t value)
 {
 	writetag(zz, key, US, sizeof(value));
 	ziwrite(zz->zi, &value, sizeof(value));
+	verboseprint(zz, "[%u]", value);
 }
 
 void zzwFL(struct zzfile *zz, zzKey key, float value)
 {
 	writetag(zz, key, FL, sizeof(value));
 	ziwrite(zz->zi, &value, sizeof(value));
+	verboseprint(zz, "[%f]", value);
 }
 
 void zzwFD(struct zzfile *zz, zzKey key, double value)
 {
 	writetag(zz, key, FD, sizeof(value));
 	ziwrite(zz->zi, &value, sizeof(value));
+	verboseprint(zz, "[%f]", value);
 }
 
 void zzwOB(struct zzfile *zz, zzKey key, int len, const char *string)
@@ -245,6 +279,7 @@ void zzwOB(struct zzfile *zz, zzKey key, int len, const char *string)
 	writetag(zz, key, OB, wlen);
 	res = ziwrite(zz->zi, string, len);
 	if (len % 2 != 0) ziwrite(zz->zi, "", 1);	// pad
+	verboseprint(zz, "...");
 }
 
 void zzwOW(struct zzfile *zz, zzKey key, int len, const uint16_t *string)
@@ -252,6 +287,7 @@ void zzwOW(struct zzfile *zz, zzKey key, int len, const uint16_t *string)
 	const int size = len * 2;
 	writetag(zz, key, OW, size);
 	ziwrite(zz->zi, string, size);
+	verboseprint(zz, "...");
 }
 
 void zzwOF(struct zzfile *zz, zzKey key, int len, const float *string)
@@ -259,6 +295,7 @@ void zzwOF(struct zzfile *zz, zzKey key, int len, const float *string)
 	const int size = len * 4;
 	writetag(zz, key, OF, size);
 	ziwrite(zz->zi, string, size);
+	verboseprint(zz, "[%f...]", string[0]);
 }
 
 void zzwUI(struct zzfile *zz, zzKey key, const char *string)
@@ -270,6 +307,7 @@ void zzwUI(struct zzfile *zz, zzKey key, const char *string)
 	writetag(zz, key, UI, wlen);
 	ziwrite(zz->zi, string, length);
 	if (length % 2 != 0) ziwrite(zz->zi, "", 1);	// pad with null
+	verboseprint(zz, "[%s]", string);
 }
 
 static inline int countdelims(const char *str, const char delim)
@@ -296,6 +334,7 @@ static void wstr(struct zzfile *zz, zzKey key, const char *string, enum VR vr, s
 		// pad with a space to make even length
 		ziwrite(zz->zi, " ", 1);
 	}
+	verboseprint(zz, "[%s]", string);
 }
 void zzwPN(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, PN, 64); }
 void zzwSH(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, SH, 16); }
@@ -360,6 +399,7 @@ void zzwDSdv(struct zzfile *zz, zzKey key, int len, const double *value)
 	// Now set the size of the tag
 	if (explicit(zz)) ziwriteu16at(zz->zi, wlen, pos);
 	else ziwriteu32at(zz->zi, wlen, pos);
+	verboseprint(zz, "[%f...]", value[0]);
 }
 
 void zzwDA(struct zzfile *zz, zzKey key, time_t datestamp)
@@ -450,4 +490,5 @@ void zzwHeader(struct zzfile *zz, const char *sopclass, const char *sopinstanceu
 void zzwEmpty(struct zzfile *zz, zzKey key, enum VR vr)
 {
 	writetag(zz, key, vr, 0);
+	verboseprint(zz, "[]");
 }
