@@ -17,6 +17,8 @@ static void *threadfunc1(void *arg)
 	unsigned char buf[100];
 	long result, i;
 
+	(void)arg;
+
 	memset(buf, 0xfd, sizeof(buf));
 	while (!zz)
 	{

@@ -79,7 +79,7 @@ void copy(const char *destination, const char *source)
 	src = zzclose(src);
 }
 
-int main(int argc, char **argv)
+int main(void)
 {
 	copy("samples/zzwcopy.dcm", "samples/random.dcm");
 	return 0;
