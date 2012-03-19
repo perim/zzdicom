@@ -14,13 +14,13 @@
 #define DCM_DiKeyChallenge                       ZZ_KEY(DIGROUP, 0x0021) // OB, random string encrypted with challenged's public key
 #define DCM_DiKeyResponse                        ZZ_KEY(DIGROUP, 0x0022) // OB, string above, encrypted with challenger's public key
 #define DCM_DiKeyStatus                          ZZ_KEY(DIGROUP, 0x0023) // CS, one of "ACCEPTED" or "FAILED"
-#define DCM_DiPriority                           ZZ_KEY(DIGROUP, 0x0024) // CS, optional, one of "HIGH", "NORMAL", "LOW", or "BULK"
+//#define DCM_DiPriority                           ZZ_KEY(DIGROUP, 0x0024) // CS, optional, one of "HIGH", "NORMAL", "LOW", or "BULK"
 
 // network service
 #define DCM_DiNetworkServiceSequence             ZZ_KEY(DIGROUP, 0x1000) // SQ
 #define DCM_DiNetworkService                     ZZ_KEY(DIGROUP, 0x1001) // CS, one of "STORE", "QUERY", "RETRIEVE", "INFO", "ACCESS"
-#define DCM_DiNetworkServiceStatus               ZZ_KEY(DIGROUP, 0x1002) // CS, "ACCEPTED" or "SERVICE DENIED" or "NO SUCH SERVICE"
-#define DCM_DiNetworkRequestor                   ZZ_KEY(DIGROUP, 0x1003) // PN, person making request
+#define DCM_DiNetworkRequestor                   ZZ_KEY(DIGROUP, 0x1002) // PN, person making request
+#define DCM_DiNetworkServiceStatus               ZZ_KEY(DIGROUP, 0x1100) // CS, "ACCEPTED" or "SERVICE DENIED" or "NO SERVICE"
 
 // storage
 #define DCM_DiStorageNumberOfStudies             ZZ_KEY(DIGROUP, 0x2001) // US
@@ -77,5 +77,7 @@
 
 // pre-cache replication service
 #define DCM_DiReplicatePermissionsSequence       ZZ_KEY(DIGROUP, 0x8005) // SQ, for pre-cache replication using "REPLICATE" service
+
+#define DCM_DiTraceSequence                      ZZ_KEY(DIGROUP, 0xda1a) // SQ, for debugging network communications, odd items=client
 
 #define DCM_DiDisconnect                         ZZ_KEY(DIGROUP, 0xffff) // CS, "SUCCESS" or "FAILURE", nice way to disconnect

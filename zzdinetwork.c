@@ -38,7 +38,7 @@ void zzdiprint(struct zzfile *zz, const char *str)
 	}
 }
 
-void zzdinegotiation(struct zzfile *zz, bool server)
+bool zzdinegotiation(struct zzfile *zz, bool server, struct zzfile *tracefile)
 {
 	struct timeval tv;
 	char str[80];
@@ -129,4 +129,6 @@ void zzdinegotiation(struct zzfile *zz, bool server)
 		zzdiprint(zz, zzgetstring(zz, str, sizeof(str) - 1));
 	}
 	// We are now connected and operational
+	if (loop) printf("Ran out of data!\n");
+	return !loop;
 }

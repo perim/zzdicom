@@ -146,6 +146,10 @@ void zicleareof(struct zzio *zi);
 // Return current file descriptor
 int zifd(struct zzio *zi);
 
+/// Duplicate all writes to another zzio file descriptor. This is mostly meant for 
+/// debugging, so not much effort is spent on performance (ie no zero-copying writes).
+void zitee(struct zzio *zz, struct zzio *tee);
+
 /* --------------------------------------------------------------------- */
 // Private functions below - only for unit testing
 

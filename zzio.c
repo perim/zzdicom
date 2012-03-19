@@ -64,6 +64,9 @@ struct zzio
 
 	// for error reporting
 	char errstr[128];
+
+	// for chaining up duplicated writes to other file descriptors
+	struct zzio *tee;
 };
 
 // Convenience functions for setting error. Currently no way to clear them. We also do not check if flag is set on function entry.
@@ -123,6 +126,11 @@ static inline long zi_write_raw(struct zzio *zi, void *buf, long len)	// zi->wri
 		result = pwrite(zi->fd, buf, len, zi->writepos);
 	}
 	ASSERT_OR_RETURN(zi, result, result != -1, "Write error: %s", strerror(errno));
+	if (zi->tee) // duplicate the write
+	{
+		long ret = zi_write_raw(zi->tee, buf, len);
+		ASSERT(zi, ret == result, "Tee write error: %s", strerror(errno));
+	}
 	zi->writepos += result;
 	return result;
 }
@@ -690,4 +698,10 @@ void zicleareof(struct zzio *zi)
 int zifd(struct zzio *zi)
 {
 	return zi->fd;
+}
+
+void zitee(struct zzio *zz, struct zzio *target)
+{
+	ziflush(target); // necessary, since from this moment on, we use zz's buffers, ignoring target's
+	zz->tee = target;
 }

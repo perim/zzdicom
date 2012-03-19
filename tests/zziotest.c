@@ -13,6 +13,7 @@
 #define PACKET_STEP 71
 #define STEPS 20
 #define FILENAME "/tmp/test.bin"
+#define TEENAME "/tmp/tee.bin"
 
 static long header_write_func(long size, char *buffer, const void *userdata)
 {
@@ -37,34 +38,10 @@ static long header_read_func(char **buffer, long *len, void *userdata)
 	return size;
 }
 
-static void test1(int packetsize, bool splitter)
+static void verify1(const char *filename, bool splitter)
 {
-	struct zzio *zi;
-	int i, c, value;
+	int value = 1, i;
 
-	// Write
-	zi = ziopenwrite(FILENAME, packetsize, 0);
-	assert(zi);
-	if (splitter)
-	{
-		zisetwriter(zi, header_write_func, HEADER_SIZE, zi);
-		zisetreader(zi, header_read_func, zi);
-	}
-	value = 1;
-	for (c = 0; c < STEPS; c++)
-	{
-		for (i = 0; i < c * PACKET_STEP; i++)
-		{
-			ziputc(zi, value);
-			value = (value + 1) % 255;
-		}
-		ziflush(zi);
-	}
-	zi = ziclose(zi);
-	assert(zi == NULL);
-
-	// Verify packets
-	value = 1;
 	if (splitter)
 	{
 		FILE *fp = fopen(FILENAME, "r");
@@ -96,6 +73,44 @@ static void test1(int packetsize, bool splitter)
 		}
 		fclose(fp);
 	}
+}
+
+static void test1(int packetsize, bool splitter)
+{
+	struct zzio *zi, *tee;
+	int i, c, value;
+
+	// Write
+	zi = ziopenwrite(FILENAME, packetsize, 0);
+	tee = ziopenwrite(TEENAME, packetsize, 0);
+	assert(zi);
+	assert(tee);
+	zitee(zi, tee);
+	if (splitter)
+	{
+		zisetwriter(zi, header_write_func, HEADER_SIZE, zi);
+		zisetreader(zi, header_read_func, zi);
+	}
+	value = 1;
+	for (c = 0; c < STEPS; c++)
+	{
+		for (i = 0; i < c * PACKET_STEP; i++)
+		{
+			ziputc(zi, value);
+			value = (value + 1) % 255;
+		}
+		ziflush(zi);
+	}
+	zi = ziclose(zi);
+	tee = ziclose(tee);
+	assert(zi == NULL);
+	assert(tee == NULL);
+
+	// Verify packets
+	verify1(FILENAME, splitter);
+
+	// Verify tee
+	verify1(TEENAME, splitter);
 
 	// Read back in
 	zi = ziopenread(FILENAME, packetsize, 0);
@@ -355,15 +370,15 @@ int main(void)
 	const char *srcfile2 = "samples/spine.dcm";
 
 	// Round # 1 - getc, putc
-	test1(128, true);
-	test1(1024, true);
-	test1(11, true);
-	test1(99, true);
-
 	test1(128, false);
 	test1(1024, false);
 	test1(11, false);
 	test1(99, false);
+
+	test1(128, true);
+	test1(1024, true);
+	test1(11, true);
+	test1(99, true);
 
 	// Round # 2 - read, write 32 bit values
 	test2(4, 128, true);

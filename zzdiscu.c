@@ -18,6 +18,16 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+enum
+{
+	OPT_TRACE,
+	OPT_COUNT
+};
+
+static struct zzopts opts[] =
+	{ { "--trace", "Save a network trace dump to \"zzdiscu.dcm\"", false }, // OPT_TRACE
+	  { NULL, NULL, false } };              // OPT_COUNT
+
 #if 0
 static void zzdiserviceprovider(struct zzfile *zz)
 {
@@ -46,15 +56,36 @@ static void zzdiserviceprovider(struct zzfile *zz)
 
 int main(int argc, char **argv)
 {
-	struct zzfile szz, *zz;
+	struct zzfile szz, *zz, stracefile, *tracefile = NULL;
 
-	(void) zzutil(argc, argv, 0, "", "DICOM experimental network client", NULL);
+	(void) zzutil(argc, argv, 0, "", "DICOM experimental network client", opts);
 
 	zz = zznetconnect("", "127.0.0.1", 5104, &szz, 0);
 	if (zz)
 	{
+		if (opts[OPT_TRACE].found)
+		{
+			char buf[100];
+			memset(buf, 0, sizeof(buf));
+			tracefile = zzcreate("zzdiscu.dcm", &stracefile, "1.2.3.4", zzmakeuid(buf, sizeof(buf) - 1), 
+			                     UID_LittleEndianExplicitTransferSyntax);
+			if (tracefile)
+			{
+				zitee(zz->zi, tracefile->zi);
+			}
+		}
 		strcpy(zz->net.aet, "TESTCLIENT");
-		zzdinegotiation(zz, false);
+		if (zzdinegotiation(zz, false, tracefile))
+		{
+			long sq;
+			zzdisending(zz);
+			zzwSQ_begin(zz, DCM_DiNetworkServiceSequence, &sq);
+			zzwCS(zz, DCM_DiNetworkService, "STORE");
+			//zzwPN(zz, DCM_DiNetworkRequestor, "");
+			zzwSQ_end(zz, &sq);
+			zzwCS(zz, DCM_DiDisconnect, "SUCCESS");
+		}
 	}
+	tracefile = zzclose(tracefile);
 	return 0;
 }

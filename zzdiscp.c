@@ -18,6 +18,16 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+enum
+{
+	OPT_TRACE,
+	OPT_COUNT
+};
+
+static struct zzopts opts[] =
+	{ { "--trace", "Save a network trace dump to \"zzdiscp.dcm\"", false }, // OPT_TRACE
+	  { NULL, NULL, false } };              // OPT_COUNT
+
 static void zzdiserviceprovider(struct zzfile *zz)
 {
 	char str[80];
@@ -25,10 +35,10 @@ static void zzdiserviceprovider(struct zzfile *zz)
 	long len;
 	bool loop = true;
 
-	zzdinegotiation(zz, true);
-
+	zzdireceiving(zz);
 	while (loop && zziternext(zz, &group, &element, &len))
 	{
+printf("scp loop!\n");
 		switch (ZZ_KEY(group, element))
 		{
 		case DCM_DiNetworkServiceSequence:
@@ -53,15 +63,30 @@ static void zzdiserviceprovider(struct zzfile *zz)
 
 int main(int argc, char **argv)
 {
-	struct zzfile szz, *zz;
+	struct zzfile szz, *zz, stracefile, *tracefile = NULL;
 
-	(void) zzutil(argc, argv, 0, "", "DICOM experimental network server", NULL);
+	(void) zzutil(argc, argv, 0, "", "DICOM experimental network server", opts);
 
 	zz = zznetlisten("", 5104, &szz, ZZNET_NO_FORK);
 	if (zz)
 	{
+		if (opts[OPT_TRACE].found)
+		{
+			char buf[100];
+			memset(buf, 0, sizeof(buf));
+			tracefile = zzcreate("zzdiscp.dcm", &stracefile, "1.2.3.4", zzmakeuid(buf, sizeof(buf) - 1), 
+			                     UID_LittleEndianExplicitTransferSyntax);
+			if (tracefile)
+			{
+				zitee(zz->zi, tracefile->zi);
+			}
+		}
 		strcpy(zz->net.aet, "TESTNODE");
-		zzdiserviceprovider(zz);
+		if (zzdinegotiation(zz, true, tracefile))
+		{
+			zzdiserviceprovider(zz);
+		}
 	}
+	tracefile = zzclose(tracefile);
 	return 0;
 }
