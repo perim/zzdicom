@@ -53,6 +53,8 @@ void ImageViewer::initializeGL()
 {
 	shader.addShaderFromSourceFile(QGLShader::Fragment, "shader.frag");
 	shader.link();
+	biasloc = shader.uniformLocation("bias");
+	scaleloc = shader.uniformLocation("scale");
 
 	glShadeModel(GL_SMOOTH);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -63,6 +65,8 @@ void ImageViewer::paintGL()
 	if (zzt)
 	{
 		shader.bind();
+		shader.setUniformValue(biasloc, (GLfloat)0.0);
+		shader.setUniformValue(scaleloc, (GLfloat)25.0);
 		glEnable(GL_TEXTURE_3D);
 		glClear(GL_COLOR_BUFFER_BIT);
 		glLoadIdentity();

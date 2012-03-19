@@ -30,6 +30,7 @@ private:
 	struct zztexture *zzt;
 	QGLShaderProgram shader;
 	GLfloat depth;
+	int scaleloc, biasloc;
 };
 
 class ImageViewer3D : public QGLWidget
