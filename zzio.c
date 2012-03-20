@@ -128,7 +128,10 @@ static inline long zi_write_raw(struct zzio *zi, void *buf, long len)	// zi->wri
 	ASSERT_OR_RETURN(zi, result, result != -1, "Write error: %s", strerror(errno));
 	if (zi->tee) // duplicate the write
 	{
-		long ret = zi_write_raw(zi->tee, buf, len);
+		long ret;
+		// a flush is necessary here to correctly order writes from the tee's buffer with our own writes
+		ziflush(zi->tee);
+		ret = zi_write_raw(zi->tee, buf, len);
 		ASSERT(zi, ret == result, "Tee write error: %s", strerror(errno));
 	}
 	zi->writepos += result;
@@ -702,6 +705,5 @@ int zifd(struct zzio *zi)
 
 void zitee(struct zzio *zz, struct zzio *target)
 {
-	ziflush(target); // necessary, since from this moment on, we use zz's buffers, ignoring target's
 	zz->tee = target;
 }
