@@ -38,6 +38,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 	glGenTextures(2, textures);
 	glBindTexture(GL_TEXTURE_2D, textures[1]);
 	checkError();
+	memset(zzt, 0, sizeof(*zzt));
 	zzt->volume = textures[0];
 	zzt->volumeinfo = textures[1];
 	zziterinit(zz);
