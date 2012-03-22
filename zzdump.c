@@ -316,7 +316,9 @@ void dump(char *filename)
 			strcpy(pstart, "[");
 			snprintf(pstop, sizeof(pstop) - 1, "]%*s", (int)(PADLEN - charlen - 2), "");
 		}
-		else if (zz->current.group == 0x0029 && (zz->current.element & 0xff) == 0x0010 && zz->prividx >= 0
+		else if (zz->current.group == 0x0029
+		         && ((zz->current.element & 0xff) == 0x0010 || (zz->current.element & 0xff) == 0x0020)
+		         && zz->prividx >= 0
 		         && zz->current.vr == OB && strcmp(zz->privgroup[zz->prividx].creator, "SIEMENS CSA HEADER") == 0
 		         && checkCSA(zz, &csa, &vm))
 		{
