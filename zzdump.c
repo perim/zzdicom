@@ -10,6 +10,16 @@
 #define MAX_LEN_VALUE 120
 #define PADLEN 54
 
+enum
+{
+	OPT_STDIN,
+	OPT_COUNT
+};
+
+static struct zzopts opts[] =
+	{ { "--stdin", "Read data from standard input", true, false }, // OPT_STDIN
+	  { NULL, NULL, 0, false } };              // OPT_COUNT
+
 static const char *txsyn2str(enum zztxsyn syn)
 {
 	switch (syn)
@@ -215,9 +225,8 @@ void dumpcsa(struct zzfile *zz)
 	}
 }
 
-void dump(char *filename)
+void dump(struct zzfile *zz)
 {
-	struct zzfile szz, *zz;
 	uint16_t group, element;
 	long len;
 	const char *vm, *description, *csa = NULL;
@@ -230,14 +239,9 @@ void dump(char *filename)
 	char extra[10], pstart[48], pstop[100];
 	bool content;
 
-	zz = zzopen(filename, "r", &szz);
-	if (!zz)
-	{
-		exit(1);
-	}
-
 	zziterinit(zz);
 	printf("\n# Dicom-File-Format\n");
+
 	while (zziternext(zz, &group, &element, &len))
 	{
 		// Extra checks
@@ -362,16 +366,32 @@ void dump(char *filename)
 			dumpcsa(zz);
 		}
 	}
-	zz = zzclose(zz);
 }
 
 int main(int argc, char **argv)
 {
 	int i;
 
-	for (i = zzutil(argc, argv, 2, "<filenames>", "DICOM tag dumper", NULL); i < argc; i++)
+	i = zzutil(argc, argv, 2, "[<filenames>]", "DICOM tag dumper", opts);
+	if (opts[OPT_STDIN].found)
 	{
-		dump(argv[i]);
+		struct zzfile szz, *zz;
+		zz = zzstdin(&szz);
+		dump(zz);
+		zzclose(zz);
+		return 0;
+	}
+	for (; i < argc; i++)
+	{
+		const char *filename = argv[i];
+		struct zzfile szz, *zz;
+		zz = zzopen(filename, "r", &szz);
+		if (!zz)
+		{
+			exit(1);
+		}
+		dump(zz);
+		zz = zzclose(zz);
 	}
 
 	return 0;

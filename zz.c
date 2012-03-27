@@ -26,41 +26,19 @@ const char *versionString =
 
 static bool verbose = false;
 
-struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile)
+// parse first few tags to grab some vital info
+static struct zzfile *earlyparse(struct zzfile *zz, const char *filename)
 {
-	struct zzfile *zz;
 	char dicm[5], endianbuf[6];
-	struct stat st;
 
-	if (!infile || !mode || !filename)
+	if (!zz)
 	{
 		return NULL;
 	}
-	zz = infile;
-	memset(zz, 0, sizeof(*zz));
-	if (stat(filename, &st) != 0)
-	{
-		fprintf(stderr, "%s could not be found: %s\n", filename, strerror(errno));
-		return NULL;
-	}
-	if (!S_ISREG(st.st_mode))
-	{
-		fprintf(stderr, "%s is not a file\n", filename);
-		return NULL;
-	}
-	zz->zi = ziopenfile(filename, mode);
-	if (!zz->zi || !realpath(filename, zz->fullPath))
-	{
-		fprintf(stderr, "%s could not be opened: %s\n", filename, strerror(errno));
-		return NULL;
-	}
-	zz->fileSize = st.st_size;
-	zz->modifiedTime = st.st_mtime;
-	ziwillneed(zz->zi, 0, 4096 * 4);	// request 4 pages right away
-
 	// Check for valid Part 10 header
 	zz->part10 = true;	// ever the optimist
 	memset(dicm, 0, sizeof(dicm));
+
 	if (!zisetreadpos(zz->zi, 128) || ziread(zz->zi, dicm, 4) != 4 || strncmp(dicm, "DICM", 4) != 0)
 	{
 		fprintf(stderr, "%s does not have a valid part 10 DICOM header\n", filename);
@@ -108,8 +86,53 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	zz->current.frame = -1;
 	zz->frames = -1;
 	zz->pxOffsetTable = -1;
-
 	return zz;
+}
+
+struct zzfile *zzstdin(struct zzfile *zz)
+{
+	if (zz)
+	{
+		memset(zz, 0, sizeof(*zz));
+		zz->fileSize = UNLIMITED;
+		zz->zi = ziopenstdin();
+		//zz->modifiedTime = ?
+		return earlyparse(zz, "(stdin)");
+	}
+	return zz;
+}
+
+struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile)
+{
+	struct zzfile *zz;
+	struct stat st;
+
+	if (!infile || !mode || !filename)
+	{
+		return NULL;
+	}
+	zz = infile;
+	memset(zz, 0, sizeof(*zz));
+	if (stat(filename, &st) != 0)
+	{
+		fprintf(stderr, "%s could not be found: %s\n", filename, strerror(errno));
+		return NULL;
+	}
+	if (!S_ISREG(st.st_mode))
+	{
+		fprintf(stderr, "%s is not a file\n", filename);
+		return NULL;
+	}
+	zz->zi = ziopenfile(filename, mode);
+	if (!zz->zi || !realpath(filename, zz->fullPath))
+	{
+		fprintf(stderr, "%s could not be opened: %s\n", filename, strerror(errno));
+		return NULL;
+	}
+	zz->fileSize = st.st_size;
+	zz->modifiedTime = st.st_mtime;
+	ziwillneed(zz->zi, 0, 4096 * 4);	// request 4 pages right away
+	return earlyparse(zz, filename);
 }
 
 bool zztostring(struct zzfile *zz, char *input, int strsize, int charsize)
@@ -732,7 +755,10 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 				if (strcmp(argv[i], iter->opt) == 0)
 				{
 					iter->found = true;
-					ignparams++;
+					if (!iter->counts)
+					{
+						ignparams++;
+					}
 				}
 				iter++;
 			}

@@ -25,8 +25,8 @@ enum
 };
 
 static struct zzopts opts[] =
-	{ { "--trace", "Save a network trace dump to \"zzdiscp.dcm\"", false }, // OPT_TRACE
-	  { NULL, NULL, false } };              // OPT_COUNT
+	{ { "--trace", "Save a network trace dump to \"zzdiscp.dcm\"", false, false }, // OPT_TRACE
+	  { NULL, NULL, false, false } };              // OPT_COUNT
 
 static void zzdiserviceprovider(struct zzfile *zz)
 {
@@ -38,7 +38,6 @@ static void zzdiserviceprovider(struct zzfile *zz)
 	zzdireceiving(zz);
 	while (loop && zziternext(zz, &group, &element, &len))
 	{
-printf("scp loop!\n");
 		switch (ZZ_KEY(group, element))
 		{
 		case DCM_DiNetworkServiceSequence:

@@ -122,6 +122,7 @@ struct zzopts	// list of command-line options; NULL-terminate it
 {
 	const char *opt;
 	const char *description;
+	bool counts; ///< does this count as a required argument?
 	bool found;
 };
 
@@ -241,6 +242,7 @@ bool zztostring(struct zzfile *zz, char *input, int strsize, int charsize);
 bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len);
 
 struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile);
+struct zzfile *zzstdin(struct zzfile *infile);
 struct zzfile *zzclose(struct zzfile *zz);
 
 /// Utility function to process some common command-line arguments. Returns the number of initial arguments to ignore.
