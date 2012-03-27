@@ -36,6 +36,12 @@ typedef long readbufferfunc(char **, long *, void *);
 /// Open a zzio buffer on a socket. It must already be opened and connected.
 struct zzio *ziopensocket(int sock, int flags);
 
+/// Open a zzio buffer on standard input.
+struct zzio *ziopenstdin(void);
+
+/// Open a zzio buffer on standard output.
+struct zzio *ziopenstdout(void);
+
 /// Open a zzio buffer on a file. Mode has the same meaning as for fopen(3).
 struct zzio *ziopenfile(const char *path, const char *mode);
 

@@ -35,6 +35,9 @@
 #define ZZIO_SOCKET	  1
 #define ZZIO_READABLE     2
 #define ZZIO_WRITABLE     4
+#define ZZIO_PIPE         8
+
+#defie ZZIO_BUFFERSIZE    8096 // default buffer size
 
 struct zzio
 {
@@ -104,6 +107,23 @@ static inline long zi_read_raw(struct zzio *zi, void *buf, long len, long reqlen
 			ASSERT_OR_RETURN(zi, result, result >= 0, "Read error: %s", strerror(errno));
 		}
 	}
+	else if (zi->flags & ZZIO_PIPE)
+	{
+		errno = 0;
+		sum = read(zi->fd, buf, len);
+		ASSERT_OR_RETURN(zi, sum, sum >= 0, "Read error: %s", strerror(errno));
+		if (sum < reqlen)
+		{
+			sum = 0;
+			do
+			{
+				errno = 0;
+				result = read(zi->fd, buf, reqlen - sum);
+				sum += MAX(0, result);
+			} while (sum < reqlen && (errno == EAGAIN || errno == EWOULDBLOCK));
+		}
+		ASSERT_OR_RETURN(zi, result, result >= 0, "Read error: %s", strerror(errno));
+	}
 	else
 	{
 		sum = pread(zi->fd, buf, len, zi->readpos);
@@ -117,7 +137,7 @@ static inline long zi_read_raw(struct zzio *zi, void *buf, long len, long reqlen
 static inline long zi_write_raw(struct zzio *zi, void *buf, long len)	// zi->writepos must be updated
 {
 	long result;
-	if (zi->flags & ZZIO_SOCKET)
+	if (zi->flags & ZZIO_SOCKET || zi->flags & ZZIO_PIPE)
 	{
 		result = write(zi->fd, buf, len);
 	}
@@ -136,6 +156,32 @@ static inline long zi_write_raw(struct zzio *zi, void *buf, long len)	// zi->wri
 	}
 	zi->writepos += result;
 	return result;
+}
+
+struct zzio *ziopenstdin()
+{
+	const int bufsize = ZZIO_BUFFERSIZE;
+	struct zzio *zi = NULL;
+
+	zi = calloc(1, sizeof(*zi));
+	zi->fd = STDIN_FILENO;
+	zi->readbuf = calloc(1, bufsize);
+	zi->readbufsize = bufsize;
+	zi->flags = ZZIO_READABLE | ZZIO_PIPE;
+	return zi;
+}
+
+struct zzio *ziopenstdout()
+{
+	const int bufsize = ZZIO_BUFFERSIZE;
+	struct zzio *zi = NULL;
+
+	zi = calloc(1, sizeof(*zi));
+	zi->fd = STDOUT_FILENO;
+	zi->readbuf = calloc(1, bufsize);
+	zi->readbufsize = bufsize;
+	zi->flags = ZZIO_WRITABLE | ZZIO_PIPE;
+	return zi;
 }
 
 struct zzio *ziopenread(const char *path, int bufsize, int flags)
@@ -158,7 +204,6 @@ struct zzio *ziopenread(const char *path, int bufsize, int flags)
 	zi->flags = flags | ZZIO_READABLE;
 	zi->fd = fd;
 	zi->readbufsize = bufsize;
-	zi->writebufsize = bufsize;
 	fstat(zi->fd, &st);
 	zi->filesize = st.st_size;
 	return zi;
@@ -178,7 +223,6 @@ struct zzio *ziopenwrite(const char *path, int bufsize, int flags)
 	zi->fd = fd;
 	zi->writebuf = calloc(1, bufsize);
 	zi->flags = flags | ZZIO_WRITABLE;
-	zi->readbufsize = bufsize;
 	zi->writebufsize = bufsize;
 	return zi;
 }
@@ -230,7 +274,7 @@ struct zzio *ziopenfile(const char *path, const char *mode)
 
 struct zzio *ziopensocket(int sock, int flags)
 {
-	const int bufsize = 8096;
+	const int bufsize = ZZIO_BUFFERSIZE;
 	struct zzio *zi = NULL;
 
 	ASSERT_OR_RETURN(zi, NULL, sock >=0, "Invalid socket to open");
@@ -308,7 +352,7 @@ static inline void writeheader(struct zzio *zi, long length)
 void zicommit(struct zzio *zi)
 {
 	ziflush(zi);	// flush our buffers
-	if (!(zi->flags & ZZIO_SOCKET))
+	if (!(zi->flags & ZZIO_SOCKET || zi->flags & ZZIO_PIPE))
 	{
 #if _POSIX_SYNCHRONIZED_IO > 0
 		fdatasync(zi->fd);
@@ -435,10 +479,35 @@ int zigetc(struct zzio *zi)
 // TODO allow skipping forward, also in sockets and packetized input?
 bool zisetreadpos(struct zzio *zi, long pos)
 {
-	if (pos > zi->readpos + zi->readbuflen || pos <  zi->readpos)
+	if (pos > zi->readpos + zi->readbuflen && (zi->flags & ZZIO_SOCKET || zi->flags & ZZIO_PIPE))
+	{
+		// Seeking behind buffer in a pipe or a socket, so skip ahead
+		long result = 0, piece, skipped = 0, remaining = pos - zi->readpos + zi->readbuflen;
+		char buf[128];
+
+		while (remaining)
+		{
+			piece = MIN(zi->readbufsize, remaining);
+			zi->readpos += zi->readbuflen;
+			skipped += zi->readbuflen;
+			result = zi_read_raw(zi, zi->readbuf, zi->readbufsize, piece);
+			if (result >= 0)
+			{
+				zi->readbuflen = result;
+				zi->readbufpos = MIN(zi->readbufsize - 1, labs(pos - skipped));
+				remaining = MAX(remaining - result, 0);
+			}
+			ASSERT(zi, result >= 0, "Failed skipping ahead");
+		}
+		ASSERT(zi, zi->readpos + zi->readbufpos == pos, "Failed to find correct position (%ld + %ld != %ld)\n", zi->readpos, zi->readbufpos, pos);
+		return true;
+	}
+	else if (pos > zi->readpos + zi->readbuflen || pos < zi->readpos)
 	{
 		// Seeking outside of buffer
-		if ((zi->flags & ZZIO_SOCKET) || zi->reader) { return false; }	// TODO make error message
+		ASSERT(zi, !(zi->flags & ZZIO_SOCKET || zi->flags & ZZIO_PIPE), "Cannot before buffer with sockets or pipes");
+		ASSERT(zi, !zi->reader, "Cannot seek outside of buffer range with reader set");
+		if (zi->reader) { return false; }	// TODO make error message
 		return zi_reposition_read(zi, pos, -1);
 	}
 	else
@@ -528,7 +597,10 @@ struct zzio *ziclose(struct zzio *zi)
 bool zieof(const struct zzio *zi)
 {
 	return (zi->eofmarker && zi->readpos + zi->readbufpos > zi->readbuflen)
-	        || ((zi->flags & ZZIO_READABLE) && !(zi->flags & ZZIO_SOCKET) && zi->readpos + zi->readbufpos >= zi->filesize);
+	        || ((zi->flags & ZZIO_READABLE) 
+	            && !(zi->flags & ZZIO_SOCKET)
+	            && !(zi->flags & ZZIO_PIPE)
+	            && zi->readpos + zi->readbufpos >= zi->filesize);
 }
 
 int zierror(const struct zzio *zi)
