@@ -178,8 +178,8 @@ struct zzio *ziopenstdout()
 
 	zi = calloc(1, sizeof(*zi));
 	zi->fd = STDOUT_FILENO;
-	zi->readbuf = calloc(1, bufsize);
-	zi->readbufsize = bufsize;
+	zi->writebuf = calloc(1, bufsize);
+	zi->writebufsize = bufsize;
 	zi->flags = ZZIO_WRITABLE | ZZIO_PIPE;
 	return zi;
 }
