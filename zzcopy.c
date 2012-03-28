@@ -15,8 +15,8 @@ enum
 };
 
 static struct zzopts opts[] =
-	{ { "--rgb", "Convert to RGB", false },	// OPT_RGB
-	  { NULL, NULL, false } };		// OPT_COUNT
+	{ { "--rgb", "Convert to RGB", false, false },	// OPT_RGB
+	  { NULL, NULL, false, false } };		// OPT_COUNT
 
 void copy(const char *destination, const char *source)
 {
