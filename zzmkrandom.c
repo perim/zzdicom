@@ -13,6 +13,16 @@
 #define MAGIC4 BSWAP_32(0xfffee0dd)
 #define MAGIC5 ((0x0010 << 24) | (0x0001 << 16) | ('S' << 8) | ('S'))
 
+enum
+{
+	OPT_STDOUT,
+	OPT_COUNT
+};
+
+static struct zzopts opts[] =
+	{ { "--stdout", "Output result to stdout", false, false },	// OPT_STDOUT
+	  { NULL, NULL, false, false } };		// OPT_COUNT
+
 static long zseed = 0; // stored in instance number
 	
 static inline bool explicit(struct zzfile *zz) { return zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT; }
@@ -118,15 +128,13 @@ int main(int argc, char **argv)
 {
 	const char *outputfile = "random.dcm";
 	struct zzfile szz, *zz = &szz;
+	int firstparam;
 
-	(void)argc;
-	(void)argv;
-
-	zzutil(argc, argv, 1, "<random seed>", "Generate pseudo-random DICOM file for unit testing", NULL);
-	if (argc > 1)
+	firstparam = zzutil(argc, argv, 1, "[<random seed [<output file>]>]", "Generate pseudo-random DICOM file for unit testing", opts);
+	if (argc - firstparam > 0)
 	{
 		zseed = atoi(argv[1]);
-		if (argc > 2)
+		if (argc - firstparam > 1)
 		{
 			outputfile = argv[2];
 		}
@@ -138,7 +146,14 @@ int main(int argc, char **argv)
 	srand(zseed);
 
 	memset(zz, 0, sizeof(*zz));
-	zz->zi = ziopenfile(outputfile, "w");
+	if (!opts[OPT_STDOUT].found)
+	{
+		zz->zi = ziopenfile(outputfile, "w");
+	}
+	else
+	{
+		zz->zi = ziopenstdout();
+	}
 	if (!zz->zi)
 	{
 		fprintf(stderr, "Failed to open output file \"%s\": %s\n", outputfile, strerror(errno));
