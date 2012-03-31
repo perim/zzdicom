@@ -3,14 +3,14 @@
 #include "zz.h"
 
 // keep as private group for now
-#define DIGROUP 0x4097
+#define DIGROUP 0x4096
 
 // basic handshake
-#define DCM_DiProtocolIdentification             ZZ_KEY(DIGROUP, 0x0001) // CS, always "DICOMDIRECT"
-#define DCM_DiPeerName                           ZZ_KEY(DIGROUP, 0x0002) // LO, peer's AETITLE
-#define DCM_DiPeerKeyHash                        ZZ_KEY(DIGROUP, 0x0003) // LO, hash of PGP key for optional validation
-#define DCM_DiPeerCurrentDateTime                ZZ_KEY(DIGROUP, 0x0004) // DT
-#define DCM_DiPeerStatus                         ZZ_KEY(DIGROUP, 0x0005) // CS, one of "ACCEPTED" (known) or "UNKNOWN" or "BAD DATETIME" or "FAILED" (pgp hash)
+#define DCM_DiProtocolIdentification             ZZ_KEY(DIGROUP, 0x0002) // CS, always "DICOMDIRECT"
+#define DCM_DiPeerName                           ZZ_KEY(DIGROUP, 0x0005) // LO, peer's AETITLE
+#define DCM_DiPeerKeyHash                        ZZ_KEY(DIGROUP, 0x0007) // LO, hash of PGP key for optional validation
+#define DCM_DiPeerCurrentDateTime                ZZ_KEY(DIGROUP, 0x0008) // DT
+#define DCM_DiPeerStatus                         ZZ_KEY(DIGROUP, 0x0009) // CS, one of "ACCEPTED" (known) or "UNKNOWN" or "BAD DATETIME" or "FAILED" (pgp hash)
 #define DCM_DiKeyChallenge                       ZZ_KEY(DIGROUP, 0x0021) // OB, random string encrypted with challenged's public key
 #define DCM_DiKeyResponse                        ZZ_KEY(DIGROUP, 0x0022) // OB, string above, encrypted with challenger's public key
 #define DCM_DiKeyStatus                          ZZ_KEY(DIGROUP, 0x0023) // CS, one of "ACCEPTED" or "FAILED"
@@ -78,6 +78,7 @@
 // pre-cache replication service
 #define DCM_DiReplicatePermissionsSequence       ZZ_KEY(DIGROUP, 0x8005) // SQ, for pre-cache replication using "REPLICATE" service
 
+#define DCM_DiTraceLog                           ZZ_KEY(DIGROUP, 0x0001) // CS, either "SENT" or "RECEIVED"
 #define DCM_DiTraceSequence                      ZZ_KEY(DIGROUP, 0xda1a) // SQ, for debugging network communications, odd items=client
 
 #define DCM_DiDisconnect                         ZZ_KEY(DIGROUP, 0xffff) // CS, "SUCCESS" or "FAILURE", nice way to disconnect

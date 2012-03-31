@@ -70,6 +70,7 @@ struct zzio
 
 	// for chaining up duplicated writes to other file descriptors
 	struct zzio *tee;
+	int teeflags;
 };
 
 // Convenience functions for setting error. Currently no way to clear them. We also do not check if flag is set on function entry.
@@ -78,6 +79,8 @@ struct zzio
 	do { if (!(expr)) { if (zi) { snprintf(zi->errstr, sizeof(zi->errstr) - 1,  __VA_ARGS__); fprintf(stderr, "%s\n", zi->errstr); } assert(!#expr); return retval; } } while(0)
 #define ASSERT(zi, expr, ...) \
 	do { if (!(expr)) { if (zi) { snprintf(zi->errstr, sizeof(zi->errstr) - 1,  __VA_ARGS__); fprintf(stderr, "%s\n", zi->errstr); } assert(!#expr); } } while(0)
+
+static inline long zi_write_raw(struct zzio *zi, void *buf, long len);
 
 /// Base read function that interfaces with the kernel. The aim is to call this function as few times as possible
 /// to reduce context switches. reqlen may be -1 if there is no required size. TODO add zlib support
@@ -129,6 +132,14 @@ static inline long zi_read_raw(struct zzio *zi, void *buf, long len, long reqlen
 		sum = pread(zi->fd, buf, len, zi->readpos);
 		ASSERT_OR_RETURN(zi, sum, sum >= 0, "Read error: %s", strerror(errno));
 	}
+	if (zi->tee && zi->teeflags & ZZIO_TEE_READ) // duplicate the read
+	{
+		long ret;
+		// a flush is necessary here to correctly order writes from the tee's buffer with our own writes
+		ziflush(zi->tee);
+		ret = zi_write_raw(zi->tee, buf, sum);
+		ASSERT(zi, ret == sum, "Tee read write error (%ld/%ld): %s", ret, sum, strerror(errno));
+	}
 	zi->bytesread += sum;
 	return sum;
 }
@@ -146,7 +157,7 @@ static inline long zi_write_raw(struct zzio *zi, void *buf, long len)	// zi->wri
 		result = pwrite(zi->fd, buf, len, zi->writepos);
 	}
 	ASSERT_OR_RETURN(zi, result, result != -1, "Write error: %s", strerror(errno));
-	if (zi->tee) // duplicate the write
+	if (zi->tee && zi->teeflags & ZZIO_TEE_WRITE) // duplicate the write
 	{
 		long ret;
 		// a flush is necessary here to correctly order writes from the tee's buffer with our own writes
@@ -775,7 +786,8 @@ int zifd(struct zzio *zi)
 	return zi->fd;
 }
 
-void zitee(struct zzio *zz, struct zzio *target)
+void zitee(struct zzio *zi, struct zzio *target, int flags)
 {
-	zz->tee = target;
+	zi->tee = target;
+	zi->teeflags = flags;
 }

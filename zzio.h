@@ -152,9 +152,16 @@ void zicleareof(struct zzio *zi);
 // Return current file descriptor
 int zifd(struct zzio *zi);
 
-/// Duplicate all writes to another zzio file descriptor. This is mostly meant for 
-/// debugging, so not much effort is spent on performance (ie no zero-copying writes).
-void zitee(struct zzio *zz, struct zzio *tee);
+/// Redirect read buffer refills to another zzio file descriptor.
+#define ZZIO_TEE_READ   1
+/// Redirect write buffer flushes to another zzio file descriptor.
+#define ZZIO_TEE_WRITE  2
+
+/// Duplicate all reads and/or writes to another zzio file descriptor. This is mostly meant 
+/// for debugging, so not much effort is spent on performance (ie no zero-copying writes).
+/// You can combine read and write redirections. Attempts to seek outside a single read/write
+/// buffer will break this functionality.
+void zitee(struct zzio *zz, struct zzio *tee, int flags);
 
 /* --------------------------------------------------------------------- */
 // Private functions below - only for unit testing

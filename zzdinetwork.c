@@ -12,20 +12,36 @@
 #include <string.h>
 #include <sys/time.h>
 
-void zzdisending(struct zzfile *zz)
+static bool starteditem = false;
+
+void zzdisending(struct zzfile *zz, struct zzfile *tracefile)
 {
+	if (starteditem)
+	{
+		zzwItem_end(tracefile, NULL);
+	}
 	if (zzisverbose())
 	{
 		printf("\033[22m\033[33mSENDING -> %s: \033[0m\n", zz->net.address);
 	}
+	zzwItem_begin(tracefile, NULL);
+	zzwCS(tracefile, DCM_DiTraceLog, "SENT");
+	starteditem = true;
 }
 
-void zzdireceiving(struct zzfile *zz)
+void zzdireceiving(struct zzfile *zz, struct zzfile *tracefile)
 {
+	if (starteditem)
+	{
+		zzwItem_end(tracefile, NULL);
+	}
 	if (zzisverbose())
 	{
 		printf("\033[22m\033[33mRECEIVING <- %s: \033[0m\n", zz->net.address);
 	}
+	zzwItem_begin(tracefile, NULL);
+	zzwCS(tracefile, DCM_DiTraceLog, "RECEIVED");
+	starteditem = true;
 }
 
 void zzdiprint(struct zzfile *zz, const char *str)
@@ -52,7 +68,7 @@ bool zzdinegotiation(struct zzfile *zz, bool server, struct zzfile *tracefile)
 	zz->ladder[0].txsyn = ZZ_EXPLICIT;
 	zz->ladder[0].type = ZZ_BASELINE;
 
-	zzdisending(zz);
+	zzdisending(zz, tracefile);
 	zzwCS(zz, DCM_DiProtocolIdentification, "DICOMDIRECT1");
 	zzwLO(zz, DCM_DiPeerName, zz->net.aet);
 	zzwLO(zz, DCM_DiPeerKeyHash, "");	// TODO
@@ -63,7 +79,7 @@ bool zzdinegotiation(struct zzfile *zz, bool server, struct zzfile *tracefile)
 	zziterinit(zz);
 
 	loop = true;
-	zzdireceiving(zz);
+	zzdireceiving(zz, tracefile);
 	while (loop && zziternext(zz, &group, &element, &len))
 	{
 		memset(str, 0, sizeof(str));
@@ -78,13 +94,13 @@ bool zzdinegotiation(struct zzfile *zz, bool server, struct zzfile *tracefile)
 		zzdiprint(zz, zzgetstring(zz, str, sizeof(str) - 1));
 	}
 
-	zzdisending(zz);
+	zzdisending(zz, tracefile);
 	zzwCS(zz, DCM_DiPeerStatus, "ACCEPTED"); // TODO, no checking... should at least check datetime for testing
 	zzwOB(zz, DCM_DiKeyChallenge, 0, "");
 	ziflush(zz->zi);
 
 	loop = true;
-	zzdireceiving(zz);
+	zzdireceiving(zz, tracefile);
 	while (loop && zziternext(zz, &group, &element, &len))
 	{
 		memset(str, 0, sizeof(str));
@@ -96,12 +112,12 @@ bool zzdinegotiation(struct zzfile *zz, bool server, struct zzfile *tracefile)
 		}
 		zzdiprint(zz, zzgetstring(zz, str, sizeof(str) - 1));
 	}
-	zzdisending(zz);
+	zzdisending(zz, tracefile);
 	zzwOB(zz, DCM_DiKeyResponse, 0, "");	// TODO
 	ziflush(zz->zi);
 
 	loop = true;
-	zzdireceiving(zz);
+	zzdireceiving(zz, tracefile);
 	while (loop && zziternext(zz, &group, &element, &len))
 	{
 		memset(str, 0, sizeof(str));
@@ -112,12 +128,12 @@ bool zzdinegotiation(struct zzfile *zz, bool server, struct zzfile *tracefile)
 		}
 		zzdiprint(zz, zzgetstring(zz, str, sizeof(str) - 1));
 	}
-	zzdisending(zz);
+	zzdisending(zz, tracefile);
 	zzwCS(zz, DCM_DiKeyStatus, "ACCEPTED");
 	ziflush(zz->zi);
 
 	loop = true;
-	zzdireceiving(zz);
+	zzdireceiving(zz, tracefile);
 	while (loop && zziternext(zz, &group, &element, &len))
 	{
 		memset(str, 0, sizeof(str));

@@ -29,7 +29,7 @@ static struct zzopts opts[] =
 	  { NULL, NULL, false, false } };              // OPT_COUNT
 
 #if 0
-static void zzdiserviceprovider(struct zzfile *zz)
+static void zzdiserviceprovider(struct zzfile *zz, struct zzfile *tracefile)
 {
 	char str[80];
 	uint16_t group, element;
@@ -71,19 +71,24 @@ int main(int argc, char **argv)
 			                     UID_LittleEndianExplicitTransferSyntax);
 			if (tracefile)
 			{
-				zitee(zz->zi, tracefile->zi);
+				zzwSQ_begin(tracefile, DCM_DiTraceSequence, NULL);
+				zitee(zz->zi, tracefile->zi, ZZIO_TEE_READ | ZZIO_TEE_WRITE);
 			}
 		}
 		strcpy(zz->net.aet, "TESTCLIENT");
 		if (zzdinegotiation(zz, false, tracefile))
 		{
 			long sq;
-			zzdisending(zz);
+			zzdisending(zz, tracefile);
 			zzwSQ_begin(zz, DCM_DiNetworkServiceSequence, &sq);
 			zzwCS(zz, DCM_DiNetworkService, "STORE");
 			//zzwPN(zz, DCM_DiNetworkRequestor, "");
 			zzwSQ_end(zz, &sq);
 			zzwCS(zz, DCM_DiDisconnect, "SUCCESS");
+		}
+		if (tracefile)
+		{
+			zzwSQ_end(tracefile, NULL);
 		}
 	}
 	tracefile = zzclose(tracefile);

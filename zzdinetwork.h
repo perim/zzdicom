@@ -7,7 +7,7 @@
 bool zzdinegotiation(struct zzfile *zz, bool server, struct zzfile *tracefile);
 
 // debug functions
-void zzdisending(struct zzfile *zz);
-void zzdireceiving(struct zzfile *zz);
+void zzdisending(struct zzfile *zz, struct zzfile *tracefile);
+void zzdireceiving(struct zzfile *zz, struct zzfile *tracefile);
 
 #endif

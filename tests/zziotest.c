@@ -85,7 +85,7 @@ static void test1(int packetsize, bool splitter)
 	tee = ziopenwrite(TEENAME, packetsize, 0);
 	assert(zi);
 	assert(tee);
-	zitee(zi, tee);
+	zitee(zi, tee, ZZIO_TEE_WRITE);
 	if (splitter)
 	{
 		zisetwriter(zi, header_write_func, HEADER_SIZE, zi);

@@ -28,14 +28,14 @@ static struct zzopts opts[] =
 	{ { "--trace", "Save a network trace dump to \"zzdiscp.dcm\"", false, false }, // OPT_TRACE
 	  { NULL, NULL, false, false } };              // OPT_COUNT
 
-static void zzdiserviceprovider(struct zzfile *zz)
+static void zzdiserviceprovider(struct zzfile *zz, struct zzfile *tracefile)
 {
 	char str[80];
 	uint16_t group, element;
 	long len;
 	bool loop = true;
 
-	zzdireceiving(zz);
+	zzdireceiving(zz, tracefile);
 	while (loop && zziternext(zz, &group, &element, &len))
 	{
 		switch (ZZ_KEY(group, element))
@@ -77,13 +77,18 @@ int main(int argc, char **argv)
 			                     UID_LittleEndianExplicitTransferSyntax);
 			if (tracefile)
 			{
-				zitee(zz->zi, tracefile->zi);
+				zzwSQ_begin(tracefile, DCM_DiTraceSequence, NULL);
+				zitee(zz->zi, tracefile->zi, ZZIO_TEE_READ | ZZIO_TEE_WRITE);
 			}
 		}
 		strcpy(zz->net.aet, "TESTNODE");
 		if (zzdinegotiation(zz, true, tracefile))
 		{
-			zzdiserviceprovider(zz);
+			zzdiserviceprovider(zz, tracefile);
+		}
+		if (tracefile)
+		{
+			zzwSQ_end(tracefile, NULL);
 		}
 	}
 	tracefile = zzclose(tracefile);
