@@ -390,21 +390,22 @@ void ziflush(struct zzio *zi)
 	assert((zi->flags & ZZIO_WRITABLE) || zi->writebuflen == 0);
 	if (zi->writebuflen > 0 && zi->writer) writeheader(zi, zi->writebufpos);
 	zi->writebufpos = 0;
-	while (zi->writebuflen > 0)
+	while (zi->writebuflen - zi->writebufpos > 0)
 	{
-		chunk = zi_write_raw(zi, zi->writebuf + zi->writebufpos, zi->writebuflen);
+		chunk = zi_write_raw(zi, zi->writebuf + zi->writebufpos, zi->writebuflen - zi->writebufpos);
 		if (chunk > 0)
 		{
-			long expand = zi->writepos + chunk - zi->filesize;
-			if (expand > 0) zi->filesize += expand;
-			zi->writebuflen -= chunk;
+			if (!(zi->flags & ZZIO_SOCKET || zi->flags & ZZIO_PIPE))
+			{
+				zi->filesize += MAX(0, zi->writepos + chunk - zi->filesize);
+			}
 			zi->writebufpos += chunk;
 			zi->byteswritten += chunk;
 		}
 		assert(zi->writebufpos <= zi->writebufsize && zi->writebufpos >= 0);
 		assert(zi->writebuflen <= zi->writebufsize);
 	}
-	assert(zi->writebuflen == 0);
+	assert(zi->writebuflen == zi->writebufpos);
 	zi->writebufpos = 0;
 	zi->writebuflen = 0;
 }
