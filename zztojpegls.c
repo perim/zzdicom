@@ -15,25 +15,25 @@
 #include "zzwrite.h"
 #include "part6.h"
 
-static void explicit1(FILE *fp, uint16_t group, uint16_t element, const char *vr, uint16_t length)
+static void explicit1(int fd, uint16_t group, uint16_t element, const char *vr, uint16_t length)
 {
-        fwrite(&group, 2, 1, fp);
-        fwrite(&element, 2, 1, fp);
-        fwrite(&vr[0], 1, 1, fp);
-        fwrite(&vr[1], 1, 1, fp);
-        fwrite(&length, 2, 1, fp);
+	write(fd, &group, 2);
+	write(fd, &element, 2);
+	write(fd, &vr[0], 1);
+	write(fd, &vr[1], 1);
+	write(fd, &length, 2);
 }
 
-static void explicit2(FILE *fp, uint16_t group, uint16_t element, const char *vr, uint32_t length)
+static void explicit2(int fd, uint16_t group, uint16_t element, const char *vr, uint32_t length)
 {
-        uint16_t zero = 0;
+	uint16_t zero = 0;
 
-        fwrite(&group, 2, 1, fp);
-        fwrite(&element, 2, 1, fp);
-        fwrite(&vr[0], 1, 1, fp);
-        fwrite(&vr[1], 1, 1, fp);
-        fwrite(&zero, 2, 1, fp);
-        fwrite(&length, 4, 1, fp);
+	write(fd, &group, 2);
+	write(fd, &element, 2);
+	write(fd, &vr[0], 1);
+	write(fd, &vr[1], 1);
+	write(fd, &zero, 2);
+	write(fd, &length, 4);
 }
 
 static bool jpegtols(char *filename)
@@ -56,7 +56,7 @@ static bool jpegtols(char *filename)
 		fprintf(stderr, "Failed to open file %s", filename);
 		exit(-1);
 	}
-	fstat(fileno(zz->fp), &st);
+	fstat(zifd(zz->zi), &st);
 	size = st.st_size;
 	strcpy(newname, zz->fullPath);
 	cptr = strrchr(newname, '.');
@@ -75,7 +75,7 @@ static bool jpegtols(char *filename)
 		return false;
 	}
 	// memory map the entire file to avoid the hassle of dynamic memory management
-	addr = mmap(NULL, zz->fileSize, PROT_READ, MAP_SHARED, fileno(zz->fp), 0);
+	addr = mmap(NULL, zz->fileSize, PROT_READ, MAP_SHARED, zifd(zz->zi), 0);
 	if (addr == MAP_FAILED)
 	{
 		fprintf(stderr, "%s - could not mmap file: %s\n", filename, strerror(errno));
@@ -112,17 +112,17 @@ static bool jpegtols(char *filename)
 			case OW:
 			case OF:
 			case UT:
-				explicit2(zw->fp, group, element, vr, len);
+				explicit2(zifd(zw->zi), group, element, vr, len);
 				break;
 			default:
-				explicit1(zw->fp, group, element, vr, len);
+				explicit1(zifd(zw->zi), group, element, vr, len);
 				break;
 			}
-			fwrite(addr + zz->current.pos, len, 1, zw->fp);	// write from mmap backing
+			write(zifd(zw->zi), addr + zz->current.pos, len);	// write from mmap backing
 		}
 		else if (element == 0)
 		{
-			explicit1(zw->fp, group, element, "UL", 0);
+			explicit1(zifd(zw->zi), group, element, "UL", 0);
 		}
 
 		// Read out valuable info
