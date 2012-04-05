@@ -107,7 +107,7 @@ static inline long zi_read_raw(struct zzio *zi, void *buf, long len, long reqlen
 				// and even if there is no actual error; in  this case,
 				// errno is set to EAGAIN or EWOULDBLOCK
 			} while (sum < reqlen && (errno == EAGAIN || errno == EWOULDBLOCK));
-			ASSERT_OR_RETURN(zi, result, result >= 0, "Read error: %s", strerror(errno));
+			//ASSERT_OR_RETURN(zi, result, result >= 0, "Read error: %s", strerror(errno));
 		}
 	}
 	else if (zi->flags & ZZIO_PIPE)
@@ -156,7 +156,7 @@ static inline long zi_write_raw(struct zzio *zi, void *buf, long len)	// zi->wri
 	{
 		result = pwrite(zi->fd, buf, len, zi->writepos);
 	}
-	ASSERT_OR_RETURN(zi, result, result != -1, "Write error: %s", strerror(errno));
+	//ASSERT_OR_RETURN(zi, result, result != -1, "Write error: %s", strerror(errno));
 	if (zi->tee && zi->teeflags & ZZIO_TEE_WRITE) // duplicate the write
 	{
 		long ret;
@@ -382,8 +382,11 @@ void ziflush(struct zzio *zi)
 	    || (zi->readbufpos + zi->readbuflen > zi->writebufpos && zi->readbufpos + zi->readbuflen < zi->writebufpos + zi->writebuflen)
 	    || (zi->readbufpos < zi->writebufpos && zi->readbufpos + zi->readbuflen > zi->writebufpos + zi->writebuflen))
 	{
-		zi->readbuflen = 0;
-		zi->readbufpos = 0;
+		if (!(zi->flags & ZZIO_WRITABLE || zi->flags & ZZIO_PIPE))
+		{
+			zi->readbuflen = 0;
+			zi->readbufpos = 0;
+		}
 	}
 
 	// commit write buffer

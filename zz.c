@@ -837,7 +837,7 @@ bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len
 
 struct zzfile *zzclose(struct zzfile *zz)
 {
-	if (zz)
+	if (zz && zz->zi)
 	{
 		ziclose(zz->zi);
 	}

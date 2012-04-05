@@ -19,7 +19,7 @@
 // network service
 #define DCM_DiNetworkServiceSequence             ZZ_KEY(DIGROUP, 0x1000) // SQ
 #define DCM_DiNetworkService                     ZZ_KEY(DIGROUP, 0x1001) // CS, one of "STORE", "QUERY", "RETRIEVE", "INFO", "ACCESS"
-#define DCM_DiNetworkRequestor                   ZZ_KEY(DIGROUP, 0x1002) // PN, person making request
+#define DCM_DiNetworkServiceRequestor            ZZ_KEY(DIGROUP, 0x1002) // PN, person making request
 #define DCM_DiNetworkServiceStatus               ZZ_KEY(DIGROUP, 0x1100) // CS, "ACCEPTED" or "SERVICE DENIED" or "NO SERVICE"
 
 // storage

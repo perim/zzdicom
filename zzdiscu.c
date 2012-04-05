@@ -56,41 +56,30 @@ static void zzdiserviceprovider(struct zzfile *zz, struct zzfile *tracefile)
 
 int main(int argc, char **argv)
 {
-	struct zzfile szz, *zz, stracefile, *tracefile = NULL;
+	struct zznetwork *zzn;
 
 	(void) zzutil(argc, argv, 0, "", "DICOM experimental network client", opts);
 
-	zz = zznetconnect("", "127.0.0.1", 5104, &szz, 0);
-	if (zz)
+	zzn = zznetconnect("", "127.0.0.1", 5104, 0);
+	if (zzn)
 	{
 		if (opts[OPT_TRACE].found)
 		{
-			char buf[100];
-			memset(buf, 0, sizeof(buf));
-			tracefile = zzcreate("zzdiscu.dcm", &stracefile, "1.2.3.4", zzmakeuid(buf, sizeof(buf) - 1), 
-			                     UID_LittleEndianExplicitTransferSyntax);
-			if (tracefile)
-			{
-				zzwSQ_begin(tracefile, DCM_DiTraceSequence, NULL);
-				zitee(zz->zi, tracefile->zi, ZZIO_TEE_READ | ZZIO_TEE_WRITE);
-			}
+			zznettrace(zzn, "zzdiscu.dcm");
 		}
-		strcpy(zz->net.aet, "TESTCLIENT");
-		if (zzdinegotiation(zz, false, tracefile))
+		strcpy(zzn->out->net.aet, "TESTCLIENT");
+		if (zzdinegotiation(zzn))
 		{
-			long sq;
-			zzdisending(zz, tracefile);
-			zzwSQ_begin(zz, DCM_DiNetworkServiceSequence, &sq);
-			zzwCS(zz, DCM_DiNetworkService, "STORE");
-			//zzwPN(zz, DCM_DiNetworkRequestor, "");
-			zzwSQ_end(zz, &sq);
-			zzwCS(zz, DCM_DiDisconnect, "SUCCESS");
+			zzdisending(zzn);
+			zzwSQ_begin(zzn->out, DCM_DiNetworkServiceSequence, NULL);
+			zzwItem_begin(zzn->out, NULL);
+			zzwCS(zzn->out, DCM_DiNetworkService, "STORE");
+			//zzwPN(zzn->out, DCM_DiNetworkRequestor, "");
+			zzwItem_end(zzn->out, NULL);
+			zzwSQ_end(zzn->out, NULL);
+			zzwCS(zzn->out, DCM_DiDisconnect, "SUCCESS");
 		}
-		if (tracefile)
-		{
-			zzwSQ_end(tracefile, NULL);
-		}
+		zznetclose(zzn);
 	}
-	tracefile = zzclose(tracefile);
 	return 0;
 }

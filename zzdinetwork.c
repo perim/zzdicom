@@ -14,34 +14,40 @@
 
 static bool starteditem = false;
 
-void zzdisending(struct zzfile *zz, struct zzfile *tracefile)
+void zzdisending(struct zznetwork *zzn)
 {
 	if (starteditem)
 	{
-		zzwItem_end(tracefile, NULL);
+		zzwItem_end(zzn->trace, NULL);
 	}
 	if (zzisverbose())
 	{
-		printf("\033[22m\033[33mSENDING -> %s: \033[0m\n", zz->net.address);
+		printf("\033[22m\033[33mSENDING -> %s: \033[0m\n", zzn->in->net.address);
 	}
-	zzwItem_begin(tracefile, NULL);
-	zzwCS(tracefile, DCM_DiTraceLog, "SENT");
-	starteditem = true;
+	if (zzn->trace)
+	{
+		zzwItem_begin(zzn->trace, NULL);
+		zzwCS(zzn->trace, DCM_DiTraceLog, "SENT");
+		starteditem = true;
+	}
 }
 
-void zzdireceiving(struct zzfile *zz, struct zzfile *tracefile)
+void zzdireceiving(struct zznetwork *zzn)
 {
 	if (starteditem)
 	{
-		zzwItem_end(tracefile, NULL);
+		zzwItem_end(zzn->trace, NULL);
 	}
 	if (zzisverbose())
 	{
-		printf("\033[22m\033[33mRECEIVING <- %s: \033[0m\n", zz->net.address);
+		printf("\033[22m\033[33mRECEIVING <- %s: \033[0m\n", zzn->in->net.address);
 	}
-	zzwItem_begin(tracefile, NULL);
-	zzwCS(tracefile, DCM_DiTraceLog, "RECEIVED");
-	starteditem = true;
+	if (zzn->trace)
+	{
+		zzwItem_begin(zzn->trace, NULL);
+		zzwCS(zzn->trace, DCM_DiTraceLog, "RECEIVED");
+		starteditem = true;
+	}
 }
 
 void zzdiprint(struct zzfile *zz, const char *str)
@@ -54,33 +60,32 @@ void zzdiprint(struct zzfile *zz, const char *str)
 	}
 }
 
-bool zzdinegotiation(struct zzfile *zz, bool server, struct zzfile *tracefile)
+bool zzdinegotiation(struct zznetwork *zzn)
 {
 	struct timeval tv;
 	char str[80];
 	bool loop;
 	uint16_t group, element;
 	long len;
+	struct zzfile *tracefile = zzn->trace;
 
-	(void)server; // FIXME
+	zzn->in->utf8 = zzn->out->utf8 = true;
+	zzn->in->ladder[0].txsyn = zzn->out->ladder[0].txsyn = ZZ_EXPLICIT;
+	zzn->in->ladder[0].type = zzn->out->ladder[0].type = ZZ_BASELINE;
 
-	zz->utf8 = true;
-	zz->ladder[0].txsyn = ZZ_EXPLICIT;
-	zz->ladder[0].type = ZZ_BASELINE;
-
-	zzdisending(zz, tracefile);
-	zzwCS(zz, DCM_DiProtocolIdentification, "DICOMDIRECT1");
-	zzwLO(zz, DCM_DiPeerName, zz->net.aet);
-	zzwLO(zz, DCM_DiPeerKeyHash, "");	// TODO
+	zzdisending(zzn);
+	zzwCS(zzn->out, DCM_DiProtocolIdentification, "DICOMDIRECT1");
+	zzwLO(zzn->out, DCM_DiPeerName, zzn->out->net.aet);
+	zzwLO(zzn->out, DCM_DiPeerKeyHash, "");	// TODO
 	gettimeofday(&tv, NULL);
-	zzwDT(zz, DCM_DiPeerCurrentDateTime, tv);
-	ziflush(zz->zi);
+	zzwDT(zzn->out, DCM_DiPeerCurrentDateTime, tv);
+	ziflush(zzn->out->zi);
 
-	zziterinit(zz);
+	zziterinit(zzn->in);
 
 	loop = true;
-	zzdireceiving(zz, tracefile);
-	while (loop && zziternext(zz, &group, &element, &len))
+	zzdireceiving(zzn);
+	while (loop && zziternext(zzn->in, &group, &element, &len))
 	{
 		memset(str, 0, sizeof(str));
 		switch (ZZ_KEY(group, element))
@@ -91,17 +96,17 @@ bool zzdinegotiation(struct zzfile *zz, bool server, struct zzfile *tracefile)
 		case DCM_DiPeerKeyHash: break;
 		default: printf("(%04x,%04x) ignored\n", (unsigned)group, (unsigned)element); break;	// ignore
 		}
-		zzdiprint(zz, zzgetstring(zz, str, sizeof(str) - 1));
+		zzdiprint(zzn->in, zzgetstring(zzn->in, str, sizeof(str) - 1));
 	}
 
-	zzdisending(zz, tracefile);
-	zzwCS(zz, DCM_DiPeerStatus, "ACCEPTED"); // TODO, no checking... should at least check datetime for testing
-	zzwOB(zz, DCM_DiKeyChallenge, 0, "");
-	ziflush(zz->zi);
+	zzdisending(zzn);
+	zzwCS(zzn->out, DCM_DiPeerStatus, "ACCEPTED"); // TODO, no checking... should at least check datetime for testing
+	zzwOB(zzn->out, DCM_DiKeyChallenge, 0, "");
+	ziflush(zzn->out->zi);
 
 	loop = true;
-	zzdireceiving(zz, tracefile);
-	while (loop && zziternext(zz, &group, &element, &len))
+	zzdireceiving(zzn);
+	while (loop && zziternext(zzn->in, &group, &element, &len))
 	{
 		memset(str, 0, sizeof(str));
 		switch (ZZ_KEY(group, element))
@@ -110,15 +115,15 @@ bool zzdinegotiation(struct zzfile *zz, bool server, struct zzfile *tracefile)
 		case DCM_DiKeyChallenge: loop = false; break;
 		default: break;	// ignore
 		}
-		zzdiprint(zz, zzgetstring(zz, str, sizeof(str) - 1));
+		zzdiprint(zzn->in, zzgetstring(zzn->in, str, sizeof(str) - 1));
 	}
-	zzdisending(zz, tracefile);
-	zzwOB(zz, DCM_DiKeyResponse, 0, "");	// TODO
-	ziflush(zz->zi);
+	zzdisending(zzn);
+	zzwOB(zzn->out, DCM_DiKeyResponse, 0, "");	// TODO
+	ziflush(zzn->out->zi);
 
 	loop = true;
-	zzdireceiving(zz, tracefile);
-	while (loop && zziternext(zz, &group, &element, &len))
+	zzdireceiving(zzn);
+	while (loop && zziternext(zzn->in, &group, &element, &len))
 	{
 		memset(str, 0, sizeof(str));
 		switch (ZZ_KEY(group, element))
@@ -126,15 +131,15 @@ bool zzdinegotiation(struct zzfile *zz, bool server, struct zzfile *tracefile)
 		case DCM_DiKeyResponse: loop = false; break;
 		default: break;	// ignore
 		}
-		zzdiprint(zz, zzgetstring(zz, str, sizeof(str) - 1));
+		zzdiprint(zzn->in, zzgetstring(zzn->in, str, sizeof(str) - 1));
 	}
-	zzdisending(zz, tracefile);
-	zzwCS(zz, DCM_DiKeyStatus, "ACCEPTED");
-	ziflush(zz->zi);
+	zzdisending(zzn);
+	zzwCS(zzn->out, DCM_DiKeyStatus, "ACCEPTED");
+	ziflush(zzn->out->zi);
 
 	loop = true;
-	zzdireceiving(zz, tracefile);
-	while (loop && zziternext(zz, &group, &element, &len))
+	zzdireceiving(zzn);
+	while (loop && zziternext(zzn->in, &group, &element, &len))
 	{
 		memset(str, 0, sizeof(str));
 		switch (ZZ_KEY(group, element))
@@ -142,7 +147,7 @@ bool zzdinegotiation(struct zzfile *zz, bool server, struct zzfile *tracefile)
 		case DCM_DiKeyStatus: loop = false; break;
 		default: break;	// ignore
 		}
-		zzdiprint(zz, zzgetstring(zz, str, sizeof(str) - 1));
+		zzdiprint(zzn->in, zzgetstring(zzn->in, str, sizeof(str) - 1));
 	}
 	// We are now connected and operational
 	if (loop) printf("Ran out of data!\n");

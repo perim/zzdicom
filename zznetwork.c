@@ -1,5 +1,7 @@
 #include "zznetwork.h"
 #include "zzio.h"
+#include "zzwrite.h"
+#include "zzditags.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -26,7 +28,6 @@ union socketfamily
 
 static void setzz(struct zzfile *zz, const char *interface)
 {
-	memset(zz, 0, sizeof(*zz));
 	if (interface)
 	{
 		strncpy(zz->net.interface, interface, sizeof(zz->net.interface) - 1);
@@ -46,7 +47,7 @@ static void sigchld_handler(int s)
 }
 
 // FIXME: Use interface
-struct zzfile *zznetlisten(const char *interface, int port, struct zzfile *zz, int flags)
+struct zznetwork *zznetlisten(const char *interface, int port, int flags)
 {
 	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
@@ -57,8 +58,13 @@ struct zzfile *zznetlisten(const char *interface, int port, struct zzfile *zz, i
 	int rv;
 	char portstr[10];
 	union socketfamily their_addr; // connector's address information
+	struct zznetwork *zzn = calloc(1, sizeof(*zzn));
+	zzn->in = calloc(1, sizeof(*zzn->in));
+	zzn->out = calloc(1, sizeof(*zzn->out));
+	zzn->server = true;
 
-	setzz(zz, interface);
+	setzz(zzn->in, interface);
+	setzz(zzn->out, interface);
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
@@ -128,26 +134,28 @@ struct zzfile *zznetlisten(const char *interface, int port, struct zzfile *zz, i
 			perror("accept");
 			continue;
 		}
-		memset(zz->net.address, 0, sizeof(zz->net.address));
+		memset(zzn->in->net.address, 0, sizeof(zzn->in->net.address));
 		if (their_addr.sa.sa_family == AF_INET)
 		{
 			inet_ntop(their_addr.sa_stor.ss_family, &their_addr.sa_in.sin_addr, s, sizeof(s));	// ipv4
-			strncpy(zz->net.address, s, sizeof(zz->net.address) - 1);
+			strncpy(zzn->in->net.address, s, sizeof(zzn->in->net.address) - 1);
 			//printf("server: got ipv4 connection from %s\n", s);
 		}
 		else
 		{
 			inet_ntop(their_addr.sa_stor.ss_family, &their_addr.sa_in6.sin6_addr, s, sizeof(s));	// ipv6
-			strncpy(zz->net.address, s, sizeof(zz->net.address) - 1);
+			strncpy(zzn->in->net.address, s, sizeof(zzn->in->net.address) - 1);
 			//printf("server: got ipv6 connection from %s\n", s);
 		}
+		memcpy(zzn->out->net.address, zzn->in->net.address, sizeof(zzn->out->net.address));
 
 		if (flags & ZZNET_NO_FORK || !fork())
 		{
 			// this is the child process
 			close(sockfd); // child doesn't need the listener
-			zz->zi = ziopensocket(new_fd, 0);
-			return zz;
+			zzn->in->zi = ziopensocket(new_fd, 0);
+			zzn->out->zi = zzn->in->zi;
+			return zzn;
 		}
 		close(new_fd);  // parent doesn't need this
 	}
@@ -155,17 +163,22 @@ struct zzfile *zznetlisten(const char *interface, int port, struct zzfile *zz, i
 }
 
 // FIXME: Use interface
-struct zzfile *zznetconnect(const char *interface, const char *host, int port, struct zzfile *zz,	int flags)
+struct zznetwork *zznetconnect(const char *interface, const char *host, int port, int flags)
 {
 	int sockfd, numbytes;
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
 	char portstr[10];
+	struct zznetwork *zzn = calloc(1, sizeof(*zzn));
+	zzn->in = calloc(1, sizeof(*zzn->in));
+	zzn->out = calloc(1, sizeof(*zzn->out));
+
+	setzz(zzn->in, interface);
+	setzz(zzn->out, interface);
 
 	(void)flags;
 
-	setzz(zz, interface);
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
@@ -197,17 +210,57 @@ struct zzfile *zznetconnect(const char *interface, const char *host, int port, s
 
 	if (p == NULL)
 	{
-		//fprintf(stderr, "client: failed to connect\n");
+		fprintf(stderr, "client: failed to connect\n");
+		zznetclose(zzn);
+		freeaddrinfo(servinfo); // all done with this structure
 		return NULL;
 	}
 
 	inet_ntop(p->ai_family, p->ai_addr, s, sizeof(s));
-	memset(zz->net.address, 0, sizeof(zz->net.address));
-	strncpy(zz->net.address, s, sizeof(zz->net.address) - 1);
+	memset(zzn->in->net.address, 0, sizeof(zzn->in->net.address));
+	strncpy(zzn->in->net.address, s, sizeof(zzn->in->net.address) - 1);
+	memcpy(zzn->out->net.address, zzn->in->net.address, sizeof(zzn->out->net.address));
 	//printf("client: connecting to %s\n", s);
 
 	freeaddrinfo(servinfo); // all done with this structure
 
-	zz->zi = ziopensocket(sockfd, 0);
-	return zz;
+	zzn->in->zi = ziopensocket(sockfd, 0);
+	zzn->out->zi = zzn->in->zi;
+	zzn->server = false;
+	return zzn;
+}
+
+struct zznetwork *zznetclose(struct zznetwork *zzn)
+{
+	zzclose(zzn->in);
+	zzn->out->zi = NULL; // since we refer to same descriptor, make sure don't free twice
+	zzclose(zzn->out);
+	if (zzn->trace)
+	{
+		zzwItem_end(zzn->trace, NULL); // finalize last entry
+		zzwSQ_end(zzn->trace, NULL); // finalize trace sequence
+		zzclose(zzn->trace); // close last
+		free(zzn->trace);
+	}
+	free(zzn->in);
+	free(zzn->out);
+	free(zzn);
+	return NULL;
+}
+
+void zznettrace(struct zznetwork *zzn, const char *filename)
+{
+	char buf[100];
+	struct zzfile *tracefile = calloc(1, sizeof(*tracefile));
+
+	memset(buf, 0, sizeof(buf));
+	zzn->trace = zzcreate(filename, tracefile, "1.2.3.4", zzmakeuid(buf, sizeof(buf) - 1),
+	                      UID_LittleEndianExplicitTransferSyntax);
+	if (zzn->trace)
+	{
+		// We only need to set it for 'in', since they share the same descriptor
+		zitee(zzn->in->zi, zzn->trace->zi, ZZIO_TEE_READ | ZZIO_TEE_WRITE);
+		// Start first sequence
+		zzwSQ_begin(zzn->trace, DCM_DiTraceSequence, NULL);
+	}
 }

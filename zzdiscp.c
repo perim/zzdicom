@@ -28,69 +28,66 @@ static struct zzopts opts[] =
 	{ { "--trace", "Save a network trace dump to \"zzdiscp.dcm\"", false, false }, // OPT_TRACE
 	  { NULL, NULL, false, false } };              // OPT_COUNT
 
-static void zzdiserviceprovider(struct zzfile *zz, struct zzfile *tracefile)
+static void zzdiserviceprovider(struct zznetwork *zzn)
 {
 	char str[80];
 	uint16_t group, element;
 	long len;
 	bool loop = true;
+	bool newservice = false;
 
-	zzdireceiving(zz, tracefile);
-	while (loop && zziternext(zz, &group, &element, &len))
+	zzdireceiving(zzn);
+	while (loop && zziternext(zzn->in, &group, &element, &len))
 	{
 		switch (ZZ_KEY(group, element))
 		{
 		case DCM_DiNetworkServiceSequence:
-			printf("NEW SERVICE SQ\n");
+			newservice = true;
 			break;
 		case DCM_DiNetworkService:
-			printf("Service = %s\n", zzgetstring(zz, str, sizeof(str) - 1));
-			zzwCS(zz, DCM_DiNetworkServiceStatus, "ACCEPTED"); // TODO check validity of above
-			ziflush(zz->zi);
+			assert(newservice);
+			printf("Service = %s\n", zzgetstring(zzn->in, str, sizeof(str) - 1));
+			zzdisending(zzn);
+			zzwCS(zzn->out, DCM_DiNetworkServiceStatus, "ACCEPTED"); // TODO check validity of above
+			ziflush(zzn->out->zi);
+			zzdireceiving(zzn);
+			newservice = false;
 			break;
 		case DCM_DiDisconnect:
 			loop = false;
 			printf("-- disconnect --\n");
 			break;
+		case DCM_ItemDelimitationItem:
+		case DCM_SequenceDelimitationItem:
+		case DCM_Item:
+			break;
 		default:
-			printf("unknown tag\n");
+			printf("unknown tag (%04x,%04x)\n", group, element);
 			break;	// ignore
 		}
 	}
-	ziclose(zz->zi);
 }
 
 int main(int argc, char **argv)
 {
-	struct zzfile szz, *zz, stracefile, *tracefile = NULL;
+	struct zznetwork *zzn;
+	struct zzfile stracefile;
 
 	(void) zzutil(argc, argv, 0, "", "DICOM experimental network server", opts);
 
-	zz = zznetlisten("", 5104, &szz, ZZNET_NO_FORK);
-	if (zz)
+	zzn = zznetlisten("", 5104, ZZNET_NO_FORK);
+	if (zzn)
 	{
 		if (opts[OPT_TRACE].found)
 		{
-			char buf[100];
-			memset(buf, 0, sizeof(buf));
-			tracefile = zzcreate("zzdiscp.dcm", &stracefile, "1.2.3.4", zzmakeuid(buf, sizeof(buf) - 1), 
-			                     UID_LittleEndianExplicitTransferSyntax);
-			if (tracefile)
-			{
-				zzwSQ_begin(tracefile, DCM_DiTraceSequence, NULL);
-				zitee(zz->zi, tracefile->zi, ZZIO_TEE_READ | ZZIO_TEE_WRITE);
-			}
+			zznettrace(zzn, "zzdiscp.dcm");
 		}
-		strcpy(zz->net.aet, "TESTNODE");
-		if (zzdinegotiation(zz, true, tracefile))
+		strcpy(zzn->out->net.aet, "TESTNODE");
+		if (zzdinegotiation(zzn))
 		{
-			zzdiserviceprovider(zz, tracefile);
+			zzdiserviceprovider(zzn);
 		}
-		if (tracefile)
-		{
-			zzwSQ_end(tracefile, NULL);
-		}
+		zznetclose(zzn);
 	}
-	tracefile = zzclose(tracefile);
 	return 0;
 }
