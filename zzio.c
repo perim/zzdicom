@@ -382,7 +382,7 @@ void ziflush(struct zzio *zi)
 	    || (zi->readbufpos + zi->readbuflen > zi->writebufpos && zi->readbufpos + zi->readbuflen < zi->writebufpos + zi->writebuflen)
 	    || (zi->readbufpos < zi->writebufpos && zi->readbufpos + zi->readbuflen > zi->writebufpos + zi->writebuflen))
 	{
-		if (!(zi->flags & ZZIO_WRITABLE || zi->flags & ZZIO_PIPE))
+		if (!(zi->flags & ZZIO_SOCKET || zi->flags & ZZIO_PIPE))
 		{
 			zi->readbuflen = 0;
 			zi->readbufpos = 0;
