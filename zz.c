@@ -622,6 +622,10 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		zz->ladder[1].type = ZZ_GROUP;
 		zz->ladder[1].item = -1;
 	}
+	else if (zz->ladder[zz->ladderidx].csahack)
+	{
+		// do nothing
+	}
 	else if (header.element == 0x0000 || (key != DCM_PixelData && *len == UNLIMITED) || zz->current.vr == SQ || key == DCM_Item)
 	{
 		// Entered into a group or sequence, copy parameters
@@ -631,6 +635,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 			return false;	// stop parsing and give up!
 		}
 		zz->ladderidx++;
+		memset(&zz->ladder[zz->ladderidx], 0, sizeof(zz->ladder[zz->ladderidx]));
 		zz->ladder[zz->ladderidx].group = header.group;
 		zz->ladder[zz->ladderidx].element = header.element;
 		if (header.element == 0x0000)
@@ -680,7 +685,8 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	}
 
 	// Is it a private group creator?
-	if (zz->privmax < MAX_LADDER && zz->current.group % 2 > 0 && zz->current.element < 0x1000 && zz->current.vr == LO)
+	if (zz->privmax < MAX_LADDER && zz->current.group % 2 > 0 && zz->current.element < 0x1000 && zz->current.vr == LO
+	    && !zz->ladder[zz->ladderidx].csahack)
 	{
 		zz->privmax++;
 		zz->privgroup[zz->privmax].offset = zz->current.element << 8;

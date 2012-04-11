@@ -194,6 +194,7 @@ struct zzfile
 		uint16_t	element;	// which element we are in
 		enum zzsteptype	type;		// type of group
 		int		item;		// item number in sequence, or -1 if not in a sequence, zero indexed
+		bool		csahack;	// hack for iterating through Siemens CSA tags in broken DICOM
 	} ladder[MAX_LADDER];
 
 	/// While almost all DICOM state can be maintained using a single stack,

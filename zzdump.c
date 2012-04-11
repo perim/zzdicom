@@ -137,6 +137,7 @@ void dumpcsa(struct zzfile *zz)
 			zz->current.length = UNLIMITED; // force parsing
 			zz->current.group = 0x000; // silence verify warning
 			zz->current.element = 0x000; // silence verify warning
+			zz->ladder[zz->ladderidx].csahack = true; // ignore groups etc
 			return;
 		}
 		ziread(zz->zi, &ntags, 4);
@@ -245,7 +246,10 @@ void dump(struct zzfile *zz)
 	while (zziternext(zz, &group, &element, &len))
 	{
 		// Extra checks
-		zzverify(zz);
+		if (!zz->ladder[zz->ladderidx].csahack)
+		{
+			zzverify(zz);
+		}
 
 		// Dictionary magic
 		vm = "?";
@@ -297,13 +301,13 @@ void dump(struct zzfile *zz)
 
 		for (i = 0; i < zz->currNesting; i++) printf("  ");
 
-		if (group > 0x0002 && element == 0x0000)	// generic group length
+		if (group > 0x0002 && element == 0x0000 && !zz->ladder[zz->ladderidx].csahack)	// generic group length
 		{
 			if (zz->current.vr == NO) zz->current.vr = UL; // has to be
 			description = "Generic Group Length";
 			vm = "1";
 		}
-		else if (group % 2 > 0 && element < 0x1000 && element > 0x0010 && len != UNLIMITED)
+		else if (group % 2 > 0 && element < 0x1000 && element > 0x0010 && len != UNLIMITED && !zz->ladder[zz->ladderidx].csahack)
 		{
 			if (zz->current.vr == NO) zz->current.vr = LO; // educated guess
 			description = "Private Creator";
