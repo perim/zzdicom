@@ -89,7 +89,7 @@ static inline long zi_write_raw(struct zzio *zi, void *buf, long len);
 // FIXME - MSG_DONTWAIT does not work on *BSD! need to set socket to non-blocking...
 static inline long zi_read_raw(struct zzio *zi, void *buf, long len, long reqlen)
 {
-	long result, sum;
+	long result = 0, sum;
 	if (zi->flags & ZZIO_SOCKET)
 	{
 		errno = 0;
