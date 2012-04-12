@@ -3,12 +3,13 @@ project(zzdicom)
 
 find_package(OpenGL)
 find_package(GLUT)
+find_library(LIBUUID_LIBRARIES uuid)
 
 enable_testing()
 
 add_definitions("-Wall -Werror -Wformat=2 -Wno-unused")
 add_library(zzdicom zzio.c zzio.h zz.c zzwrite.c zzsql.c zzverify.c zz_priv.h zzwrite.h zzsql.h zztexture.c zztexture.h)
-target_link_libraries(zzdicom ${OPENGL_LIBRARIES})
+target_link_libraries(zzdicom ${OPENGL_LIBRARIES} ${LIBUUID_LIBRARIES})
 set_target_properties(zzdicom PROPERTIES COMPILE_FLAGS "-I /usr/local/include")
 
 add_executable(zzanon zzanon.c)
