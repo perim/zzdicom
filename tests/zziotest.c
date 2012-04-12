@@ -257,6 +257,9 @@ static void test4(int bufsize, const char *srcfile)
 	char *mem, *mem2;
 	int i;
 
+	assert(src);
+	assert(dst);
+
 	zisetbuffersize(src, bufsize);
 	zisetbuffersize(dst, bufsize);
 
@@ -313,6 +316,9 @@ static void test5(int bufsize, const char *srcfile, int padding)
 	char *mem, *mem2;
 	int i;
 
+	assert(src);
+	assert(dst);
+
 	zisetbuffersize(src, bufsize);
 	zisetbuffersize(dst, bufsize);
 
@@ -364,10 +370,21 @@ static void test5(int bufsize, const char *srcfile, int padding)
 	free(mem2);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
-	const char *srcfile = "samples/tw2.dcm";
-	const char *srcfile2 = "samples/spine.dcm";
+	const char *srcfile;
+	const char *srcfile2;
+
+	if (argc < 3)
+	{
+		srcfile = "samples/tw2.dcm";
+		srcfile2 = "samples/spine.dcm";
+	}
+	else
+	{
+		srcfile = argv[1];
+		srcfile2 = argv[2];
+	}
 
 	// Round # 1 - getc, putc
 	test1(128, false);
