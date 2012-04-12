@@ -19,7 +19,7 @@
 	} \
 }
 #else
-#define verboseprint(...)
+#define verboseprint(...) {}
 #endif
 
 static inline bool explicit(struct zzfile *zz) { return zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT; }
@@ -97,7 +97,7 @@ void zzwSQ(struct zzfile *zz, zzKey key, uint32_t size)
 void zzwUN(struct zzfile *zz, zzKey key, uint32_t size)
 {
 	writetag(zz, key, UN, size);
-	if (size == UNLIMITED) verboseprint(zz, "\033[22m\033[33m(Sequence)\033[0m")
+	if ((long)size == UNLIMITED) verboseprint(zz, "\033[22m\033[33m(Sequence)\033[0m")
 	else verboseprint(zz, "\033[22m\033[33m(Unknown)\033[0m");
 }
 
