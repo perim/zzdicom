@@ -212,7 +212,7 @@ int main(int argc, char **argv)
 {
 	int i;
 
-	for (i = zzutil(argc, argv, 2, "<filenames>", "Convert uncompressed to JPEG-ls compressed DICOM", NULL); i < argc; i++)
+	for (i = zzutil(argc, argv, 1, "<filenames>", "Convert uncompressed to JPEG-ls compressed DICOM", NULL); i < argc; i++)
 	{
 		jpegtols(argv[i]);
 	}

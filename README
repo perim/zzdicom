@@ -57,6 +57,8 @@ zzmkrandom - generates a pseudo-random DICOM file for use in manual testing or a
 framework. You can pass a random seed on the command line, or let it generate its own random
 seed. The random seed used is saved in the Instance Number tag.
 
+zzpixel - manipulates pixel values in a DICOM file.
+
 Credits
 -------
 This project would not have been possible without reusing some content from the DCMTK and GDCM

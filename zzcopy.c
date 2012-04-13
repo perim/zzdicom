@@ -15,8 +15,8 @@ enum
 };
 
 static struct zzopts opts[] =
-	{ { "--rgb", "Convert to RGB", false, false },	// OPT_RGB
-	  { NULL, NULL, false, false } };		// OPT_COUNT
+	{ { "--rgb", "Convert to RGB", false, false, 0, 0 },	// OPT_RGB
+	  { NULL, NULL, false, false, 0, 0 } };		// OPT_COUNT
 
 void copy(const char *destination, const char *source)
 {
@@ -175,7 +175,7 @@ void copy(const char *destination, const char *source)
 
 int main(int argc, char **argv)
 {
-	int firstparam = zzutil(argc, argv, 3, "<source> <destination>", "DICOM file copy and convert", opts);
+	int firstparam = zzutil(argc, argv, 2, "<source> <destination>", "DICOM file copy and convert", opts);
 	copy(argv[firstparam + 1], argv[firstparam]);
 	return 0;
 }

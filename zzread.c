@@ -13,7 +13,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Error opening local DICOM database - aborting.\n");
 		exit(-1);
 	}
-	for (i = zzutil(argc, argv, 2, "<filenames>", "Add files to local DICOM database", NULL); i < argc; i++)
+	for (i = zzutil(argc, argv, 1, "<filenames>", "Add files to local DICOM database", NULL); i < argc; i++)
 	{
 		zz = zzopen(argv[i], "r", &szz);
 		if (zz)

@@ -17,8 +17,8 @@ enum
 };
 
 static struct zzopts opts[] =
-	{ { "--stdin", "Read data from standard input", true, false }, // OPT_STDIN
-	  { NULL, NULL, 0, false } };              // OPT_COUNT
+	{ { "--stdin", "Read data from standard input", true, false, 0, 0 }, // OPT_STDIN
+	  { NULL, NULL, false, false, 0, 0 } };              // OPT_COUNT
 
 static const char *txsyn2str(enum zztxsyn syn)
 {
@@ -376,7 +376,7 @@ int main(int argc, char **argv)
 {
 	int i;
 
-	i = zzutil(argc, argv, 2, "[<filenames>]", "DICOM tag dumper", opts);
+	i = zzutil(argc, argv, 1, "[<filenames>]", "DICOM tag dumper", opts);
 	if (opts[OPT_STDIN].found)
 	{
 		struct zzfile szz, *zz;

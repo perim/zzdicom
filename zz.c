@@ -706,6 +706,7 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 {
 	FILE *out = stderr;
 	int i, ignparams = 1;	// always tell caller to ignore argv[0]
+	int extraparams = 0;	// params required by other params
 	bool usageReq = false;
 	struct zzopts *iter;
 
@@ -717,7 +718,12 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 	}
 	for (i = 1; i < argc; i++)
 	{
-		if (strcmp(argv[i], "--") == 0)
+		if (extraparams)
+		{
+			// eat this parameter
+			extraparams--;
+		}
+		else if (strcmp(argv[i], "--") == 0)
 		{
 			ignparams++;
 			break;	// stop parsing command line parameters
@@ -725,14 +731,14 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 		else if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0)
 		{
 			fprintf(stdout, "%s\n", help);
-			fprintf(stdout, "  %-10s Verbose output\n", "-v");
-			fprintf(stdout, "  %-10s This help\n", "-h|--help");
-			fprintf(stdout, "  %-10s Version of zzdicom package\n", "--version");
-			fprintf(stdout, "  %-10s Short help\n", "--usage");
+			fprintf(stdout, "  %-28s Verbose output\n", "-v");
+			fprintf(stdout, "  %-28s This help\n", "-h|--help");
+			fprintf(stdout, "  %-28s Version of zzdicom package\n", "--version");
+			fprintf(stdout, "  %-28s Short help\n", "--usage");
 			iter = opts;
 			while (iter && iter->opt)	// null-entry terminated
 			{
-				fprintf(stdout, "  %-10s %s\n", iter->opt, iter->description);
+				fprintf(stdout, "  %-28s %s\n", iter->opt, iter->description);
 				iter++;
 			}
 			usageReq = true;
@@ -758,19 +764,24 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 			iter = opts;
 			while (iter && iter->opt)
 			{
-				if (strcmp(argv[i], iter->opt) == 0)
+				int lim = strlen(iter->opt);
+				char *space = strchr(iter->opt, ' ');
+				if (space)
+				{
+					lim = space - iter->opt;
+				}
+				if (strncmp(argv[i], iter->opt, lim) == 0)
 				{
 					iter->found = true;
-					if (!iter->counts)
-					{
-						ignparams++;
-					}
+					iter->argstart = i;
+					ignparams += 1 - (int)iter->counts + iter->args;
+					extraparams += iter->args;
 				}
 				iter++;
 			}
 		}
 	}
-	if (usageReq || argc < minArgs + ignparams - 1)
+	if (extraparams || usageReq || argc - ignparams < minArgs)
 	{
 		fprintf(out, "Usage: %s [-v|--version|-h|--usage", argv[0]);
 		iter = opts;

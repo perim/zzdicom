@@ -124,6 +124,8 @@ struct zzopts	// list of command-line options; NULL-terminate it
 	const char *description;
 	bool counts; ///< does this count as a required argument?
 	bool found;
+	int args; ///< number of arguments this option takes
+	int argstart; ///< where in list our arguments start (less than the return value of the zzutil() call)
 };
 
 /// Maximum amount of recursiveness in a DICOM file. Note that this includes
@@ -246,7 +248,9 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 struct zzfile *zzstdin(struct zzfile *infile);
 struct zzfile *zzclose(struct zzfile *zz);
 
-/// Utility function to process some common command-line arguments. Returns the number of initial arguments to ignore.
+/// Utility function to process some common command-line arguments. Returns the index of the first 
+/// required argument to process.
+/// minArgs -- minimum number of arguments required, not counting any optional arguments in opts
 int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *help, struct zzopts *opts);
 
 /// Utility iterator that wraps zzread. Passing in a NULL pointer for zz makes it a no-op.

@@ -25,8 +25,8 @@ enum
 };
 
 static struct zzopts opts[] =
-	{ { "--trace", "Save a network trace dump to \"zzdiscu.dcm\"", false, false }, // OPT_TRACE
-	  { NULL, NULL, false, false } };              // OPT_COUNT
+	{ { "--trace", "Save a network trace dump to \"zzdiscu.dcm\"", false, false, 0, 0 }, // OPT_TRACE
+	  { NULL, NULL, false, false, 0, 0 } };              // OPT_COUNT
 
 #if 0
 static void zzdiserviceprovider(struct zzfile *zz, struct zzfile *tracefile)

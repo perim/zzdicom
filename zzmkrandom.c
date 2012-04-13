@@ -20,8 +20,8 @@ enum
 };
 
 static struct zzopts opts[] =
-	{ { "--stdout", "Output result to stdout", false, false },	// OPT_STDOUT
-	  { NULL, NULL, false, false } };		// OPT_COUNT
+	{ { "--stdout", "Output result to stdout", false, false, 0, 0 },	// OPT_STDOUT
+	  { NULL, NULL, false, false, 0, 0 } };		// OPT_COUNT
 
 static long zseed = 0; // stored in instance number
 	

@@ -9,6 +9,16 @@
 
 #include "part6.h"
 
+enum
+{
+	OPT_ZERO,
+	OPT_COUNT
+};
+
+static struct zzopts opts[] =
+	{ { "--zero <x1> <y1> <x2> <y2>", "Fill region of image with zeroes", false, false, 4, 0 }, // OPT_ZERO
+	  { NULL, NULL, false, false, 0, 0 } };              // OPT_COUNT
+
 void manip(const char *source, int bx1, int by1, int bx2, int by2)
 {
 	struct zzfile szzsrc, *src;
@@ -149,11 +159,19 @@ void manip(const char *source, int bx1, int by1, int bx2, int by2)
 
 int main(int argc, char **argv)
 {
-	int firstparam = zzutil(argc, argv, 6, "<source> <x1> <y1> <x2> <y2>", "DICOM file pixel manipulation", NULL);
-	int x1 = atoi(argv[firstparam + 1]);
-	int y1 = atoi(argv[firstparam + 2]);
-	int x2 = atoi(argv[firstparam + 3]);
-	int y2 = atoi(argv[firstparam + 4]);
-	manip(argv[firstparam], x1, y1, x2, y2);
-	return 0;
+	int firstparam = zzutil(argc, argv, 1, "<source>", "DICOM file pixel manipulation", opts);
+	if (opts[OPT_ZERO].found)
+	{
+		int param = opts[OPT_ZERO].argstart;
+		int x1 = atoi(argv[param + 1]);
+		int y1 = atoi(argv[param + 2]);
+		int x2 = atoi(argv[param + 3]);
+		int y2 = atoi(argv[param + 4]);
+		manip(argv[firstparam], x1, y1, x2, y2);
+	}
+	else
+	{
+		fprintf(stdout, "Nothing to do\n");
+	}
+	return EXIT_SUCCESS;
 }
