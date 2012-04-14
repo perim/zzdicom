@@ -7,8 +7,7 @@ COMMONVERIFY = zzverify.o
 COMMONNET = zznet.o zznetwork.o
 COMMONDINET = zzdinetwork.o zznetwork.o
 PART6 = part6.o
-# zztojpegls
-PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom zzdiscp zzdiscu zzpixel
+PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom zzdiscp zzdiscu zzpixel zztojpegls
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h zzdinetwork.h zzditags.h zznetwork.h
 
 all: CFLAGS += -Os -fstack-protector -DNDEBUG
@@ -73,7 +72,7 @@ cppcheck:
 	cppcheck -j 4 -q zzcopy.c zztexture.c zzsql.c zzio.c
 	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c zznetwork.c
 	cppcheck -j 4 -q zzdiscp.c zzdiscu.c zzdinetwork.c
-	cppcheck -j 4 -q zznetwork.c zzpixel.c
+	cppcheck -j 4 -q zznetwork.c zzpixel.c zztojpegls.c
 	cppcheck -j 4 -q tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
 	cppcheck -j 4 -q tests/testnet.c
 
@@ -108,7 +107,8 @@ memcheck:
 	valgrind --leak-check=yes -q ./zzdump -- samples/tw1.dcm > /dev/null
 	valgrind --leak-check=yes -q ./zzdump -v samples/tw2.dcm > /dev/null
 
-checkall: cppcheck check memcheck
+checkall: debug cppcheck check memcheck
+	[ -d gdcmData ] || git clone -q git://gdcm.git.sourceforge.net/gitroot/gdcm/gdcmData
 
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
