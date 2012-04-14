@@ -107,8 +107,12 @@ memcheck:
 	valgrind --leak-check=yes -q ./zzdump -- samples/tw1.dcm > /dev/null
 	valgrind --leak-check=yes -q ./zzdump -v samples/tw2.dcm > /dev/null
 
-checkall: debug cppcheck check memcheck
+tests/gdcmdatatest: tests/gdcmdatatest.c $(HEADERS) $(COMMON) $(COMMONVERIFY)
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONVERIFY)
+
+checkall: debug cppcheck check memcheck tests/gdcmdatatest
 	[ -d gdcmData ] || git clone -q git://gdcm.git.sourceforge.net/gitroot/gdcm/gdcmData
+	tests/gdcmdatatest
 
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
