@@ -498,7 +498,6 @@ bool zisetreadpos(struct zzio *zi, long pos)
 	{
 		// Seeking behind buffer in a pipe or a socket, so skip ahead
 		long result = 0, piece, skipped = 0, remaining = pos - zi->readpos + zi->readbuflen;
-		char buf[128];
 
 		while (remaining)
 		{
