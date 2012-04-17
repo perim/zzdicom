@@ -19,6 +19,44 @@ static struct zzopts opts[] =
 	{ { "--zero <x1> <y1> <x2> <y2>", "Fill region of image with zeroes", false, false, 4, 0 }, // OPT_ZERO
 	  { NULL, NULL, false, false, 0, 0 } };              // OPT_COUNT
 
+// zero out pixels in a 8bit black/white image
+void zero8bbw(uint8_t *data, int width, int height, int depth, int bx1, int by1, int bx2, int by2)
+{
+	int x, y, z;
+	for (x = 0; x < width; x++)
+	{
+		for (y = 0; y < height; y++)
+		{
+			for (z = 0; z < depth; z++)
+			{
+				if (x >= bx1 && x < bx2 && y >= by1 && y < by2)
+				{
+					data[z * width * height + y * width + x] = 0;
+				}
+			}
+		}
+	}
+}
+
+// zero out pixels in a 16bit black/white image
+void zero16bbw(uint16_t *data, int width, int height, int depth, int bx1, int by1, int bx2, int by2)
+{
+	int x, y, z;
+	for (x = 0; x < width; x++)
+	{
+		for (y = 0; y < height; y++)
+		{
+			for (z = 0; z < depth; z++)
+			{
+				if (x >= bx1 && x < bx2 && y >= by1 && y < by2)
+				{
+					data[z * width * height + y * width + x] = 0;
+				}
+			}
+		}
+	}
+}
+
 void manip(const char *source, int bx1, int by1, int bx2, int by2)
 {
 	struct zzfile szzsrc, *src;
@@ -28,7 +66,7 @@ void manip(const char *source, int bx1, int by1, int bx2, int by2)
 	const struct part6 *tag;
 	const struct privatedic *privtag;
 	char vrstr[3], longstr[80];
-	long samples_per_pixel = 1, width = 0, height = 0, depth = 1;
+	long samples_per_pixel = 1, width = 0, height = 0, depth = 1, bits_per_sample = 16;
 	char value[MAX_LEN_IS];
 
 	src = zzopen(source, "rw", &szzsrc);
@@ -64,6 +102,7 @@ void manip(const char *source, int bx1, int by1, int bx2, int by2)
 		case DCM_BitsStored:
 			break;
 		case DCM_BitsAllocated:
+			bits_per_sample = zzgetuint16(src, 0);
 			break;
 		case DCM_HighBit:
 			break;
@@ -88,6 +127,22 @@ void manip(const char *source, int bx1, int by1, int bx2, int by2)
 			long offset = pos & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
 			void *addr;
 
+			if (samples_per_pixel != 1)
+			{
+				fprintf(stderr, "Samples per pixel %ld not supported!\n", samples_per_pixel);
+				exit(EXIT_FAILURE);
+			}
+			if (bits_per_sample != 8 && bits_per_sample != 16)
+			{
+				fprintf(stderr, "Bad bits per sample: %ld\n", bits_per_sample);
+				exit(EXIT_FAILURE);
+			}
+			if (src->ladder[src->ladderidx].txsyn == ZZ_EXPLICIT_JPEGLS) // TODO check more
+			{
+				fprintf(stderr, "Compressed pixel data not supported!\n");
+				exit(EXIT_FAILURE);
+			}
+
 			// don't parse an icon sequence's image data
 			for (i = 0; i < src->ladderidx; i++)
 			{
@@ -111,33 +166,23 @@ void manip(const char *source, int bx1, int by1, int bx2, int by2)
 				fprintf(stderr, "Failed to map image data: %s\n", strerror(errno));
 				exit(EXIT_FAILURE);
 			}
-			uint16_t *data = addr + pos - offset;    // increment by page alignment shift
-			madvise(data, size + pos - offset, MADV_SEQUENTIAL);
+			if (madvise(addr, size + pos - offset, MADV_SEQUENTIAL) != 0)
+			{
+				fprintf(stderr, "Failed to advise kernel on image buffer: %s\n", strerror(errno));
+			}
 
-			if (samples_per_pixel != 1)
+			if (opts[OPT_ZERO].found)
 			{
-				fprintf(stderr, "Samples per pixel %ld not supported!", samples_per_pixel);
-				exit(EXIT_FAILURE);
-			}
-			if (src->ladder[src->ladderidx].txsyn == ZZ_EXPLICIT_JPEGLS) // TODO check more
-			{
-				fprintf(stderr, "Compressed pixel data not supported!");
-				exit(EXIT_FAILURE);
-			}
-			// Manipulate pixels
-			for (x = 0; x < width; x++)
-			{
-				for (y = 0; y < height; y++)
+				if (bits_per_sample == 16)
 				{
-					for (z = 0; z < depth; z++)
-					{
-						if (x >= bx1 && x < bx2 && y >= by1 && y < by2)
-						{
-							data[z * width * height + y * width + x] = 0;
-						}
-					}
+					zero16bbw(addr + pos - offset, width, height, depth, bx1, by1, bx2, by2);
+				}
+				else if (bits_per_sample == 8)
+				{
+					zero8bbw(addr + pos - offset, width, height, depth, bx1, by1, bx2, by2);
 				}
 			}
+
 			if (msync(addr, size + pos - offset, MS_ASYNC) != 0)
 			{
 				fprintf(stderr, "Failed to sync changes: %s\n", strerror(errno));

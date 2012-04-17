@@ -76,7 +76,8 @@ cppcheck:
 	cppcheck -j 4 -q tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
 	cppcheck -j 4 -q tests/testnet.c
 
-check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet
+check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy
+# tests/testnet
 	tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
@@ -86,7 +87,7 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet
 	tests/zzwcopy
 	./zzmkrandom 54632 samples/random.dcm
 	tests/zzwcopy
-	tests/testnet
+#	tests/testnet
 	./zzdump --version > /dev/null
 	./zzdump --help > /dev/null
 	./zzdump --usage > /dev/null
@@ -98,12 +99,14 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet
 	./zzanon TEST samples/tw1.dcm
 	./zzanon TEST samples/tw2.dcm
 	./zzcopy samples/spine.dcm samples/copy.dcm
+	./zzpixel --zero 200 200 300 300 samples/copy.dcm
 
 memcheck:
 	valgrind --leak-check=yes -q tests/zzw
 	valgrind --leak-check=yes -q ./tests/zziotest
 	valgrind --leak-check=yes -q ./zzanon ANON samples/tw1.dcm
 	valgrind --leak-check=yes -q ./zzcopy samples/spine.dcm samples/copy.dcm
+	valgrind --leak-check=yes -q ./zzpixel --zero 200 200 300 300 samples/copy.dcm
 	valgrind --leak-check=yes -q ./zzdump -- samples/tw1.dcm > /dev/null
 	valgrind --leak-check=yes -q ./zzdump -v samples/tw2.dcm > /dev/null
 
