@@ -17,6 +17,15 @@ debug: clean
 debug: CFLAGS += -O0 -DDEBUG -fstack-protector-all
 debug: sqlinit.h $(PROGRAMS)
 
+gcov: CFLAGS += -fprofile-arcs -ftest-coverage
+gcov: clean sqlinit.h $(PROGRAMS) check
+	rm -rf tmp coverage_report
+	mkdir -p tmp
+	gcov *.c
+	lcov --directory ./ --capture --output-file lcov_tmp.info -b ./
+	lcov --extract lcov_tmp.info "$(pwd)/*" --output-file lcov.info
+	genhtml lcov.info -o coverage_report
+
 %.o : %.c
 	$(CC) -o $@ $< -c $(CFLAGS)
 
@@ -66,6 +75,7 @@ zzdiscu: zzdiscu.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET)
 
 clean:
 	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov gmon.out
+	rm -rf tmp coverage_report
 
 cppcheck:
 	cppcheck -j 4 -q zz.c zzwrite.c zzdump.c zzverify.c zzmkrandom.c
