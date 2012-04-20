@@ -31,10 +31,6 @@ static struct zzfile *earlyparse(struct zzfile *zz, const char *filename)
 {
 	char dicm[5], endianbuf[6];
 
-	if (!zz)
-	{
-		return NULL;
-	}
 	// Check for valid Part 10 header
 	zz->part10 = true;	// ever the optimist
 	memset(dicm, 0, sizeof(dicm));

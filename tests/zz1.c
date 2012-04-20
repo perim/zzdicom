@@ -51,6 +51,9 @@ int main(void)
         result = zziternext(NULL, NULL, NULL, &len);
         assert(result == false);
 
+	// default false
+	assert(zzisverbose() == false);
+
 	// Check proper handling of bad file input
 	zz = zzopen("/nonexistent", "r", &szz); // canot open non-existent file
 	assert(zz == NULL);

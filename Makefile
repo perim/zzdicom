@@ -103,13 +103,14 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy
 	./zzdump --usage > /dev/null
 	./zzdump -v samples/confuse.dcm > /dev/null
 	./zzdump -- samples/tw1.dcm > /dev/null
-	./zzdump samples/tw2.dcm > /dev/null
+	cat samples/tw2.dcm | ./zzdump --stdin > /dev/null
 	./zzdump samples/brokensq.dcm > /dev/null
 	./zzdump samples/spine.dcm > /dev/null
 	./zzanon TEST samples/tw1.dcm
 	./zzanon TEST samples/tw2.dcm
 	./zzcopy samples/spine.dcm samples/copy.dcm
 	./zzpixel --zero 200 200 300 300 samples/copy.dcm
+	./zzmkrandom --stdout 203948 | ./zzdump --stdin > /dev/null
 
 memcheck:
 	valgrind --leak-check=yes -q tests/zzw
