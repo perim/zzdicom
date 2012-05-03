@@ -41,7 +41,7 @@ zzdump: zzdump.c $(HEADERS) $(COMMON) $(PART6) $(COMMONVERIFY)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONVERIFY)
 
 zzcopy: zzcopy.c $(HEADERS) $(COMMON) $(PART6) $(COMMONWRITE)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONWRITE)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONWRITE) -lCharLS
 
 zzpixel: zzpixel.c $(HEADERS) $(COMMON) $(PART6)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6)

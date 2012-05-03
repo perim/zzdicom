@@ -5,17 +5,20 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <CharLS/interface.h>
 
 #include "part6.h"
 
 enum
 {
+	OPT_JPEGLS,
 	OPT_RGB,
 	OPT_COUNT
 };
 
 static struct zzopts opts[] =
-	{ { "--rgb", "Convert to RGB", false, false, 0, 0 },	// OPT_RGB
+	{ { "--jpegls", "Convert to JPEG-lS compression", false, false, 0, 0 },	// OPT_JPEGLS
+	  { "--rgb", "Convert to RGB", false, false, 0, 0 },	// OPT_RGB
 	  { NULL, NULL, false, false, 0, 0 } };		// OPT_COUNT
 
 void copy(const char *destination, const char *source)
@@ -27,7 +30,7 @@ void copy(const char *destination, const char *source)
 	const struct part6 *tag;
 	const struct privatedic *privtag;
 	char vrstr[3], longstr[80];
-	long samples_per_pixel = 1, x = 0, y = 0, z = 0;
+	long samples_per_pixel = 1, x = 0, y = 0, z = 0, bits_per_sample = 16;
 	char value[MAX_LEN_IS];
 
 	src = zzopen(source, "r", &szzsrc);
@@ -42,7 +45,9 @@ void copy(const char *destination, const char *source)
 		{
 			if (!dst)
 			{
-				dst = zzcreate(destination, &szzdst, src->sopClassUid, src->sopInstanceUid, UID_LittleEndianExplicitTransferSyntax);
+				const char *ts = opts[OPT_JPEGLS].found ?
+					UID_JPEGLSLosslessTransferSyntax : UID_LittleEndianExplicitTransferSyntax;
+				dst = zzcreate(destination, &szzdst, src->sopClassUid, src->sopInstanceUid, ts);
 			}
 			tag = zztag(group, element);
 			if ((src->current.vr == NO || src->current.vr == UN) && tag && src->ladder[src->ladderidx].txsyn == ZZ_IMPLICIT && group != 0xfffe)
@@ -82,6 +87,7 @@ void copy(const char *destination, const char *source)
 				zzwCopy(dst, src);
 				break;
 			case DCM_BitsAllocated:
+				bits_per_sample = zzgetuint16(src, 0);
 				if (opts[OPT_RGB].found)
 				{
 					zzwUS(dst, DCM_BitsAllocated, 8);
@@ -119,7 +125,50 @@ void copy(const char *destination, const char *source)
 				zzwCopy(dst, src);
 				break;
 			case DCM_PixelData:
-				if (opts[OPT_RGB].found && samples_per_pixel != 3)
+				// FIXME, handle frame table...  then transforms to apply to it
+				if (opts[OPT_JPEGLS].found)
+				{
+					void *srcbuf = zireadbuf(src->zi, len);
+					const int size = x * y * (bits_per_sample / 8) * samples_per_pixel;
+					void *dstbuf = malloc(size);	// assume that we will not compress worse
+					struct JlsParameters params;
+					enum JLS_ERROR err;
+					size_t result;
+					int i;
+
+					memset(&params, 0, sizeof(params));
+					params.bitspersample = bits_per_sample;
+					params.height = x;
+					params.width = y;
+					params.components = samples_per_pixel;
+					params.ilv = (params.components == 3) ? ILV_SAMPLE : ILV_NONE;
+					params.bytesperline = 0;
+					dst->ladder[dst->ladderidx].txsyn = ZZ_EXPLICIT_JPEGLS;
+					zzwPixelData_begin(dst, z, bits_per_sample, UNLIMITED);
+					for (i = 0; i < z; i++)
+					{
+						result = 0;
+						err = JpegLsEncode(dstbuf, size, &result, srcbuf + i * size, size, &params);
+						switch (err)
+						{
+						case OK: break;
+						case TooMuchCompressedData: fprintf(stderr, "%s - too much compressed data\n", source); break;
+						case InvalidJlsParameters: fprintf(stderr, "%s - invalid encoding parameters\n", source); break;
+						case ParameterValueNotSupported: fprintf(stderr, "%s - not supported encoding parameters\n", source); break;
+						case UncompressedBufferTooSmall: fprintf(stderr, "%s - could not yield compression gain\n", source); break;
+						case InvalidCompressedData:
+						case ImageTypeNotSupported:
+						case CompressedBufferTooSmall: fprintf(stderr, "%s - this should not happen\n", source); break;
+						case UnsupportedBitDepthForTransform: fprintf(stderr, "%s - unsupported bit depth\n", source); break;
+						case UnsupportedColorTransform: fprintf(stderr, "%s - unsupported color transform\n", source); break;
+						};
+						zzwPixelData_frame(dst, i, dstbuf, result);
+					}
+					zzwPixelData_end(dst);
+					free(dstbuf);
+					zifreebuf(src->zi, srcbuf, len);
+				}
+				else if (opts[OPT_RGB].found && samples_per_pixel != 3)
 				{
 					char *rgb;
 					uint16_t *mono;
@@ -159,9 +208,11 @@ void copy(const char *destination, const char *source)
 					zifreebuf(src->zi, mono, srcsize * 2);
 					zzwOB(dst, DCM_PixelData, dstsize, (const char *)rgb);
 					free(rgb);
-					break;
 				}
-				zzwCopy(dst, src);
+				else
+				{
+					zzwCopy(dst, src);
+				}
 				break;
 			default:
 				zzwCopy(dst, src);
