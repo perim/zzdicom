@@ -83,8 +83,7 @@ cppcheck:
 	cppcheck -j 4 -q tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
 	cppcheck -j 4 -q tests/testnet.c
 
-check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy
-# tests/testnet
+check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet
 	tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
@@ -94,7 +93,7 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy
 	tests/zzwcopy
 	./zzmkrandom 54632 samples/random.dcm
 	tests/zzwcopy
-#	tests/testnet
+	tests/testnet
 	./zzdump --version > /dev/null
 	./zzdump --help > /dev/null
 	./zzdump --usage > /dev/null
@@ -133,8 +132,8 @@ tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 tests/zziotest: tests/zziotest.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
 
-tests/testnet: tests/testnet.c $(HEADERS) $(COMMON) zznetwork.o
-	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) zznetwork.o -lpthread
+tests/testnet: tests/testnet.c $(HEADERS) $(COMMON) $(COMMONWRITE) zznetwork.o
+	$(CC) -o $@ $< $(COMMON) $(COMMONWRITE) -I. $(CFLAGS) zznetwork.o -lpthread
 
 tests/zzw: tests/zzw.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONVERIFY)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY)
