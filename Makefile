@@ -7,7 +7,7 @@ COMMONVERIFY = zzverify.o
 COMMONNET = zznet.o zznetwork.o
 COMMONDINET = zzdinetwork.o zznetwork.o
 PART6 = part6.o
-PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom zzdiscp zzdiscu zzpixel zztojpegls
+PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom zzdiscp zzdiscu zzpixel
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h zzdinetwork.h zzditags.h zznetwork.h
 
 all: CFLAGS += -Os -fstack-protector -DNDEBUG
@@ -58,9 +58,6 @@ zzstudies: zzstudies.c $(HEADERS) $(COMMON) $(COMMONSQL)
 zzprune: zzprune.c $(HEADERS) $(COMMON) $(COMMONSQL)
 	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
 
-zztojpegls: zztojpegls.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(PART6)
-	$(CC) -o $@ $< $(COMMON) $(COMMONWRITE) $(CFLAGS) -lCharLS $(PART6)
-
 zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON) $(COMMONWRITE)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE)
 
@@ -82,7 +79,7 @@ cppcheck:
 	cppcheck -j 4 -q zzcopy.c zztexture.c zzsql.c zzio.c
 	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c zznetwork.c
 	cppcheck -j 4 -q zzdiscp.c zzdiscu.c zzdinetwork.c
-	cppcheck -j 4 -q zznetwork.c zzpixel.c zztojpegls.c
+	cppcheck -j 4 -q zznetwork.c zzpixel.c
 	cppcheck -j 4 -q tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
 	cppcheck -j 4 -q tests/testnet.c
 
@@ -110,6 +107,8 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy
 	./zzanon TEST samples/tw2.dcm
 	./zzcopy samples/spine.dcm samples/copy.dcm
 	./zzpixel --zero 200 200 300 300 samples/copy.dcm
+	./zzcopy --rgb samples/spine.dcm samples/copy.dcm
+	./zzcopy --jpegls samples/spine.dcm samples/copy.dcm
 	./zzmkrandom --stdout 203948 | ./zzdump --stdin > /dev/null
 
 memcheck:
