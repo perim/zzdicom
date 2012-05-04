@@ -193,13 +193,15 @@ void zzwPixelData_begin(struct zzfile *zz, long frames, int bits, long size)
 
 void zzwPixelData_frame(struct zzfile *zz, int frame, const void *data, uint32_t size)
 {
+	long wlen = size;
+	if (size % 2 != 0) wlen++;			// padding
 	if (zz->ladder[zz->ladderidx].txsyn > ZZ_EXPLICIT)	// write encapsulation
 	{
 		ziwriteu32at(zz->zi, ziwritepos(zz->zi) - (zz->pxOffsetTable + zz->frames * sizeof(uint32_t)), zz->pxOffsetTable + frame * sizeof(uint32_t));
-		implicit(zz->zi, 0xfffe, 0xe000, size);
+		implicit(zz->zi, 0xfffe, 0xe000, wlen);
 	}
 	ziwrite(zz->zi, data, size);
-	// TODO pad to even length?
+	if (size % 2 != 0) ziwrite(zz->zi, "", 1);	// pad
 }
 
 void zzwPixelData_end(struct zzfile *zz)

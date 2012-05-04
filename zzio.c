@@ -138,6 +138,7 @@ static inline long zi_read_raw(struct zzio *zi, void *buf, long len, long reqlen
 		// a flush is necessary here to correctly order writes from the tee's buffer with our own writes
 		ziflush(zi->tee);
 		ret = zi_write_raw(zi->tee, buf, sum);
+		zi->tee->byteswritten += ret;
 		ASSERT(zi, ret == sum, "Tee read write error (%ld/%ld): %s", ret, sum, strerror(errno));
 	}
 	zi->bytesread += sum;
@@ -664,6 +665,44 @@ void zifreebuf(struct zzio *zi, void *buf, long size)
 	munmap(addr, realsize);
 }
 
+#ifdef ZZ_LINUX
+// duplicate data from one pipe to another, then to a destination; will often not actually copy anything
+static inline void dupefd(int pipefd, int *pipetee, long bytes_in_pipe, int flags, int target)
+{
+	long result, sum = bytes_in_pipe;
+	while (sum > 0)
+	{
+		result = tee(pipefd, pipetee[1], sum, flags);
+		if (result < 0)
+		{
+			if (errno == EINTR || errno == EAGAIN)
+			{
+				continue; // interrupted, try again
+			}
+			fprintf(stderr, "Failed to tee from pipe: %s\n", strerror(errno));
+			break;
+		}
+		sum -= result;
+	}
+	sum = bytes_in_pipe;
+	while (sum > 0)
+	{
+		result = splice(pipetee[0], NULL, target, NULL, sum, flags);
+		if (result < 0)
+		{
+			if (errno == EINTR || errno == EAGAIN)
+			{
+				continue; // interrupted, try again
+			}
+			fprintf(stderr, "Failed to read from pipe: %s\n", strerror(errno));
+			assert(false);
+			break;
+		}
+		sum -= result;
+	}
+}
+#endif
+
 long zicopy(struct zzio *dst, struct zzio *src, long length)
 {
 	long result;
@@ -686,8 +725,8 @@ long zicopy(struct zzio *dst, struct zzio *src, long length)
 #ifdef ZZ_LINUX
 		// This implements kernel side "zero-copy" of data between file descriptors,
 		// allowing higher theoretical throughput, and quite real reduced CPU usage.
-		int pipefd[2];
-		long total_sent = 0, bytes_in_pipe, remainder;
+		int pipefd[2], pipeteein[2], pipeteeout[2];
+		long total_sent = 0, bytes_in_pipe, remainder, result2;
 		unsigned baseflags = SPLICE_F_NONBLOCK, flags = 0;
 
 		if (src->writebuflen > 0)
@@ -700,7 +739,7 @@ long zicopy(struct zzio *dst, struct zzio *src, long length)
 		}
 		lseek(src->fd, src->readpos + src->readbufpos, SEEK_SET);
 		lseek(dst->fd, dst->writepos, SEEK_SET);
-		if (!(dst->flags & ZZIO_SOCKET))
+		if (!(dst->flags & ZZIO_SOCKET || dst->flags & ZZIO_PIPE))
 		{
 			posix_fallocate(dst->fd, dst->writepos, length);
 		}
@@ -708,8 +747,7 @@ long zicopy(struct zzio *dst, struct zzio *src, long length)
 		{
 			baseflags |= SPLICE_F_MOVE;
 		}
-		result = pipe(pipefd);
-		if (result < 0)
+		if (pipe(pipefd) || pipe(pipeteein) || pipe(pipeteeout))
 		{
 			fprintf(stderr, "Failed to make pipe: %s\n", strerror(errno));
 			return -1;
@@ -736,6 +774,14 @@ long zicopy(struct zzio *dst, struct zzio *src, long length)
 			{
 				flags |= SPLICE_F_MORE; // tell kernel that more is coming
 			}
+			if (src->tee && (src->teeflags & ZZIO_TEE_READ))
+			{
+				dupefd(pipefd[0], pipeteein, bytes_in_pipe, flags, zifd(src->tee));
+			}
+			if (dst->tee && (dst->teeflags & ZZIO_TEE_WRITE))
+			{
+				dupefd(pipefd[0], pipeteeout, bytes_in_pipe, flags, zifd(dst->tee));
+			}
 			while (bytes_in_pipe > 0)
 			{
 				result = splice(pipefd[0], NULL, dst->fd, NULL, bytes_in_pipe, flags);
@@ -755,6 +801,20 @@ long zicopy(struct zzio *dst, struct zzio *src, long length)
 		}
 		close(pipefd[0]);
 		close(pipefd[1]);
+		close(pipeteein[0]);
+		close(pipeteein[1]);
+		close(pipeteeout[0]);
+		close(pipeteeout[1]);
+		if (src->tee)
+		{
+			src->tee->writepos += total_sent;
+			src->tee->byteswritten += total_sent;
+		}
+		if (dst->tee)
+		{
+			dst->tee->writepos += total_sent;
+			dst->tee->byteswritten += total_sent;
+		}
 		src->readpos += total_sent;
 		src->readbuflen = 0;
 		src->readbufpos = 0;

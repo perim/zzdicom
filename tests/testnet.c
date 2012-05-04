@@ -9,10 +9,11 @@
 static int filesize = -1;
 static const char *filename = "samples/spine.dcm";
 static const char *resultname = "samples/dump.dcm";
+static const char *tracename = "samples/dump2.dcm";
 
 static void *threadfunc1(void *arg)
 {
-	struct zzfile szz, *zz = NULL;
+	struct zznetwork *zzn = NULL;
 	struct zzio *io = NULL;
 	unsigned char buf[100];
 	long result, i;
@@ -20,15 +21,15 @@ static void *threadfunc1(void *arg)
 	(void)arg;
 
 	memset(buf, 0xfd, sizeof(buf));
-	while (!zz)
+	while (!zzn)
 	{
 		usleep(100);
-		zz = zznetconnect(NULL, "localhost", 5106, &szz, 0);
+		zzn = zznetconnect(NULL, "localhost", 5106, 0);
 	}
-	result = ziwrite(zz->zi, buf, sizeof(buf));
+	result = ziwrite(zzn->out->zi, buf, sizeof(buf));
 	assert(result == sizeof(buf));
-	ziflush(zz->zi);
-	result = ziread(zz->zi, buf, sizeof(buf));
+	ziflush(zzn->out->zi);
+	result = ziread(zzn->out->zi, buf, sizeof(buf));
 	assert(result == sizeof(buf));
 	for (i = 0; i < result; i++)
 	{
@@ -39,25 +40,28 @@ static void *threadfunc1(void *arg)
 	io = ziopenfile(filename, "r");
 	assert(io);
 	assert(filesize > 0);
-	zicopy(zz->zi, io, filesize);
+	result = zicopy(zzn->out->zi, io, filesize);
+	assert(result == filesize);
 	io = ziclose(io);
-	ziflush(zz->zi);
+	ziflush(zzn->out->zi);
 
 	// Now do it again, for zzreadbuf test
 	io = ziopenfile(filename, "r");
 	assert(io);
 	assert(filesize > 0);
-	zicopy(zz->zi, io, filesize);
+	result = zicopy(zzn->out->zi, io, filesize);
+	assert(result == filesize);
 	io = ziclose(io);
-	ziflush(zz->zi);
+	ziflush(zzn->out->zi);
 
-	zz = zzclose(zz);
+	zzn = zznetclose(zzn);
 	return NULL;
 }
 
 int main(void)
 {
 	struct stat st;
+	struct zznetwork *zzn = NULL;
 	struct zzfile szz, *zz;
 	pthread_t thread;
 	unsigned char buf[100], buf2[100];
@@ -70,30 +74,43 @@ int main(void)
 	filesize = st.st_size;
 
 	// test permission denied
-	zz = zznetlisten(NULL, 1, &szz, ZZNET_NO_FORK);
-	assert(zz == NULL);
+	zzn = zznetlisten(NULL, 1, ZZNET_NO_FORK);
+	assert(zzn == NULL);
 
 	// just connect and exchange some data
 	result = pthread_create(&thread, NULL, threadfunc1, NULL);
 	assert(result == 0);
-	zz = zznetlisten(NULL, 5106, &szz, ZZNET_NO_FORK);
-	assert(zz);
-	result = ziread(zz->zi, buf, sizeof(buf));
+	zzn = zznetlisten(NULL, 5106, ZZNET_NO_FORK);
+	assert(zzn);
+	zzn->trace = calloc(1, sizeof(*zzn->trace));
+	zzn->trace->zi = ziopenfile(tracename, "w");
+	zitee(zzn->in->zi, zzn->trace->zi, ZZIO_TEE_READ);
+	result = ziread(zzn->in->zi, buf, sizeof(buf));
 	assert(result == sizeof(buf));
+	assert(zibytesread(zzn->in->zi) == sizeof(buf));
 	for (i = 0; i < result; i++)
 	{
 		assert(buf[i] == 0xfd);
 	}
 	memset(buf, 0x10, sizeof(buf));
-	result = ziwrite(zz->zi, buf, sizeof(buf));
+	result = ziwrite(zzn->in->zi, buf, sizeof(buf));
 	assert(result == sizeof(buf));
-	ziflush(zz->zi);
+	assert(zibyteswritten(zzn->in->zi) == sizeof(buf));
+	ziclose(zzn->trace->zi);
 
 	// Receive big file, dump to big file
 	io = ziopenfile(resultname, "w");
+	zzn->trace->zi = ziopenfile(tracename, "w");
+	assert(zzn->trace->zi);
+	zitee(zzn->in->zi, zzn->trace->zi, ZZIO_TEE_READ);
 	assert(io);	
-	zicopy(io, zz->zi, filesize);
+	result = zicopy(io, zzn->in->zi, filesize);
+	assert(result == filesize);
+	assert(zibyteswritten(io) == filesize);
+	assert(zibyteswritten(zzn->trace->zi) == filesize);
 	io = ziclose(io);
+	zzn->trace = zzclose(zzn->trace);
+	zitee(zzn->in->zi, NULL, 0);
 
 	// Compare results
 	fp1 = fopen(filename, "r");
@@ -108,8 +125,22 @@ int main(void)
 	fclose(fp1);
 	fclose(fp2);
 
+	// Compare results for tracefile
+	fp1 = fopen(filename, "r");
+	fp2 = fopen(tracename, "r");
+	while (!feof(fp1))
+	{
+		result = fread(buf, 1, sizeof(buf), fp1);
+		i = fread(buf2, 1, sizeof(buf2), fp2);
+		assert(result == i);
+		assert(memcmp(buf, buf2, result) == 0);
+	}
+	fclose(fp1);
+	fclose(fp2);
+
+	// ---------------------------------------
 	// Now receive big file, dump it to buffer
-	ptr = zireadbuf(zz->zi, filesize);
+	ptr = zireadbuf(zzn->in->zi, filesize);
 	// Compare results
 	fp1 = fopen(filename, "r");
 	i = 0;
@@ -120,10 +151,10 @@ int main(void)
 		i += result;
 	}
 	fclose(fp1);
-	zifreebuf(zz->zi, ptr, filesize);
+	zifreebuf(zzn->in->zi, ptr, filesize);
 
 	// All done!
-	zz = zzclose(zz);
+	zzn = zznetclose(zzn);
 	pthread_join(thread, NULL);
 
 	return 0;

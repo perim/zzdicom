@@ -59,6 +59,9 @@ seed. The random seed used is saved in the Instance Number tag.
 
 zzpixel - manipulates pixel values in a DICOM file.
 
+zzcopy - copy and convert DICOM files. Can transform from grayscale to RGB, or compress with
+the JPEG-LS lossless algorithm.
+
 Credits
 -------
 This project would not have been possible without reusing some content from the DCMTK and GDCM
@@ -85,7 +88,10 @@ SOFTWARE.
 
 Copyright - data
 ----------------
-spine.dcm -- CC BY-ND 3.0, see http://creativecommons.org/licenses/by-nd/3.0/
+spine.dcm -- (C) Per Inge Mathisen, license CC BY-SA 3.0 (http://creativecommons.org/licenses/by-sa/3.0/)
+broccoli.dcm,
+corn.dcm,
+cucumber.dcm -- (C) Andy Ellison, license CC BY-SA 3.0 (http://creativecommons.org/licenses/by-sa/3.0/)
 minimal.hdr,
 minimal.img,
 minimal.nii -- public domain, copied from the nifti home page

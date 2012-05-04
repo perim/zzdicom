@@ -141,17 +141,15 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			volinfo[13] = tmpd[1];
 			break;
 		case DCM_Item:
-		case DCM_PixelData:
-			if (zz->current.frame > 0 && zz->current.pxstate == ZZ_PIXELITEM)
+			// TODO, check if in correct SQ, then upload volinfo for previous frame
+			if (zz->current.frame > 0 && false /* && FIXME */)
 			{
 				// Upload info from previous frame
 				glTexSubImage2D(GL_TEXTURE_2D, 0, 0, zz->current.frame - 1, 64, 1, GL_LUMINANCE, GL_FLOAT, volinfo);
 				checkError();
 			}
-			if (key == DCM_Item)
-			{
-				break;	// still got more frames to read
-			}
+			break;
+		case DCM_PixelData:
 			if (bitspersample == 0)	// by the time we get here, we need to have found all relevant pixel info
 			{
 				fprintf(stderr, "No valid image information found\n");
@@ -162,9 +160,6 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 			glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 			checkError();
-			// TODO - check actual pixel length against length of pixel data in file before reading
-			length = zz->fileSize - zz->current.pos;
-			bytes = zireadbuf(zz->zi, length);
 			if (zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT_JPEGLS)
 			{
 				enum JLS_ERROR err;
@@ -172,29 +167,36 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 				unsigned char *buffer = malloc(bufsize), *src;
 				long i = 0, start = zz->current.pos;
 				glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, NULL);
+				// skip to offset table
+				zziternext(zz, &group, &element, &len);
 				// iterate into the encapsulated pixel data
 				while (zziternext(zz, &group, &element, &len))
 				{
 					// TODO FIXME -- support fragmented items -- maybe remove padding (if charls cannot handle)
 					if (ZZ_KEY(group, element) == DCM_Item && zz->current.pxstate == ZZ_PIXELITEM)
 					{
-						src = bytes + zz->current.pos - start;
+						bytes = zireadbuf(zz->zi, len);
+						src = bytes;
 						assert(src[0] == 0xff);
 						assert(src[1] == 0xd8);
 						err = JpegLsDecode(buffer, bufsize, src, len, NULL);
 						assert(err == 0);
 						glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, i++, zzt->pixelsize.x, zzt->pixelsize.y, 1, GL_LUMINANCE, size, buffer);
 						checkError();
+						zifreebuf(zz->zi, bytes, len);
 					}
 				}
 				free(buffer);
 			}
 			else	// assume raw pixels
 			{
+				// TODO - check actual pixel length against length of pixel data in file before reading
+				length = zz->fileSize - zz->current.pos;
+				bytes = zireadbuf(zz->zi, length);
 				glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, bytes);
+				zifreebuf(zz->zi, bytes, length);
 			}
 			checkError();
-			zifreebuf(zz->zi, bytes, length);
 			return zzt;
 		}
 	}

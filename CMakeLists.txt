@@ -19,7 +19,7 @@ add_executable(zzdump zzdump.c part6.c part6.h)
 target_link_libraries(zzdump zzdicom)
 
 add_executable(zzcopy zzcopy.c part6.c part6.h)
-target_link_libraries(zzcopy zzdicom)
+target_link_libraries(zzcopy zzdicom CharLS)
 
 add_executable(zzread zzread.c)
 target_link_libraries(zzread zzdicom sqlite3)
@@ -35,9 +35,6 @@ target_link_libraries(zzfix zzdicom)
 
 add_executable(zzmkrandom zzmkrandom.c)
 target_link_libraries(zzmkrandom zzdicom)
-
-#add_executable(zztojpegls zztojpegls.c)
-#target_link_libraries(zztojpegls zzdicom CharLS)
 
 add_executable(zzechoscp zzechoscp.c zznet.c zznet.h)
 target_link_libraries(zzechoscp zzdicom)

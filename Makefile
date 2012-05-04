@@ -7,7 +7,7 @@ COMMONVERIFY = zzverify.o
 COMMONNET = zznet.o zznetwork.o
 COMMONDINET = zzdinetwork.o zznetwork.o
 PART6 = part6.o
-PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom zzdiscp zzdiscu zzpixel zztojpegls
+PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom zzdiscp zzdiscu zzpixel
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h zzdinetwork.h zzditags.h zznetwork.h
 
 all: CFLAGS += -Os -fstack-protector -DNDEBUG
@@ -40,7 +40,7 @@ zzdump: zzdump.c $(HEADERS) $(COMMON) $(PART6) $(COMMONVERIFY)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONVERIFY)
 
 zzcopy: zzcopy.c $(HEADERS) $(COMMON) $(PART6) $(COMMONWRITE)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONWRITE)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONWRITE) -lCharLS
 
 zzpixel: zzpixel.c $(HEADERS) $(COMMON) $(PART6)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6)
@@ -56,9 +56,6 @@ zzstudies: zzstudies.c $(HEADERS) $(COMMON) $(COMMONSQL)
 
 zzprune: zzprune.c $(HEADERS) $(COMMON) $(COMMONSQL)
 	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
-
-zztojpegls: zztojpegls.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(PART6)
-	$(CC) -o $@ $< $(COMMON) $(COMMONWRITE) $(CFLAGS) -lCharLS $(PART6)
 
 zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON) $(COMMONWRITE)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE)
@@ -81,12 +78,11 @@ cppcheck:
 	cppcheck -j 4 -q zzcopy.c zztexture.c zzsql.c zzio.c
 	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c zznetwork.c
 	cppcheck -j 4 -q zzdiscp.c zzdiscu.c zzdinetwork.c
-	cppcheck -j 4 -q zznetwork.c zzpixel.c zztojpegls.c
+	cppcheck -j 4 -q zznetwork.c zzpixel.c
 	cppcheck -j 4 -q tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
 	cppcheck -j 4 -q tests/testnet.c
 
-check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy
-# tests/testnet
+check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet
 	tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
@@ -96,7 +92,7 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy
 	tests/zzwcopy
 	./zzmkrandom 54632 samples/random.dcm
 	tests/zzwcopy
-#	tests/testnet
+	tests/testnet
 	./zzdump --version > /dev/null
 	./zzdump --help > /dev/null
 	./zzdump --usage > /dev/null
@@ -109,6 +105,8 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy
 	./zzanon TEST samples/tw2.dcm
 	./zzcopy samples/spine.dcm samples/copy.dcm
 	./zzpixel --zero 200 200 300 300 samples/copy.dcm
+	./zzcopy --rgb samples/spine.dcm samples/copy.dcm
+	./zzcopy --jpegls samples/spine.dcm samples/copy.dcm
 	./zzmkrandom --stdout 203948 | ./zzdump --stdin > /dev/null
 
 memcheck:
@@ -133,8 +131,8 @@ tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 tests/zziotest: tests/zziotest.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
 
-tests/testnet: tests/testnet.c $(HEADERS) $(COMMON) zznetwork.o
-	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) zznetwork.o -lpthread
+tests/testnet: tests/testnet.c $(HEADERS) $(COMMON) $(COMMONWRITE) zznetwork.o
+	$(CC) -o $@ $< $(COMMON) $(COMMONWRITE) -I. $(CFLAGS) zznetwork.o -lpthread
 
 tests/zzw: tests/zzw.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONVERIFY)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY)
