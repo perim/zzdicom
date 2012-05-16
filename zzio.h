@@ -1,10 +1,13 @@
 // High-performance buffered IO layer with transparent support for
-// packet splitting and zlib compression. Note: Do not mix write
-// calls to this interface with write calls through other inferfaces
-// to the same file. Do not mix read or write calls to this interface
-// with read calls through other interfaces to the same socket. Always
-// call the flush function after writing before reading if the areas
-// might overlap (taking buffer size into consideration).
+// packet splitting (and with on-the-fly compression support planned 
+// for the future).
+
+// Note: Do not mix write calls to this interface with write calls 
+// through other inferfaces to the same files. Do not mix read or 
+// write calls to this interface with read calls through other 
+// interfaces to the same socket. Always call the flush function 
+// after writing before reading if the areas might overlap (taking 
+// buffer size into consideration).
 
 #ifndef ZZIO_H
 #define ZZIO_H
@@ -157,10 +160,9 @@ int zifd(struct zzio *zi);
 /// Redirect write buffer flushes to another zzio file descriptor.
 #define ZZIO_TEE_WRITE  2
 
-/// Duplicate all reads and/or writes to another zzio file descriptor. This is mostly meant 
-/// for debugging, so not much effort is spent on performance (ie no zero-copying writes).
-/// You can combine read and write redirections. Attempts to seek outside a single read/write
-/// buffer will break this functionality.
+/// Duplicate all reads and/or writes to another zzio file descriptor.
+/// You can combine read and write redirections. Attempts to seek outside a 
+/// single read/write buffer will break this functionality.
 void zitee(struct zzio *zz, struct zzio *tee, int flags);
 
 /* --------------------------------------------------------------------- */
