@@ -275,11 +275,11 @@ void zzwFD(struct zzfile *zz, zzKey key, double value)
 
 void zzwOB(struct zzfile *zz, zzKey key, int len, const char *string)
 {
-	int wlen = len, res;
+	int wlen = len;
 
 	if (len % 2 != 0) wlen++;			// padding
 	writetag(zz, key, OB, wlen);
-	res = ziwrite(zz->zi, string, len);
+	ziwrite(zz->zi, string, len);
 	if (len % 2 != 0) ziwrite(zz->zi, "", 1);	// pad
 	verboseprint(zz, "...");
 }

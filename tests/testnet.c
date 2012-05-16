@@ -62,7 +62,6 @@ int main(void)
 {
 	struct stat st;
 	struct zznetwork *zzn = NULL;
-	struct zzfile szz, *zz;
 	pthread_t thread;
 	unsigned char buf[100], buf2[100];
 	long result, i;

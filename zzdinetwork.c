@@ -96,7 +96,6 @@ bool zzdinegotiation(struct zznetwork *zzn)
 	bool loop;
 	uint16_t group, element;
 	long len;
-	struct zzfile *tracefile = zzn->trace;
 
 	zzn->in->utf8 = zzn->out->utf8 = true;
 	zzn->in->ladder[0].txsyn = zzn->out->ladder[0].txsyn = ZZ_EXPLICIT;

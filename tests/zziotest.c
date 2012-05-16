@@ -233,7 +233,7 @@ static void test3(int pos, const char *stamp, int packetsize)
 
 	zisetwritepos(zi, 128);
 	i = ziwrite(zi, stamp, strlen(stamp));
-	assert(i = strlen(stamp));
+	assert(i == (int)strlen(stamp));
 	ziflush(zi);	// commit changes
 
 	zisetreadpos(zi, 128);

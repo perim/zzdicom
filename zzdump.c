@@ -94,18 +94,17 @@ char *getstring(struct zzfile *zz, char *input, long strsize, long datasize)
 // Dump CSA1 or CSA2 private format
 void dumpcsa(struct zzfile *zz)
 {
-	int i, k;
-
 	char val[4];
 	if (zz->current.length >= 4 && zisetreadpos(zz->zi, zz->current.pos) && ziread(zz->zi, &val, 4))
 	{
 		uint32_t ntags, unused32, pos;
 		unsigned charlen, sum;
 		uint8_t unused8;
-		char str[65], vr[5], c;
+		char str[65], vr[5];
 		uint32_t csavm, syngodt, nitems, xx, j, itemsize[4];
 		char value[PADLEN];
 		char pstart[48], pstop[100];
+		int i;
 
 		memset(value, 0, sizeof(value));
 		if (val[0] == 'S' && val[1] == 'V' && val[2] == '1' && val[3] == '0')

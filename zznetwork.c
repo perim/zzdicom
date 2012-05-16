@@ -74,7 +74,7 @@ struct zznetwork *zznetlisten(const char *interface, int port, int flags)
 	if ((rv = getaddrinfo(NULL, portstr, &hints, &servinfo)) != 0)
 	{
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-		return NULL;
+		goto failure;
 	}
 
 	// loop through all the results and bind to the first we can
@@ -103,7 +103,7 @@ struct zznetwork *zznetlisten(const char *interface, int port, int flags)
 	if (p == NULL) 
 	{
 		//fprintf(stderr, "server: failed to bind\n");
-		return false;
+		goto failure;
 	}
 
 	freeaddrinfo(servinfo); // all done with this structure
@@ -111,7 +111,7 @@ struct zznetwork *zznetlisten(const char *interface, int port, int flags)
 	if (listen(sockfd, BACKLOG) == -1)
 	{
 		perror("listen");
-		return false;
+		goto failure;
 	}
 
 	sa.sa_handler = sigchld_handler; // reap all dead processes
@@ -120,7 +120,7 @@ struct zznetwork *zznetlisten(const char *interface, int port, int flags)
 	if (sigaction(SIGCHLD, &sa, NULL) == -1)
 	{
 		perror("sigaction");
-		return false;
+		goto failure;
 	}
 
 	//printf("server: waiting for connections...\n");
@@ -159,13 +159,17 @@ struct zznetwork *zznetlisten(const char *interface, int port, int flags)
 		}
 		close(new_fd);  // parent doesn't need this
 	}
-	return NULL; // we never get here
+failure:
+	free(zzn->in);
+	free(zzn->out);
+	free(zzn);
+	return NULL;
 }
 
 // FIXME: Use interface
 struct zznetwork *zznetconnect(const char *interface, const char *host, int port, int flags)
 {
-	int sockfd, numbytes;
+	int sockfd;
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];

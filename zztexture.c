@@ -165,7 +165,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 				enum JLS_ERROR err;
 				const long bufsize = zzt->pixelsize.x * zzt->pixelsize.y * components * (bitspersample / 8);
 				unsigned char *buffer = malloc(bufsize), *src;
-				long i = 0, start = zz->current.pos;
+				long i = 0;
 				glTexImage3D(GL_TEXTURE_3D, 0, type, zzt->pixelsize.x, zzt->pixelsize.y, zzt->pixelsize.z, 0, GL_LUMINANCE, size, NULL);
 				// skip to offset table
 				zziternext(zz, &group, &element, &len);

@@ -65,7 +65,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	char seriesInstanceUid[MAX_LEN_UI];
 	char patientsName[MAX_LEN_PN];
 	char modality[MAX_LEN_CS];
-	long pos, len;
+	long len;
 	bool done = false;
 
 	modified[0] = '\0';
@@ -77,7 +77,6 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len) && !done)
 	{
-		pos = zireadpos(zz->zi);
 		switch (ZZ_KEY(group, element))
 		{
 		case DCM_StudyInstanceUID:

@@ -71,7 +71,6 @@ static void zzdiserviceprovider(struct zznetwork *zzn)
 int main(int argc, char **argv)
 {
 	struct zznetwork *zzn;
-	struct zzfile stracefile;
 
 	(void) zzutil(argc, argv, 0, "", "DICOM experimental network server", opts);
 
