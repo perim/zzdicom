@@ -24,8 +24,8 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 	struct zzfile szw, *zw;
 	char *sopclassuid, *filename;
 	long sq1, sq2, item1, item2;
-	double pixelspacing[3];
 	int wrongendian;
+	char uid[MAX_LEN_UI];
 
 	if (!is_nifti_file(hdr_file))
 	{
@@ -47,6 +47,11 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 	if (hdr->dim[0] != 3)
 	{
 		fprintf(stderr, "%s - three dimensions not found (was %d), unsupported Analyze dataset\n", hdr_file, hdr->dim[0]);
+		return -1;
+	}
+	if (hdr.xyz_units != NIFTI_UNITS_MM || hdr.time_units != NIFTI_UNITS_MSEC || hdr.freq_dim != 1 || hdr.phase_dim != 2 || hdr.slice_dim != 3)
+	{
+		fprintf(stderr, "Strange parameters in nifti file -- aborting.");
 		return -1;
 	}
 
@@ -77,8 +82,7 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 		return -1;
 	}
 
-	// FIXME instance uid
-	zw = zzcreate("niftitest.dcm", &szw, sopclassuid, "1.2.3.4", UID_JPEGLSLosslessTransferSyntax);
+	zw = zzcreate("niftitest.dcm", &szw, sopclassuid, zzmakeuid(uid, sizeof(uid)), UID_JPEGLSLosslessTransferSyntax);
 	if (!zw)
 	{
 		fprintf(stderr, "%s - could not create out file: %s\n", hdr_file, strerror(errno));
@@ -141,11 +145,14 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 			zzwSQ_end(zw, &sq2);
 			zzwSQ_begin(zw, DCM_PixelMeasuresSequence, &sq2);
 				zzwItem_begin(zw, &item2);
+				{
+					double pixelspacing[3];
 					pixelspacing[0] = hdr->pixdim[1];
 					pixelspacing[1] = hdr->pixdim[2];
 					pixelspacing[2] = hdr->pixdim[3];
 					zzwDSd(zw, DCM_SliceThickness, pixelspacing[0]);
 					zzwDSdv(zw, DCM_PixelSpacing, 2, &pixelspacing[1]);
+				}
 				zzwItem_end(zw, &item2);
 			zzwSQ_end(zw, &sq2);
 		zzwItem_end(zw, &item1);
