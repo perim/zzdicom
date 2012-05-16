@@ -32,7 +32,9 @@ void copy(const char *destination, const char *source)
 	char vrstr[3], longstr[80];
 	long samples_per_pixel = 1, x = 0, y = 0, z = 0, bits_per_sample = 16;
 	char value[MAX_LEN_IS];
+	char uid[MAX_LEN_UI];
 
+	zzmakeuid(uid, sizeof(uid));	// make new SOP instance UID
 	src = zzopen(source, "r", &szzsrc);
 	if (!src)
 	{
@@ -47,7 +49,7 @@ void copy(const char *destination, const char *source)
 			{
 				const char *ts = opts[OPT_JPEGLS].found ?
 					UID_JPEGLSLosslessTransferSyntax : UID_LittleEndianExplicitTransferSyntax;
-				dst = zzcreate(destination, &szzdst, src->sopClassUid, src->sopInstanceUid, ts);
+				dst = zzcreate(destination, &szzdst, src->sopClassUid, uid, ts);
 			}
 			tag = zztag(group, element);
 			if ((src->current.vr == NO || src->current.vr == UN) && tag && src->ladder[src->ladderidx].txsyn == ZZ_IMPLICIT && group != 0xfffe)
@@ -69,6 +71,9 @@ void copy(const char *destination, const char *source)
 
 			switch (ZZ_KEY(group, element))
 			{
+			case DCM_SOPInstanceUID: 
+				zzwUI(dst, DCM_SOPInstanceUID, uid);		// add new SOP instance UID
+				break;
 			case DCM_SamplesPerPixel:
 				samples_per_pixel = zzgetuint16(src, 0);
 				if (opts[OPT_RGB].found)
