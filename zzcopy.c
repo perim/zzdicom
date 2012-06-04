@@ -26,10 +26,7 @@ void copy(const char *destination, const char *source)
 	struct zzfile szzdst, szzsrc, *dst = NULL, *src;
 	uint16_t group, element;
 	long len;
-	const char *vm, *description;
 	const struct part6 *tag;
-	const struct privatedic *privtag;
-	char vrstr[3], longstr[80];
 	long samples_per_pixel = 1, x = 0, y = 0, z = 0, bits_per_sample = 16;
 	char value[MAX_LEN_IS];
 	char uid[MAX_LEN_UI];

@@ -812,13 +812,13 @@ void zziterinit(struct zzfile *zz)
 
 bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 {
-	bool doread = true;
-
 	// Check if we should read the next tag -- try to iterate over as many tags as possible, even if data is totally fubar
 	if (zz && !zieof(zz->zi) && !zierror(zz->zi)
 	    && (zz->current.length == UNLIMITED || (zz->current.pos + zz->current.length < zz->fileSize)
 	        || zz->current.vr == SQ || zz->current.group == 0xfffe || zz->fileSize == UNLIMITED))
 	{
+		bool doread = true;
+
 		if (zz->current.pos > 0 && zz->current.length > 0 && zz->current.length != UNLIMITED
 		    && !(zz->current.group == 0xfffe && zz->current.element == 0xe000 && zz->current.pxstate == ZZ_NOT_PIXEL)
 		    && zz->current.vr != SQ)
