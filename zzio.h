@@ -155,9 +155,9 @@ void zicleareof(struct zzio *zi);
 // Return current file descriptor
 int zifd(struct zzio *zi);
 
-/// Redirect read buffer refills to another zzio file descriptor.
+/// Duplicate read buffer refills to another zzio file descriptor.
 #define ZZIO_TEE_READ   1
-/// Redirect write buffer flushes to another zzio file descriptor.
+/// Duplicate write buffer flushes to another zzio file descriptor.
 #define ZZIO_TEE_WRITE  2
 
 /// Duplicate all reads and/or writes to another zzio file descriptor.
