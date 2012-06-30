@@ -86,6 +86,22 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			break;
 		case DCM_RescaleType:		// LO, but only two chars used; US -- unspecified, OD -- optical density, HU -- hounsfield units
 			break;	// TODO
+		case DCM_WindowCenter:
+			if (zzt->VOI.level == 0.0)
+			{
+				zzgetstring(zz, value, sizeof(value) - 1);
+				if (strchr(value, '\\')) { char *c = strchr(value, '\\'); *c = '\0'; } // only grab first value
+				zzt->VOI.level = atof(value);
+			}
+			break;
+		case DCM_WindowWidth:
+			if (zzt->VOI.window == 0.0)
+			{
+				zzgetstring(zz, value, sizeof(value) - 1);
+				if (strchr(value, '\\')) { char *c = strchr(value, '\\'); *c = '\0'; } // only grab first value
+				zzt->VOI.window = atof(value);
+			}
+			break;
 		case DCM_NumberOfFrames:
 			zzgetstring(zz, value, sizeof(value) - 1);
 			zzt->pixelsize.z = atoi(value);
@@ -99,8 +115,8 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			bitspersample = zzgetuint16(zz, 0);
 			switch (bitspersample)
 			{
-			case 8: size = GL_UNSIGNED_BYTE; type = GL_LUMINANCE; break;
-			case 16: size = GL_UNSIGNED_SHORT; type = GL_LUMINANCE16; break;
+			case 8: size = GL_UNSIGNED_BYTE; type = GL_LUMINANCE; zzt->maxValue = UINT8_MAX; break;
+			case 16: size = GL_UNSIGNED_SHORT; type = GL_LUMINANCE16; zzt->maxValue = UINT16_MAX; break;
 			default: fprintf(stderr, "Bad bit size!\n"); return NULL;
 			}
 			break;

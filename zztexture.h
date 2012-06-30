@@ -43,11 +43,19 @@ struct zztexture
 		int x, y, z;
 	} pixelsize;
 
+	/// Size of value space
+	GLfloat maxValue;
+
 	/// Modality LUT transform (an actual LUT is not supported though)
 	struct
 	{
 		GLfloat intercept, slope;
 	} rescale;
+
+	struct
+	{
+		GLfloat level, window;
+	} VOI;
 };
 
 /// Generate and upload 3D textures for visualization from a single multi-frame DICOM file. OpenGL
