@@ -12,6 +12,7 @@ void zzwAS(struct zzfile *zz, zzKey key, const char *string);
 void zzwAT(struct zzfile *zz, zzKey key, zzKey key2);
 void zzwCS(struct zzfile *zz, zzKey key, const char *string);
 void zzwDA(struct zzfile *zz, zzKey key, time_t datestamp);
+void zzwDAs(struct zzfile *zz, zzKey key, const char *string);
 void zzwDT(struct zzfile *zz, zzKey key, struct timeval datetimestamp);
 void zzwDSs(struct zzfile *zz, zzKey key, const char *string);
 void zzwDSd(struct zzfile *zz, zzKey key, double value);

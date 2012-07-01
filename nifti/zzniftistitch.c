@@ -14,7 +14,7 @@
 
 #define MIN_HEADER_SIZE 348
 
-static int read_nifti_file(char *hdr_file, char *data_file)
+static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file)
 {
 	nifti_1_header *hdr;
 	FILE *fp;
@@ -23,9 +23,32 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 	char *bytes;
 	struct zzfile szw, *zw;
 	char *sopclassuid, *filename;
-	long sq1, sq2, item1, item2;
 	int wrongendian;
 	char uid[MAX_LEN_UI];
+	struct zzfile szz, *zz;
+	uint16_t group, element;
+	long len;
+	char seriesdate[MAX_LEN_DA];
+	char studydate[MAX_LEN_DA];
+	char studyuid[MAX_LEN_UI];
+	char studyid[MAX_LEN_LO];
+	char frameofrefuid[MAX_LEN_UI];
+	char patientsname[MAX_LEN_PN];
+	char patientid[MAX_LEN_UI];
+	char value[MAX_LEN_IS];
+	int number;
+	bool done = false;
+
+	memset(value, 0, sizeof(value));
+	memset(seriesdate, 0, sizeof(seriesdate));
+	memset(studydate, 0, sizeof(studydate));
+	memset(studyid, 0, sizeof(studyid));
+	memset(patientsname, 0, sizeof(patientsname));
+	memset(patientid, 0, sizeof(patientid));
+	zzmakeuid(frameofrefuid, sizeof(frameofrefuid)); // just in case...
+	zzmakeuid(studyuid, sizeof(studyuid)); // overwritten later, hopefully!
+	strcpy(patientsname, "NO NAME FOUND");
+	strcpy(patientid, "NO ID FOUND");
 
 	if (!is_nifti_file(hdr_file))
 	{
@@ -85,6 +108,59 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 		return -1;
 	}
 
+	// Grab some data from original
+	zz = zzopen(dcm_file, "r", &szz);
+	if (!zz)
+	{
+		return -1;
+	}
+	zziterinit(zz);
+	while (zziternext(zz, &group, &element, &len) && !done)
+	{
+		switch (ZZ_KEY(group, element))
+		{
+		case DCM_StudyDate:
+			zzgetstring(zz, studydate, sizeof(studydate) - 1);
+			break;
+		case DCM_SeriesDate:
+			zzgetstring(zz, seriesdate, sizeof(seriesdate) - 1);
+			break;
+		case DCM_PatientsName:
+			zzgetstring(zz, patientsname, sizeof(patientsname) - 1);
+			break;
+		case DCM_PatientID:
+			zzgetstring(zz, patientid, sizeof(patientid) - 1);
+			break;
+		case DCM_StudyInstanceUID:
+			zzgetstring(zz, studyuid, sizeof(studyuid) - 1);
+			break;
+		case DCM_StudyID:
+			zzgetstring(zz, studyid, sizeof(studyid) - 1);
+			break;
+		case DCM_FrameOfReferenceUID:
+			zzgetstring(zz, frameofrefuid, sizeof(frameofrefuid) - 1);
+			break;
+		case DCM_NumberOfFrames:  // this had better be the same
+			zzgetstring(zz, value, sizeof(value) - 1);
+			number = atoi(value);
+			if (number != hdr->dim[3])
+			{
+				fprintf(stderr, "Original has %d frames, capture has %d! Aborting...\n", number, (int)hdr->dim[3]);
+				return -1;
+			}
+			break;
+		case DCM_FrameIncrementPointer:
+			done = true;
+			break;
+		}
+	}
+	if (!done)
+	{
+		fprintf(stderr, "Could not a frame increment pointer in original DICOM file! Aborting...\n");
+		fprintf(stderr, "This application only works on multi-frame files!\n");
+		return -1;
+	}
+
 	// just memory map all the data
 	offset = (unsigned)hdr->vox_offset & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
 	msize = size + zw->current.pos - offset;
@@ -102,26 +178,25 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 	zzwCS(zw, DCM_ImageType, "DERIVED\\SECONDARY");
 	zzwUI(zw, DCM_SOPClassUID, sopclassuid);
 	zzwUI(zw, DCM_SOPInstanceUID, uid); // reusing the UID generated above
-	// StudyDate
-	// StudyTime
+	zzwDAs(zw, DCM_StudyDate, studydate);
+	zzwDAs(zw, DCM_SeriesDate, seriesdate);
 	zzwCS(zw, DCM_Modality, "SC");
 	zzwCS(zw, DCM_ConversionType, "WSD");
 	zzwLO(zw, DCM_SeriesDescription, hdr->descrip);
-	zzwPN(zw, DCM_PatientsName, "Analyze Conversion");
-	zzwLO(zw, DCM_PatientID, "Careful, Experimental");
-	// StudyInstanceUID
-	// SeriesInstanceUID
-	zzwSH(zw, DCM_StudyID, filename);
-	zzwIS(zw, DCM_SeriesNumber, 1);
+	zzwPN(zw, DCM_PatientsName, patientsname);
+	zzwLO(zw, DCM_PatientID, patientid);
+	zzwUI(zw, DCM_StudyInstanceUID, studyuid); // link original and secondary capture on study level
+	zzwUI(zw, DCM_SeriesInstanceUID, zzmakeuid(uid, sizeof(uid))); // ... but not on series level
+	zzwSH(zw, DCM_StudyID, studyid);
+	zzwIS(zw, DCM_SeriesNumber, 1); // FIXME, this should probably be something unique, incremented
 	zzwIS(zw, DCM_InstanceNumber, 1);
-	// SliceLocationVector
-	// PatientOrientation
-	// FrameOfReferenceUID
-	zzwCS(zw, DCM_PatientFrameOfReferenceSource, "ESTIMATED");
+	// SliceLocationVector?
+	// PatientOrientation?
+	zzwUI(zw, DCM_FrameOfReferenceUID, frameofrefuid);
 	zzwUS(zw, DCM_SamplesPerPixel, hdr->datatype != DT_RGB ? 1 : 3);
 	zzwCS(zw, DCM_PhotometricInterpretation, hdr->datatype != DT_RGB ? "MONOCHROME2" : "RGB");
 	zzwIS(zw, DCM_NumberOfFrames, hdr->dim[3]);
-	// FrameIncrementPointer
+	zzwCopy(zz, zw);	// copying the FrameIncrementPointer
 	zzwUS(zw, DCM_Rows, hdr->dim[1]);
 	zzwUS(zw, DCM_Columns, hdr->dim[2]);
 	zzwUS(zw, DCM_BitsAllocated, hdr->datatype != DT_UINT16 ? 8 : 16);
@@ -131,39 +206,35 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 	zzwDSd(zw, DCM_RescaleIntercept, hdr->scl_inter);
 	zzwDSd(zw, DCM_RescaleSlope, hdr->scl_slope);
 	zzwLO(zw, DCM_RescaleType, "US");
-	zzwSQ_begin(zw, DCM_SharedFunctionalGroupsSequence, &sq1);
-		zzwItem_begin(zw, &item1);
-			zzwSQ_begin(zw, DCM_PlaneOrientationSequence, &sq2);
-				zzwItem_begin(zw, &item2);
-				// TODO
-				zzwItem_end(zw, &item2);
-			zzwSQ_end(zw, &sq2);
-			zzwSQ_begin(zw, DCM_PixelMeasuresSequence, &sq2);
-				zzwItem_begin(zw, &item2);
-				{
-					double pixelspacing[3];
-					pixelspacing[0] = hdr->pixdim[1];
-					pixelspacing[1] = hdr->pixdim[2];
-					pixelspacing[2] = hdr->pixdim[3];
-					zzwDSd(zw, DCM_SliceThickness, pixelspacing[0]);
-					zzwDSdv(zw, DCM_PixelSpacing, 2, &pixelspacing[1]);
-				}
-				zzwItem_end(zw, &item2);
-			zzwSQ_end(zw, &sq2);
-		zzwItem_end(zw, &item1);
-	zzwSQ_end(zw, &sq1);
-	zzwSQ_begin(zw, DCM_PerFrameFunctionalGroupsSequence, &sq1);
-		for (i = 0; i < hdr->dim[3]; i++)
-		{
-			zzwItem_begin(zw, &item1);
-				zzwSQ_begin(zw, DCM_PlanePositionSequence, &sq2);
-					zzwItem_begin(zw, &item2);
-					// TODO
-					zzwItem_end(zw, &item2);
-				zzwSQ_end(zw, &sq2);
-			zzwItem_end(zw, &item1);
-		}
-	zzwSQ_end(zw, &sq1);
+	//-- Handle functional groups sequences
+	// find this part in the original
+	while (zziternext(zz, &group, &element, &len) && ZZ_KEY(group, element) != DCM_SharedFunctionalGroupsSequence) {}
+	if (ZZ_KEY(group, element) != DCM_SharedFunctionalGroupsSequence)
+	{
+		fprintf(stderr, "Could not find shared functional group sequence! Aborting...\n");
+		return -1;
+	}
+	// copy everything in this sequence!
+	number = zz->ladderidx;
+	while (zziternext(zz, &group, &element, &len) && zz->ladderidx >= number)
+	{
+		zzwCopy(zz, zw);
+	}
+printf(".now at (%04x, %04x)\n", group, element);
+	// and the next...
+	if (ZZ_KEY(group, element) != DCM_PerFrameFunctionalGroupsSequence)
+	{
+		fprintf(stderr, "Could not find shared functional group sequence!?\n");
+	}
+	// copy everything in this sequence! (FIXME, probably unwise to copy everything here...)
+	number = zz->ladderidx;
+	while (zziternext(zz, &group, &element, &len) && zz->ladderidx >= number)
+	{
+		zzwCopy(zz, zw);
+	}
+	// All done with original now
+printf(".and now at (%04x, %04x)\n", group, element);
+	zz = zzclose(zz);
 
 	// Now write the pixels
 	switch (hdr->datatype)
@@ -220,13 +291,13 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 
 int main(int argc, char **argv)
 {
-	zzutil(argc, argv, 1, "<header file> [<data file>]", "nifti to DICOM converter", NULL);
-	if (argc == 3)
+	zzutil(argc, argv, 2, "<dicom original> <header file> [<data file>]", "nifti to DICOM converter", NULL);
+	if (argc == 4)
 	{
-		return read_nifti_file(argv[1], argv[2]);
+		return conv_nifti_file(argv[1], argv[2], argv[3]);
 	}
 	else
 	{
-		return read_nifti_file(argv[1], argv[1]);
+		return conv_nifti_file(argv[1], argv[2], argv[2]);
 	}
 }

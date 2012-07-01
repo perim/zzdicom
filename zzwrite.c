@@ -348,6 +348,7 @@ void zzwLT(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, str
 void zzwST(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, ST, 1024); }
 void zzwUT(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, UT, UINT32_MAX - 1); }
 void zzwDSs(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, DS, 16); }
+void zzwDAs(struct zzfile *zz, zzKey key, const char *string) { wstr(zz, key, string, DA, 8); }
 
 void zzwIS(struct zzfile *zz, zzKey key, int value)
 {
