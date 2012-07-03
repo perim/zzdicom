@@ -14,7 +14,7 @@
 
 #define MIN_HEADER_SIZE 348
 
-static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file)
+static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file, char *resultfile)
 {
 	nifti_1_header *hdr;
 	FILE *fp;
@@ -100,7 +100,7 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file)
 		return -1;
 	}
 
-	zw = zzcreate("niftitest.dcm", &szw, sopclassuid, zzmakeuid(uid, sizeof(uid)), UID_JPEGLSLosslessTransferSyntax);
+	zw = zzcreate(resultfile, &szw, sopclassuid, zzmakeuid(uid, sizeof(uid)), UID_LittleEndianExplicitTransferSyntax);
 	if (!zw)
 	{
 		fprintf(stderr, "%s - could not create out file: %s\n", hdr_file, strerror(errno));
@@ -115,7 +115,7 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file)
 		return -1;
 	}
 	zziterinit(zz);
-	while (zziternext(zz, &group, &element, &len) && !done)
+	while (!done && zziternext(zz, &group, &element, &len))
 	{
 		switch (ZZ_KEY(group, element))
 		{
@@ -156,7 +156,7 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file)
 	}
 	if (!done)
 	{
-		fprintf(stderr, "Could not a frame increment pointer in original DICOM file! Aborting...\n");
+		fprintf(stderr, "Could not find a frame increment pointer in original DICOM file! Aborting...\n");
 		fprintf(stderr, "This application only works on multi-frame files!\n");
 		return -1;
 	}
@@ -196,7 +196,7 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file)
 	zzwUS(zw, DCM_SamplesPerPixel, hdr->datatype != DT_RGB ? 1 : 3);
 	zzwCS(zw, DCM_PhotometricInterpretation, hdr->datatype != DT_RGB ? "MONOCHROME2" : "RGB");
 	zzwIS(zw, DCM_NumberOfFrames, hdr->dim[3]);
-	zzwCopy(zz, zw);	// copying the FrameIncrementPointer
+	zzwCopy(zw, zz);	// copying the FrameIncrementPointer
 	zzwUS(zw, DCM_Rows, hdr->dim[1]);
 	zzwUS(zw, DCM_Columns, hdr->dim[2]);
 	zzwUS(zw, DCM_BitsAllocated, hdr->datatype != DT_UINT16 ? 8 : 16);
@@ -214,26 +214,12 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file)
 		fprintf(stderr, "Could not find shared functional group sequence! Aborting...\n");
 		return -1;
 	}
-	// copy everything in this sequence!
+	// copy everything in this sequence! (and, somewhat counter-intuitively, the next...)
 	number = zz->ladderidx;
 	while (zziternext(zz, &group, &element, &len) && zz->ladderidx >= number)
 	{
-		zzwCopy(zz, zw);
+		zzwCopy(zw, zz);
 	}
-printf(".now at (%04x, %04x)\n", group, element);
-	// and the next...
-	if (ZZ_KEY(group, element) != DCM_PerFrameFunctionalGroupsSequence)
-	{
-		fprintf(stderr, "Could not find shared functional group sequence!?\n");
-	}
-	// copy everything in this sequence! (FIXME, probably unwise to copy everything here...)
-	number = zz->ladderidx;
-	while (zziternext(zz, &group, &element, &len) && zz->ladderidx >= number)
-	{
-		zzwCopy(zz, zw);
-	}
-	// All done with original now
-printf(".and now at (%04x, %04x)\n", group, element);
 	zz = zzclose(zz);
 
 	// Now write the pixels
@@ -255,7 +241,7 @@ printf(".and now at (%04x, %04x)\n", group, element);
 		{
 			for (i = 0; i < hdr->dim[3]; i++)
 			{
-				int framesize = hdr->dim[0] * hdr->dim[1] * 2;
+				int framesize = hdr->dim[1] * hdr->dim[2] * 2;
 				zzwPixelData_frame(zw, i, bytes + i * framesize, framesize);
 			}
 		}
@@ -273,7 +259,7 @@ printf(".and now at (%04x, %04x)\n", group, element);
 		zzwPixelData_begin(zw, hdr->dim[3], 8, hdr->dim[1] * hdr->dim[2] * hdr->dim[3] * 3);
 		for (i = 0; i < hdr->dim[3]; i++)
 		{
-			int framesize = hdr->dim[0] * hdr->dim[1] * 3;
+			int framesize = hdr->dim[1] * hdr->dim[2] * 3;
 			zzwPixelData_frame(zw, i, bytes + i * framesize, framesize);
 		}
 		zzwPixelData_end(zw);
@@ -282,6 +268,7 @@ printf(".and now at (%04x, %04x)\n", group, element);
 		fprintf(stderr, "Unsupported data type -- skipped\n");
 		return -1;
 	}
+	zw = zzclose(zw);
 
 	madvise(bytes, size, MADV_DONTNEED);
 	munmap(addr, msize);
@@ -291,13 +278,13 @@ printf(".and now at (%04x, %04x)\n", group, element);
 
 int main(int argc, char **argv)
 {
-	zzutil(argc, argv, 2, "<dicom original> <header file> [<data file>]", "nifti to DICOM converter", NULL);
-	if (argc == 4)
+	zzutil(argc, argv, 3, "<dicom original> <header file> [<data file>] <dicom output>", "nifti to DICOM converter", NULL);
+	if (argc == 5)
 	{
-		return conv_nifti_file(argv[1], argv[2], argv[3]);
+		return conv_nifti_file(argv[1], argv[2], argv[3], argv[4]);
 	}
 	else
 	{
-		return conv_nifti_file(argv[1], argv[2], argv[2]);
+		return conv_nifti_file(argv[1], argv[2], argv[2], argv[3]);
 	}
 }
