@@ -172,7 +172,7 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 		zzwPixelData_begin(zw, hdr->dim[3], 8, hdr->dim[1] * hdr->dim[2] * hdr->dim[3]);
 		for (i = 0; i < hdr->dim[3]; i++)
 		{
-			int framesize = hdr->dim[1] * hdr->dim[2];
+			long framesize = hdr->dim[1] * hdr->dim[2];
 			zzwPixelData_frame(zw, i, bytes + i * framesize, framesize);
 		}
 		zzwPixelData_end(zw);
@@ -184,7 +184,8 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 		{
 			for (i = 0; i < hdr->dim[3]; i++)
 			{
-				int framesize = hdr->dim[0] * hdr->dim[1] * 2;
+				long framesize = hdr->dim[1] * hdr->dim[2] * 2;
+				printf("writing frame %d : size %ld (%d * %d * 2) at %p\n", i, framesize, hdr->dim[1], hdr->dim[2], bytes + i * framesize);
 				zzwPixelData_frame(zw, i, bytes + i * framesize, framesize);
 			}
 		}
@@ -202,7 +203,7 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 		zzwPixelData_begin(zw, hdr->dim[3], 8, hdr->dim[1] * hdr->dim[2] * hdr->dim[3] * 3);
 		for (i = 0; i < hdr->dim[3]; i++)
 		{
-			int framesize = hdr->dim[0] * hdr->dim[1] * 3;
+			long framesize = hdr->dim[1] * hdr->dim[2] * 3;
 			zzwPixelData_frame(zw, i, bytes + i * framesize, framesize);
 		}
 		zzwPixelData_end(zw);
