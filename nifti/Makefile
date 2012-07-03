@@ -1,12 +1,13 @@
-CFLAGS = -Wall -DPOSIX -Wshadow -Wformat-security -DHAVE_ZLIB -DHAVE_FDOPEN -I. -luuid -g
+CFLAGS = -Wall -DPOSIX -Wshadow -Wformat-security -DHAVE_ZLIB -DHAVE_FDOPEN -I. -luuid
 COMMON = ../zz.o ../part6.o ../zzwrite.o znzlib.o nifti1_io.o ../zzio.o
 PROGRAMS = zznifti2dcm zzniftistitch zzdcm2nifti
 HEADERS = ../zz.h ../zz_priv.h ../zzwrite.h ../part6.h nifti1.h znzlib.h nifti1_io.h
 
-all: CFLAGS += -Os
+all: CFLAGS += -Os -g
 all: zznifti2dcm zzniftistitch zzdcm2nifti
 
 debug: CFLAGS += -O0 -g -DDEBUG -fprofile-arcs -ftest-coverage
+debug: zznifti2dcm zzniftistitch zzdcm2nifti
 
 %.o : %.c
 	$(CC) -o $@ $< -c $(CFLAGS)

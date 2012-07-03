@@ -726,7 +726,7 @@ long zicopy(struct zzio *dst, struct zzio *src, long length)
 		// This implements kernel side "zero-copy" of data between file descriptors,
 		// allowing higher theoretical throughput, and quite real reduced CPU usage.
 		int pipefd[2], pipeteein[2], pipeteeout[2];
-		long total_sent = 0, bytes_in_pipe, remainder, result2;
+		long total_sent = 0, bytes_in_pipe, remainder;
 		unsigned baseflags = SPLICE_F_NONBLOCK, flags = 0;
 
 		if (src->writebuflen > 0)

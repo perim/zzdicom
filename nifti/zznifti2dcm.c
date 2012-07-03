@@ -14,7 +14,7 @@
 
 #define MIN_HEADER_SIZE 348
 
-static int read_nifti_file(char *hdr_file, char *data_file)
+static int read_nifti_file(char *hdr_file, char *data_file, char *dicomfile)
 {
 	nifti_1_header *hdr;
 	FILE *fp;
@@ -77,7 +77,7 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 		return -1;
 	}
 
-	zw = zzcreate("niftitest.dcm", &szw, sopclassuid, zzmakeuid(uid, sizeof(uid)), UID_JPEGLSLosslessTransferSyntax);
+	zw = zzcreate(dicomfile, &szw, sopclassuid, zzmakeuid(uid, sizeof(uid)), UID_LittleEndianExplicitTransferSyntax);
 	if (!zw)
 	{
 		fprintf(stderr, "%s - could not create out file: %s\n", hdr_file, strerror(errno));
@@ -185,7 +185,6 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 			for (i = 0; i < hdr->dim[3]; i++)
 			{
 				long framesize = hdr->dim[1] * hdr->dim[2] * 2;
-				printf("writing frame %d : size %ld (%d * %d * 2) at %p\n", i, framesize, hdr->dim[1], hdr->dim[2], bytes + i * framesize);
 				zzwPixelData_frame(zw, i, bytes + i * framesize, framesize);
 			}
 		}
@@ -212,6 +211,7 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 		fprintf(stderr, "Unsupported data type -- skipped\n");
 		return -1;
 	}
+	zw = zzclose(zw);
 
 	madvise(bytes, size, MADV_DONTNEED);
 	munmap(addr, msize);
@@ -221,13 +221,13 @@ static int read_nifti_file(char *hdr_file, char *data_file)
 
 int main(int argc, char **argv)
 {
-	zzutil(argc, argv, 1, "<header file> [<data file>]", "nifti to DICOM converter", NULL);
-	if (argc == 3)
+	zzutil(argc, argv, 2, "<header file> [<data file>] <dicom output>", "nifti to DICOM converter", NULL);
+	if (argc == 4)
 	{
-		return read_nifti_file(argv[1], argv[2]);
+		return read_nifti_file(argv[1], argv[2], argv[3]);
 	}
 	else
 	{
-		return read_nifti_file(argv[1], argv[1]);
+		return read_nifti_file(argv[1], argv[1], argv[2]);
 	}
 }
