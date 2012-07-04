@@ -149,18 +149,66 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file, char
 				return -1;
 			}
 			break;
+		case DCM_SliceLocationVector:
+			// Write DICOM tags
+			zzwCS(zw, DCM_ImageType, "DERIVED\\SECONDARY");
+			zzwUI(zw, DCM_SOPClassUID, sopclassuid);
+			zzwUI(zw, DCM_SOPInstanceUID, uid); // reusing the UID generated above
+			zzwDAs(zw, DCM_StudyDate, studydate);
+			zzwDAs(zw, DCM_SeriesDate, seriesdate);
+			zzwCS(zw, DCM_Modality, "SC");
+			zzwCS(zw, DCM_ConversionType, "WSD");
+			zzwLO(zw, DCM_SeriesDescription, hdr->descrip);
+			zzwPN(zw, DCM_PatientsName, patientsname);
+			zzwLO(zw, DCM_PatientID, patientid);
+
+			zzwCopy(zw, zz); // copy the SliceLocationVector
+			break;
 		case DCM_FrameIncrementPointer:
+			zzwUI(zw, DCM_StudyInstanceUID, studyuid); // link original and secondary capture on study level
+			zzwUI(zw, DCM_SeriesInstanceUID, zzmakeuid(uid, sizeof(uid))); // ... but not on series level
+			zzwSH(zw, DCM_StudyID, studyid);
+			zzwIS(zw, DCM_SeriesNumber, 1); // FIXME, this should probably be something unique, incremented
+			zzwIS(zw, DCM_InstanceNumber, 1);
+			zzwUI(zw, DCM_FrameOfReferenceUID, frameofrefuid);
+			zzwUS(zw, DCM_SamplesPerPixel, hdr->datatype != DT_RGB ? 1 : 3);
+			zzwCS(zw, DCM_PhotometricInterpretation, hdr->datatype != DT_RGB ? "MONOCHROME2" : "RGB");
+			zzwIS(zw, DCM_NumberOfFrames, hdr->dim[3]);
+			// PatientOrientation?
+			zzwCopy(zw, zz); // copying the FrameIncrementPointer
+			break;
+		case DCM_SharedFunctionalGroupsSequence:
+			zzwUS(zw, DCM_Rows, hdr->dim[1]);
+			zzwUS(zw, DCM_Columns, hdr->dim[2]);
+			zzwUS(zw, DCM_BitsAllocated, hdr->datatype != DT_UINT16 ? 8 : 16);
+			zzwUS(zw, DCM_BitsStored, hdr->datatype != DT_UINT16 ? 8 : 16);
+			zzwUS(zw, DCM_HighBit, hdr->datatype != DT_UINT16 ? 7 : 15);
+			zzwUS(zw, DCM_PixelRepresentation, 0);
+			zzwDSd(zw, DCM_RescaleIntercept, hdr->scl_inter);
+			zzwDSd(zw, DCM_RescaleSlope, hdr->scl_slope);
+			zzwLO(zw, DCM_RescaleType, "US");
 			done = true;
 			break;
 		}
 	}
 	if (!done)
 	{
-		fprintf(stderr, "Could not find a frame increment pointer in original DICOM file! Aborting...\n");
+		fprintf(stderr, "Could not find a functional group sequence in original DICOM file! Aborting...\n");
 		fprintf(stderr, "This application only works on multi-frame files!\n");
 		return -1;
 	}
 
+	//-- Handle functional groups sequences
+	// copy everything in this sequence! (and, somewhat counter-intuitively, the next...)
+	number = zz->ladderidx;
+	do
+	{
+		zzwCopy(zw, zz);
+	}
+	while (zziternext(zz, &group, &element, &len) && zz->ladderidx >= number);
+	zz = zzclose(zz);
+
+	//-- Now write the pixels
 	// just memory map all the data
 	offset = (unsigned)hdr->vox_offset & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
 	msize = size + (unsigned)hdr->vox_offset - offset;
@@ -172,58 +220,7 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file, char
 		return -1;
 	}
 	bytes = addr + (unsigned)hdr->vox_offset - offset;	// increment by page alignment shift
-	madvise(bytes, size, MADV_SEQUENTIAL | MADV_WILLNEED);
-
-	// Write DICOM tags
-	zzwCS(zw, DCM_ImageType, "DERIVED\\SECONDARY");
-	zzwUI(zw, DCM_SOPClassUID, sopclassuid);
-	zzwUI(zw, DCM_SOPInstanceUID, uid); // reusing the UID generated above
-	zzwDAs(zw, DCM_StudyDate, studydate);
-	zzwDAs(zw, DCM_SeriesDate, seriesdate);
-	zzwCS(zw, DCM_Modality, "SC");
-	zzwCS(zw, DCM_ConversionType, "WSD");
-	zzwLO(zw, DCM_SeriesDescription, hdr->descrip);
-	zzwPN(zw, DCM_PatientsName, patientsname);
-	zzwLO(zw, DCM_PatientID, patientid);
-	zzwUI(zw, DCM_StudyInstanceUID, studyuid); // link original and secondary capture on study level
-	zzwUI(zw, DCM_SeriesInstanceUID, zzmakeuid(uid, sizeof(uid))); // ... but not on series level
-	zzwSH(zw, DCM_StudyID, studyid);
-	zzwIS(zw, DCM_SeriesNumber, 1); // FIXME, this should probably be something unique, incremented
-	zzwIS(zw, DCM_InstanceNumber, 1);
-	// SliceLocationVector?
-	// PatientOrientation?
-	zzwUI(zw, DCM_FrameOfReferenceUID, frameofrefuid);
-	zzwUS(zw, DCM_SamplesPerPixel, hdr->datatype != DT_RGB ? 1 : 3);
-	zzwCS(zw, DCM_PhotometricInterpretation, hdr->datatype != DT_RGB ? "MONOCHROME2" : "RGB");
-	zzwIS(zw, DCM_NumberOfFrames, hdr->dim[3]);
-	zzwCopy(zw, zz);	// copying the FrameIncrementPointer
-	zzwUS(zw, DCM_Rows, hdr->dim[1]);
-	zzwUS(zw, DCM_Columns, hdr->dim[2]);
-	zzwUS(zw, DCM_BitsAllocated, hdr->datatype != DT_UINT16 ? 8 : 16);
-	zzwUS(zw, DCM_BitsStored, hdr->datatype != DT_UINT16 ? 8 : 16);
-	zzwUS(zw, DCM_HighBit, hdr->datatype != DT_UINT16 ? 7 : 15);
-	zzwUS(zw, DCM_PixelRepresentation, 0);
-	zzwDSd(zw, DCM_RescaleIntercept, hdr->scl_inter);
-	zzwDSd(zw, DCM_RescaleSlope, hdr->scl_slope);
-	zzwLO(zw, DCM_RescaleType, "US");
-	//-- Handle functional groups sequences
-	// find this part in the original
-	while (zziternext(zz, &group, &element, &len) && ZZ_KEY(group, element) != DCM_SharedFunctionalGroupsSequence) {}
-	if (ZZ_KEY(group, element) != DCM_SharedFunctionalGroupsSequence)
-	{
-		fprintf(stderr, "Could not find shared functional group sequence! Aborting...\n");
-		return -1;
-	}
-	// copy everything in this sequence! (and, somewhat counter-intuitively, the next...)
-	number = zz->ladderidx;
-	do
-	{
-		zzwCopy(zw, zz);
-	}
-	while (zziternext(zz, &group, &element, &len) && zz->ladderidx >= number);
-	zz = zzclose(zz);
-
-	// Now write the pixels
+	//madvise(bytes, size, MADV_SEQUENTIAL | MADV_WILLNEED); // FIXME...
 	switch (hdr->datatype)
 	{
 	case DT_UNSIGNED_CHAR:
@@ -273,6 +270,7 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file, char
 
 	madvise(bytes, size, MADV_DONTNEED);
 	munmap(addr, msize);
+	fclose(fp);
 
 	return 0;
 }
