@@ -216,10 +216,11 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file, char
 	}
 	// copy everything in this sequence! (and, somewhat counter-intuitively, the next...)
 	number = zz->ladderidx;
-	while (zziternext(zz, &group, &element, &len) && zz->ladderidx >= number)
+	do
 	{
 		zzwCopy(zw, zz);
 	}
+	while (zziternext(zz, &group, &element, &len) && zz->ladderidx >= number);
 	zz = zzclose(zz);
 
 	// Now write the pixels
