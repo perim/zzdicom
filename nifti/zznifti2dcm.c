@@ -91,7 +91,7 @@ static int read_nifti_file(char *hdr_file, char *data_file, char *dicomfile)
 	addr = mmap(NULL, msize, PROT_READ, MAP_SHARED, fileno(fp), offset);
 	if (addr == MAP_FAILED)
 	{
-		fprintf(stderr, "%s - could not mmap file: %s\n", hdr_file, strerror(errno));
+		fprintf(stderr, "%s - could not mmap file: %s\n", data_file, strerror(errno));
 		zw = zzclose(zw);
 		return -1;
 	}
@@ -215,6 +215,7 @@ static int read_nifti_file(char *hdr_file, char *data_file, char *dicomfile)
 
 	madvise(bytes, size, MADV_DONTNEED);
 	munmap(addr, msize);
+	fclose(fp);
 
 	return 0;
 }
