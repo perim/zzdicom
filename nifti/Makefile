@@ -25,8 +25,13 @@ clean:
 	rm -f *.o sqlinit.h $(PROGRAMS) *.gcno *.gcda random.dcm *.dcm
 
 check: zznifti2dcm zzniftistitch zzdcm2nifti
-	./zznifti2dcm ../samples/minimal.nii
-	./zznifti2dcm ../samples/minimal.hdr ../samples/minimal.img
+	./zznifti2dcm ../samples/minimal.nii ../samples/minimal.dcm
+	./zznifti2dcm ../samples/minimal.hdr ../samples/minimal.img ../samples/minimal.dcm
+	./zzdcm2nifti ../samples/spine.dcm ../samples/spine.nii
+	[ -f ~/bin/nifti_tool ] && ~/bin/nifti_tool -check_hdr -infiles ../samples/spine.nii
+	[ -f ~/bin/nifti_tool ] && ~/bin/nifti_tool -check_nim -infiles ../samples/spine.nii
+	./zznifti2dcm ../samples/spine.nii ../samples/spine-converted.dcm
+	./zzniftistitch ../samples/spine.dcm ../samples/spine.nii ../samples/spine-stitched.dcm
 
 install:
 	install -t /usr/local/bin $(PROGRAMS)

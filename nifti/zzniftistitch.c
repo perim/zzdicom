@@ -163,7 +163,7 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file, char
 
 	// just memory map all the data
 	offset = (unsigned)hdr->vox_offset & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
-	msize = size + zw->current.pos - offset;
+	msize = size + (unsigned)hdr->vox_offset - offset;
 	addr = mmap(NULL, msize, PROT_READ, MAP_SHARED, fileno(fp), offset);
 	if (addr == MAP_FAILED)
 	{
@@ -171,7 +171,7 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file, char
 		zw = zzclose(zw);
 		return -1;
 	}
-	bytes = addr + zw->current.pos - offset;	// increment by page alignment shift
+	bytes = addr + (unsigned)hdr->vox_offset - offset;	// increment by page alignment shift
 	madvise(bytes, size, MADV_SEQUENTIAL | MADV_WILLNEED);
 
 	// Write DICOM tags
