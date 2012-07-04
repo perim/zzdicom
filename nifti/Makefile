@@ -28,8 +28,8 @@ check: zznifti2dcm zzniftistitch zzdcm2nifti
 	./zznifti2dcm ../samples/minimal.nii ../samples/minimal-nii.dcm
 	./zznifti2dcm ../samples/minimal.hdr ../samples/minimal.img ../samples/minimal-hdr.dcm
 	./zzdcm2nifti ../samples/spine.dcm ../samples/spine.nii
-	[ -f ~/bin/nifti_tool ] && ~/bin/nifti_tool -check_hdr -infiles ../samples/spine.nii
-	[ -f ~/bin/nifti_tool ] && ~/bin/nifti_tool -check_nim -infiles ../samples/spine.nii
+	[ ! -f ~/bin/nifti_tool ] || ~/bin/nifti_tool -check_hdr -infiles ../samples/spine.nii
+	[ ! -f ~/bin/nifti_tool ] || ~/bin/nifti_tool -check_nim -infiles ../samples/spine.nii
 	./zznifti2dcm ../samples/spine.nii ../samples/spine-converted.dcm
 	./zzniftistitch ../samples/spine.dcm ../samples/spine.nii ../samples/spine-stitched.dcm
 
