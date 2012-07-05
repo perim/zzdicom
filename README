@@ -62,6 +62,15 @@ zzpixel - manipulates pixel values in a DICOM file.
 zzcopy - copy and convert DICOM files. Can transform from grayscale to RGB, or compress with
 the JPEG-LS lossless algorithm.
 
+In the nifti directory, you can also find these very experimental tools:
+
+zzdcm2nifti - convert file from a multi-frame DICOM to nifti format.
+
+zznifti2dcm - convert file from nifti to DICOM format, losing a lot of data in the process.
+
+zzniftistitch - convert a file from nifti to DICOM format, retrieving positioning and patient
+information from the original DICOM series.
+
 Credits
 -------
 This project would not have been possible without reusing some content from the DCMTK and GDCM

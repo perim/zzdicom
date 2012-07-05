@@ -638,12 +638,14 @@ void *zireadbuf(struct zzio *zi, long size)
 	}
 	else
 	{
+		int result;
 		long pos = zi->readpos + zi->readbufpos;
 		long offset = pos & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
 		addr = mmap(NULL, size + pos - offset, PROT_READ, MAP_SHARED, zi->fd, offset);
 		ASSERT_OR_RETURN(zi, NULL, addr != MAP_FAILED, "Memory map failed: %s", strerror(errno));
 		bytes = addr + pos - offset;	// increment by page alignment shift
-		madvise(bytes, size + pos - offset, MADV_SEQUENTIAL);
+		result = madvise(addr, size + pos - offset, MADV_SEQUENTIAL);
+		ASSERT(zi, result == 0, "madvise failed: %s", strerror(errno));
 	}
 	zi->readpos += size;
 	zi->readbuflen = 0;
@@ -662,7 +664,8 @@ void zifreebuf(struct zzio *zi, void *buf, long size)
 	// else unmap memory
 	void *addr = (void *)((intptr_t)buf & ~(sysconf(_SC_PAGE_SIZE) - 1));
 	long realsize = size + buf - addr;
-	munmap(addr, realsize);
+	int result = munmap(addr, realsize);
+	ASSERT(zi, result == 0, "munmap failed: %s", strerror(errno));
 }
 
 #ifdef ZZ_LINUX

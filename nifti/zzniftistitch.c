@@ -151,6 +151,7 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file, char
 			break;
 		case DCM_SliceLocationVector:
 			// Write DICOM tags
+			// FIXME, handle other slice sort vectors
 			zzwCS(zw, DCM_ImageType, "DERIVED\\SECONDARY");
 			zzwUI(zw, DCM_SOPClassUID, sopclassuid);
 			zzwUI(zw, DCM_SOPInstanceUID, uid); // reusing the UID generated above
@@ -161,7 +162,6 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file, char
 			zzwLO(zw, DCM_SeriesDescription, hdr->descrip);
 			zzwPN(zw, DCM_PatientsName, patientsname);
 			zzwLO(zw, DCM_PatientID, patientid);
-
 			zzwCopy(zw, zz); // copy the SliceLocationVector
 			break;
 		case DCM_FrameIncrementPointer:
@@ -220,7 +220,10 @@ static int conv_nifti_file(char *dcm_file, char *hdr_file, char *data_file, char
 		return -1;
 	}
 	bytes = addr + (unsigned)hdr->vox_offset - offset;	// increment by page alignment shift
-	//madvise(bytes, size, MADV_SEQUENTIAL | MADV_WILLNEED); // FIXME...
+	if (madvise(addr, size + (unsigned)hdr->vox_offset - offset, MADV_SEQUENTIAL | MADV_WILLNEED) != 0)
+	{
+		fprintf(stderr, "madvise failed: %s\n", strerror(errno));
+	}
 	switch (hdr->datatype)
 	{
 	case DT_UNSIGNED_CHAR:

@@ -96,7 +96,10 @@ static int read_nifti_file(char *hdr_file, char *data_file, char *dicomfile)
 		return -1;
 	}
 	bytes = addr + (unsigned)hdr->vox_offset - offset;	// increment by page alignment shift
-	madvise(bytes, size, MADV_SEQUENTIAL | MADV_WILLNEED);
+	if (madvise(addr, size + (unsigned)hdr->vox_offset - offset, MADV_SEQUENTIAL | MADV_WILLNEED) != 0)
+	{
+		fprintf(stderr, "madvise failed: %s\n", strerror(errno));
+	}
 
 	// Write DICOM tags
 	zzwCS(zw, DCM_ImageType, "DERIVED\\SECONDARY");
