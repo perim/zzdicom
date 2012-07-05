@@ -108,7 +108,7 @@ bool zzdinegotiation(struct zznetwork *zzn)
 	}
 	zziterinit(zzn->in);
 	loop = true;
-	zzdireceiving2(zzn, "RECV1");
+	zzdireceiving2(zzn, "RECEIVED");
 	while (loop && zziternext(zzn->in, &group, &element, &len))
 	{
 		memset(str, 0, sizeof(str));
@@ -133,7 +133,7 @@ bool zzdinegotiation(struct zznetwork *zzn)
 	ziflush(zzn->out->zi);
 
 	loop = true;
-	zzdireceiving2(zzn, "RECV2");
+	zzdireceiving2(zzn, "RECEIVED");
 	while (loop && zziternext(zzn->in, &group, &element, &len))
 	{
 		memset(str, 0, sizeof(str));
@@ -150,7 +150,7 @@ bool zzdinegotiation(struct zznetwork *zzn)
 	ziflush(zzn->out->zi);
 
 	loop = true;
-	zzdireceiving2(zzn, "RECV3");
+	zzdireceiving2(zzn, "RECEIVED");
 	while (loop && zziternext(zzn->in, &group, &element, &len))
 	{
 		memset(str, 0, sizeof(str));
@@ -166,7 +166,7 @@ bool zzdinegotiation(struct zznetwork *zzn)
 	ziflush(zzn->out->zi);
 
 	loop = true;
-	zzdireceiving2(zzn, "RECV4");
+	zzdireceiving2(zzn, "RECEIVED");
 	while (loop && zziternext(zzn->in, &group, &element, &len))
 	{
 		memset(str, 0, sizeof(str));

@@ -73,7 +73,7 @@ int main(int argc, char **argv)
 			zzdisending(zzn);
 			zzwSQ_begin(zzn->out, DCM_DiNetworkServiceSequence, NULL);
 			zzwItem_begin(zzn->out, NULL);
-			zzwCS(zzn->out, DCM_DiNetworkService, "STORE");
+			zzwCS(zzn->out, DCM_DiNetworkService, "INFO");
 			//zzwPN(zzn->out, DCM_DiNetworkRequestor, "");
 			zzwItem_end(zzn->out, NULL);
 			zzwSQ_end(zzn->out, NULL);

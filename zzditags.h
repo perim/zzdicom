@@ -74,6 +74,7 @@
 #define DCM_DiInfoTechnicalContact               ZZ_KEY(DIGROUP, 0x6021) // PN
 #define DCM_DiServiceEventsSequence              ZZ_KEY(DIGROUP, 0x6080) // SQ, multiple items
 #define DCM_DiAdverseEventsSequence              ZZ_KEY(DIGROUP, 0x6090) // SQ, multiple items
+#define DCM_DiInfoStatus                         ZZ_KEY(DIGROUP, 0x6099) // CS, "SUCCESS" always, signal that all info tags have been received
 
 // pre-cache replication service
 #define DCM_DiReplicatePermissionsSequence       ZZ_KEY(DIGROUP, 0x8005) // SQ, for pre-cache replication using "REPLICATE" service

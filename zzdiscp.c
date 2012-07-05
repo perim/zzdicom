@@ -42,13 +42,33 @@ static void zzdiserviceprovider(struct zznetwork *zzn)
 		switch (ZZ_KEY(group, element))
 		{
 		case DCM_DiNetworkServiceSequence:
-			newservice = true;
+			newservice = true; // now waiting for DiNetworkService
 			break;
 		case DCM_DiNetworkService:
 			assert(newservice);
 			printf("Service = %s\n", zzgetstring(zzn->in, str, sizeof(str) - 1));
 			zzdisending(zzn);
-			zzwCS(zzn->out, DCM_DiNetworkServiceStatus, "ACCEPTED"); // TODO check validity of above
+			if (strcmp(str, "STORE") == 0)
+			{
+				zzwCS(zzn->out, DCM_DiNetworkServiceStatus, "ACCEPTED"); // then await data
+			}
+			else if (strcmp(str, "INFO") == 0)
+			{
+				zzwCS(zzn->out, DCM_DiNetworkServiceStatus, "ACCEPTED");
+				zzwSQ_begin(zzn->out, DCM_DiInfoEquipmentSequence, NULL);
+				zzwItem_begin(zzn->out, NULL);
+				zzwLO(zzn->out, DCM_Manufacturer, "zzdicom");
+				zzwLO(zzn->out, DCM_ManufacturersModelName, "zzdicom");
+				zzwLO(zzn->out, DCM_DeviceSerialNumber, "1"); // FIXME, read from setting?
+				zzwLO(zzn->out, DCM_SoftwareVersions, "0.0.2"); // FIXME, read from file
+				zzwItem_end(zzn->out, NULL);
+				zzwSQ_end(zzn->out, NULL);
+				zzwCS(zzn->out, DCM_DiInfoStatus, "SUCCESS"); // signal done
+			}
+			else
+			{
+				zzwCS(zzn->out, DCM_DiNetworkServiceStatus, "NO SUCH SERVICE");
+			}
 			ziflush(zzn->out->zi);
 			zzdireceiving(zzn);
 			newservice = false;
