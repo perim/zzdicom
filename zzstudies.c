@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 	struct zzdb szdb, *zdb;
 	char lines[100];
 
-	zzutil(argc, argv, 1, "", "List all studies in local DICOM database", NULL);
+	zzutil(argc, argv, 0, "", "List all studies in local DICOM database", NULL);
 	zdb = zzdbopen(&szdb);
 	if (!zdb)
 	{
