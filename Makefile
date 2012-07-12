@@ -78,11 +78,12 @@ cppcheck:
 	cppcheck -j 4 -q zzcopy.c zztexture.c zzsql.c zzio.c
 	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c zznetwork.c
 	cppcheck -j 4 -q zzdiscp.c zzdiscu.c zzdinetwork.c
-	cppcheck -j 4 -q zznetwork.c zzpixel.c
+	cppcheck -j 4 -q zznetwork.c zzpixel.c zzini.c
 	cppcheck -j 4 -q tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
-	cppcheck -j 4 -q tests/testnet.c
+	cppcheck -j 4 -q tests/testnet.c tests/initest.c
 
-check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet
+check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet tests/initest
+	tests/initest
 	tests/zz1 2> /dev/null
 	tests/zzw
 	tests/zzt samples/spine.dcm
@@ -142,6 +143,9 @@ tests/zzt: tests/zzt.c $(HEADERS) $(COMMON) $(COMMONTEXTURE)
 
 tests/zzwcopy: tests/zzwcopy.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONVERIFY) $(PART6)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY) $(PART6)
+
+tests/initest: tests/initest.c zzini.c zzini.h
+	$(CC) -o $@ $< -I. zzini.c $(CFLAGS)
 
 install:
 	install -t /usr/local/bin $(PROGRAMS)

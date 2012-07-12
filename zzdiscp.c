@@ -24,6 +24,8 @@ enum
 	OPT_COUNT
 };
 
+extern const char *versionString;
+
 static struct zzopts opts[] =
 	{ { "--trace", "Save a network trace dump to \"zzdiscp.dcm\"", false, false, 0, 0 }, // OPT_TRACE
 	  { NULL, NULL, false, false, 0, 0 } };              // OPT_COUNT
@@ -60,7 +62,7 @@ static void zzdiserviceprovider(struct zznetwork *zzn)
 				zzwLO(zzn->out, DCM_Manufacturer, "zzdicom");
 				zzwLO(zzn->out, DCM_ManufacturersModelName, "zzdicom");
 				zzwLO(zzn->out, DCM_DeviceSerialNumber, "1"); // FIXME, read from setting?
-				zzwLO(zzn->out, DCM_SoftwareVersions, "0.0.2"); // FIXME, read from file
+				zzwLO(zzn->out, DCM_SoftwareVersions, versionString);
 				zzwItem_end(zzn->out, NULL);
 				zzwSQ_end(zzn->out, NULL);
 				zzwCS(zzn->out, DCM_DiInfoStatus, "SUCCESS"); // signal done

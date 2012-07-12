@@ -54,14 +54,22 @@
 
 // access request
 #define DCM_DiAccessAuthorizing                  ZZ_KEY(DIGROUP, 0x5001) // PN, name of person authorizing access (deliberately no phone #!)
-#define DCM_DiAccessTechnicalContact             ZZ_KEY(DIGROUP, 0x5002) // PN
-#define DCM_DiAccessTechnicalContactPhone        ZZ_KEY(DIGROUP, 0x5003) // LO, phone number of technical contact
+#define DCM_DiAccessTechnicalContact             ZZ_KEY(DIGROUP, 0x5002) // PN, name of technical contact for request
+#define DCM_DiAccessTechnicalContactPhone        ZZ_KEY(DIGROUP, 0x5003) // LO, phone number of technical contact for request
 #define DCM_DiAccessMessage                      ZZ_KEY(DIGROUP, 0x5004) // LT, message to IT admin
 #define DCM_DiAccessInstitutionDepartmentName    ZZ_KEY(DIGROUP, 0x5005) // LO, where modality is located
 #define DCM_DiAccessEquipmentSequence            ZZ_KEY(DIGROUP, 0x5006) // SQ, insert < C.7.5.2 Enhanced General Equipment Module >
-#define DCM_DiAccessPrivilegeRequestedSequence   ZZ_KEY(DIGROUP, 0x5007) // SQ, may have multiple items, containing DCM_DiNetworkService
-                                                                        // and optional extras like DCM_DiStorageMethod
-#define DCM_DiAccessStatus                       ZZ_KEY(DIGROUP, 0x5099) // CS, "QUEUED" (or "FAILED" if contents are invalid)
+#define DCM_DiAccessPrivilegeRequested           ZZ_KEY(DIGROUP, 0x5007) // LO, may have multiple items, containing service labels
+                                                                         // and optional extras like "UPDATE" (update stored series)
+#define DCM_DiAccessUID                          ZZ_KEY(DIGROUP, 0x5008) // UI, unique UID for this request
+#define DCM_DiAccessAETITLE                      ZZ_KEY(DIGROUP, 0x5009) // AE, hospital unique AETITLE for this modality
+#define DCM_DiAccessIP                           ZZ_KEY(DIGROUP, 0x500a) // LO, IP address of modality (if applicable)
+#define DCM_DiAccessPort                         ZZ_KEY(DIGROUP, 0x500a) // LO, port address of modality service (if applicable)
+#define DCM_DiAccessServiceContact               ZZ_KEY(DIGROUP, 0x500b) // PN, name(s) of person to call if modality has a problem
+#define DCM_DiAccessServiceContactPhone          ZZ_KEY(DIGROUP, 0x500c) // LO, phone number(s) of person to call if modality has a problem
+#define DCM_DiAccessPublicKey                    ZZ_KEY(DIGROUP, 0x500d) // LT, public key of modality
+#define DCM_DiAccessStatus                       ZZ_KEY(DIGROUP, 0x5099) // CS, "QUEUED", or "FAILED" if contents are invalid,
+                                                                         // or "AETITLE IN USE", or "UID NOT UNIQUE"
 
 // info request
 #define DCM_DiInfoEquipmentSequence              ZZ_KEY(DIGROUP, 0x6002) // SQ, insert < C.7.5.2 Enhanced General Equipment Module >
