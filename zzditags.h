@@ -80,8 +80,12 @@
 #define DCM_DiInfoInstallationDate               ZZ_KEY(DIGROUP, 0x6011) // DA, modality installation date at institution
 #define DCM_DiInfoInstitutionDepartmentName      ZZ_KEY(DIGROUP, 0x6020) // LO, where modality is located
 #define DCM_DiInfoTechnicalContact               ZZ_KEY(DIGROUP, 0x6021) // PN
-#define DCM_DiServiceEventsSequence              ZZ_KEY(DIGROUP, 0x6080) // SQ, multiple items
-#define DCM_DiAdverseEventsSequence              ZZ_KEY(DIGROUP, 0x6090) // SQ, multiple items
+#define DCM_DiServiceEventSequence               ZZ_KEY(DIGROUP, 0x6080) // SQ, multiple items
+#define DCM_DiServiceEventDateTime               ZZ_KEY(DIGROUP, 0x6081) // DT, time of service event
+#define DCM_DiServiceEventLog                    ZZ_KEY(DIGROUP, 0x6082) // LT, log of what happened in service event
+#define DCM_DiServiceEventTechnician             ZZ_KEY(DIGROUP, 0x6082) // PN, person(s) who carried out service
+#define DCM_DiServiceEventResponsible            ZZ_KEY(DIGROUP, 0x6082) // PN, person who authorized service on behalf of equipment owner
+#define DCM_DiAdverseEventSequence               ZZ_KEY(DIGROUP, 0x6090) // SQ, multiple items
 #define DCM_DiInfoStatus                         ZZ_KEY(DIGROUP, 0x6099) // CS, "SUCCESS" always, signal that all info tags have been received
 
 // pre-cache replication service
