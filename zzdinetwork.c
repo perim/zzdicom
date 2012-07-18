@@ -162,7 +162,7 @@ bool zzdinegotiation(struct zznetwork *zzn)
 		zzdiprint(zzn->in, zzgetstring(zzn->in, str, sizeof(str) - 1));
 	}
 	zzdisending(zzn);
-	zzwCS(zzn->out, DCM_DiKeyStatus, "ACCEPTED");
+	zzwCS(zzn->out, DCM_DiConnectionStatus, "ACCEPTED");
 	ziflush(zzn->out->zi);
 
 	loop = true;
@@ -172,8 +172,30 @@ bool zzdinegotiation(struct zznetwork *zzn)
 		memset(str, 0, sizeof(str));
 		switch (ZZ_KEY(group, element))
 		{
-		case DCM_DiKeyStatus: loop = false; break;
-		default: break;	// ignore
+		case DCM_DiConnectionStatus: 
+			zzgetstring(zzn->in, str, sizeof(str) - 1);
+			if (strcmp(str, "CHALLENGE FAILURE") == 0)
+			{
+				warning("Key challenge failed during negotiation");
+				return false;
+			}
+			else if (strcmp(str, "ACCESS DENIED") == 0)
+			{
+				warning("Access denied during negotiation");
+				return false;
+			}
+			else if (strcmp(str, "ACCEPTED") == 0)
+			{
+				loop = false; 	// success
+			}
+			else
+			{
+				warning("Unknown connection status received: %s", str);
+				return false;
+			}
+			break;
+		default:
+			break;	// ignore
 		}
 		zzdiprint(zzn->in, zzgetstring(zzn->in, str, sizeof(str) - 1));
 	}

@@ -11,16 +11,20 @@
 #define DCM_DiPeerKeyHash                        ZZ_KEY(DIGROUP, 0x0007) // LO, hash of PGP key for optional validation
 #define DCM_DiPeerCurrentDateTime                ZZ_KEY(DIGROUP, 0x0008) // DT
 #define DCM_DiPeerStatus                         ZZ_KEY(DIGROUP, 0x0009) // CS, one of "ACCEPTED" (known) or "UNKNOWN" or "BAD DATETIME" or "FAILED" (pgp hash)
+#define DCM_DiServiceRequestor                   ZZ_KEY(DIGROUP, 0x0010) // PN, person making request from modality (if known)
+#define DCM_DiServiceAuthenticationMethod        ZZ_KEY(DIGROUP, 0x0011) // CS, method of authenticating person making request, optional,
+                                                                         // defined values: "NONE", "LOCAL" (local passwords)
+#define DCM_DiServiceAuthenticationKey           ZZ_KEY(DIGROUP, 0x0012) // OB/LO, content depends on word above
 #define DCM_DiKeyChallenge                       ZZ_KEY(DIGROUP, 0x0021) // OB, random string encrypted with challenged's public key
 #define DCM_DiKeyResponse                        ZZ_KEY(DIGROUP, 0x0022) // OB, string above, encrypted with challenger's public key
-#define DCM_DiKeyStatus                          ZZ_KEY(DIGROUP, 0x0023) // CS, one of "ACCEPTED" or "FAILED"
-//#define DCM_DiPriority                           ZZ_KEY(DIGROUP, 0x0024) // CS, optional, one of "HIGH", "NORMAL", "LOW", or "BULK"
+#define DCM_DiConnectionStatus                   ZZ_KEY(DIGROUP, 0x0023) // CS, one of "ACCEPTED", "CHALLENGE FAILURE", or "ACCESS DENIED"
+#define DCM_DiPriority                           ZZ_KEY(DIGROUP, 0x0024) // CS, optional, one of "HIGH", "NORMAL", "LOW", or "BULK"
 
 // network service
 #define DCM_DiNetworkServiceSequence             ZZ_KEY(DIGROUP, 0x1000) // SQ
-#define DCM_DiNetworkService                     ZZ_KEY(DIGROUP, 0x1001) // CS, one of "STORE", "QUERY", "RETRIEVE", "INFO", "ACCESS"
-#define DCM_DiNetworkServiceRequestor            ZZ_KEY(DIGROUP, 0x1002) // PN, person making request
-#define DCM_DiNetworkServiceStatus               ZZ_KEY(DIGROUP, 0x1100) // CS, "ACCEPTED" or "SERVICE DENIED" or "NO SERVICE"
+#define DCM_DiNetworkService                     ZZ_KEY(DIGROUP, 0x1001) // CS, one of "STORE", "QUERY", "RETRIEVE", "INFO", or "ACCESS"
+#define DCM_DiNetworkServiceUID                  ZZ_KEY(DIGROUP, 0x1006) // UI, UID of network request
+#define DCM_DiNetworkServiceStatus               ZZ_KEY(DIGROUP, 0x1100) // CS, "ACCEPTED" or "SERVICE DENIED" (bad permissions) or "NO SERVICE" (not available)
 
 // storage
 #define DCM_DiStorageNumberOfStudies             ZZ_KEY(DIGROUP, 0x2001) // US
@@ -31,6 +35,7 @@
 #define DCM_DiStorageObjectSequence              ZZ_KEY(DIGROUP, 0x2006) // SQ, contains one or more files (objects)
 #define DCM_DiStorageMD5Hash                     ZZ_KEY(DIGROUP, 0x2007) // LO, MD5 hash of file
 #define DCM_DiStorageMethod                      ZZ_KEY(DIGROUP, 0x2008) // CS, "NEW" or "UPDATE" or "REQUESTED" (if retrieve)
+#define DCM_DiStorageRetrieveUID                 ZZ_KEY(DIGROUP, 0x2009) // UI, req if above is "REQUESTED", UID of request, not present otherwise
 #define DCM_DiStorageSize                        ZZ_KEY(DIGROUP, 0x2090) // UX (new VR, unsigned 64bit), size of object to follow
 #define DCM_DiStorageSequence                    ZZ_KEY(DIGROUP, 0x2091) // SQ, contains file to store
 #define DCM_DiStorageResultSequence              ZZ_KEY(DIGROUP, 0x2101) // SQ, contains responses to storage items
@@ -68,6 +73,7 @@
 #define DCM_DiAccessServiceContact               ZZ_KEY(DIGROUP, 0x500b) // PN, name(s) of person to call if modality has a problem
 #define DCM_DiAccessServiceContactPhone          ZZ_KEY(DIGROUP, 0x500c) // LO, phone number(s) of person to call if modality has a problem
 #define DCM_DiAccessPublicKey                    ZZ_KEY(DIGROUP, 0x500d) // LT, public key of modality
+#define DCM_DiAccessAuthenticationMethods        ZZ_KEY(DIGROUP, 0x500e) // CS, 1-n, methods to authenticate modality users, defined values: "NONE"
 #define DCM_DiAccessStatus                       ZZ_KEY(DIGROUP, 0x5099) // CS, "QUEUED", or "FAILED" if contents are invalid,
                                                                          // or "AETITLE IN USE", or "UID NOT UNIQUE"
 
