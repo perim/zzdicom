@@ -117,7 +117,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			{
 			case 8: size = GL_UNSIGNED_BYTE; type = GL_LUMINANCE; zzt->maxValue = UINT8_MAX; break;
 			case 16: size = GL_UNSIGNED_SHORT; type = GL_LUMINANCE16; zzt->maxValue = UINT16_MAX; break;
-			default: fprintf(stderr, "Bad bit size!\n"); return NULL;
+			default: warning("Bad bit size!"); return NULL;
 			}
 			break;
 		case DCM_PhotometricInterpretation:
@@ -136,14 +136,14 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			components = zzgetuint16(zz, 0);
 			if (components != 1)
 			{
-				fprintf(stderr, "Only grayscale images supported at this time.\n");
+				warning("Only grayscale images supported at this time.");
 				return NULL;
 			}
 			break;
 		case DCM_PlanarConfiguration:
 			if (zzgetuint16(zz, 0) != 0)
 			{
-				fprintf(stderr, "Unsupported planar configuration\n");
+				warning("Unsupported planar configuration");
 				return NULL;
 			}
 			break;
@@ -168,7 +168,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 		case DCM_PixelData:
 			if (bitspersample == 0)	// by the time we get here, we need to have found all relevant pixel info
 			{
-				fprintf(stderr, "No valid image information found\n");
+				warning("No valid image information found");
 				return NULL;
 			}
 			glBindTexture(GL_TEXTURE_2D, 0);

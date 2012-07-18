@@ -143,7 +143,7 @@ void dumpcsa(struct zzfile *zz)
 		ziread(zz->zi, &unused32, 4);
 		if (unused32 != 77)
 		{
-			printf("Bad magic header value! (was %u)\n", unused32);
+			debug("Bad magic header value! (was %u)", unused32);
 			return;
 		}
 		memset(str, 0, sizeof(str));
@@ -158,7 +158,7 @@ void dumpcsa(struct zzfile *zz)
 			ziread(zz->zi, &xx, 4);
 			if (xx != 77 && xx != 205)
 			{
-				printf("Bad magic tag value! (was %u)\n", xx);
+				debug("Bad magic tag value! (was %u)", xx);
 				return;
 			}
 			for (j = 0; j < (unsigned)zz->currNesting + 1; j++) printf("  "); // indent
@@ -171,13 +171,13 @@ void dumpcsa(struct zzfile *zz)
 				ziread(zz->zi, itemsize, 4 * 4);
 				if (itemsize[2] != 77 && itemsize[2] != 205) // someone in Siemens must have a number fetish...
 				{
-					printf("Bad magic item value! (was %u) [%u,%u,%u,%u]\n", itemsize[2], itemsize[0], itemsize[1], itemsize[2], itemsize[3]); 
+					debug("Bad magic item value! (was %u) [%u,%u,%u,%u]", itemsize[2], itemsize[0], itemsize[1], itemsize[2], itemsize[3]); 
 					return;
 				}
 				sum += itemsize[1];
 				if (zz->current.pos - zireadpos(zz->zi) + (long)itemsize[1] > zz->current.length)
 				{
-					printf("Ran out of buffer while parsing!\n");
+					debug("Ran out of buffer while parsing!");
 					return;
 				}
 				pos = zireadpos(zz->zi) + itemsize[1];
@@ -217,7 +217,7 @@ void dumpcsa(struct zzfile *zz)
 				strcpy(pstart, "\033[22m\033[33m(");
 				snprintf(pstop, sizeof(pstop) - 1, ")\033[0m%*s", (int)(PADLEN - charlen - 2), "");
 			}
-			printf("\033[22m\033[32m(----,----)\033[0m %s %s%s%s # %4d, %d %s\n",
+			debug("\033[22m\033[32m(----,----)\033[0m %s %s%s%s # %4d, %d %s",
 			       vr, pstart, value, pstop, sum, nitems, str);
 			memset(str, 0, sizeof(str));
 			memset(vr, 0, sizeof(vr));

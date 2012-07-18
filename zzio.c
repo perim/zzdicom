@@ -73,6 +73,13 @@ struct zzio
 	int teeflags;
 };
 
+#define warning(...) do { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while (0)
+#ifndef NDEBUG
+#define debug(...) do { fprintf(stdout, __VA_ARGS__); fprintf(stderr, "\n"); } while (0)
+#else
+#define debug(...)
+#endif
+
 // Convenience functions for setting error. Currently no way to clear them. We also do not check if flag is set on function entry.
 // FIXME: Wrap printf behind an #ifdef DEBUG conditional
 #define ASSERT_OR_RETURN(zi, retval, expr, ...) \
@@ -514,7 +521,7 @@ bool zisetreadpos(struct zzio *zi, long pos)
 			}
 			ASSERT(zi, result >= 0, "Failed skipping ahead");
 		}
-		ASSERT(zi, zi->readpos + zi->readbufpos == pos, "Failed to find correct position (%ld + %ld != %ld)\n", zi->readpos, zi->readbufpos, pos);
+		ASSERT(zi, zi->readpos + zi->readbufpos == pos, "Failed to find correct position (%ld + %ld != %ld)", zi->readpos, zi->readbufpos, pos);
 		return true;
 	}
 	else if (pos > zi->readpos + zi->readbuflen || pos < zi->readpos)
@@ -682,7 +689,7 @@ static inline void dupefd(int pipefd, int *pipetee, long bytes_in_pipe, int flag
 			{
 				continue; // interrupted, try again
 			}
-			fprintf(stderr, "Failed to tee from pipe: %s\n", strerror(errno));
+			warning("Failed to tee from pipe: %s", strerror(errno));
 			break;
 		}
 		sum -= result;
@@ -697,7 +704,7 @@ static inline void dupefd(int pipefd, int *pipetee, long bytes_in_pipe, int flag
 			{
 				continue; // interrupted, try again
 			}
-			fprintf(stderr, "Failed to read from pipe: %s\n", strerror(errno));
+			warning("Failed to read from pipe: %s", strerror(errno));
 			assert(false);
 			break;
 		}
@@ -752,7 +759,7 @@ long zicopy(struct zzio *dst, struct zzio *src, long length)
 		}
 		if (pipe(pipefd) || pipe(pipeteein) || pipe(pipeteeout))
 		{
-			fprintf(stderr, "Failed to make pipe: %s\n", strerror(errno));
+			warning("Failed to make pipe: %s", strerror(errno));
 			return -1;
 		}
 		while (total_sent < length)
@@ -765,7 +772,7 @@ long zicopy(struct zzio *dst, struct zzio *src, long length)
 				{
 					continue; // interrupted, try again
 				}
-				fprintf(stderr, "Failed to write to pipe: %s\n", strerror(errno));
+				warning("Failed to write to pipe: %s", strerror(errno));
 				close(pipefd[0]);
 				close(pipefd[1]);
 				return -1;
@@ -794,7 +801,7 @@ long zicopy(struct zzio *dst, struct zzio *src, long length)
 					{
 						continue; // interrupted, try again
 					}
-					fprintf(stderr, "Failed to read from pipe: %s\n", strerror(errno));
+					warning("Failed to read from pipe: %s", strerror(errno));
 					close(pipefd[0]);
 					close(pipefd[1]);
 					return -1;

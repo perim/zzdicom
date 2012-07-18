@@ -37,7 +37,7 @@ static struct zzfile *earlyparse(struct zzfile *zz, const char *filename)
 
 	if (!zisetreadpos(zz->zi, 128) || ziread(zz->zi, dicm, 4) != 4 || strncmp(dicm, "DICM", 4) != 0)
 	{
-		fprintf(stderr, "%s does not have a valid part 10 DICOM header\n", filename);
+		debug("%s does not have a valid part 10 DICOM header", filename);
 		zisetreadpos(zz->zi, 0);	// try anyway
 		zz->part10 = false;
 	}
@@ -60,7 +60,7 @@ static struct zzfile *earlyparse(struct zzfile *zz, const char *filename)
 	// Check for big-endian syntax - not supported
 	if (endianbuf[0] < endianbuf[1])
 	{
-		fprintf(stderr, "%s appears to be big-endian - this is not supported\n", filename);
+		warning("%s appears to be big-endian - this is not supported", filename);
 		return zzclose(zz);
 	}
 
@@ -111,18 +111,18 @@ struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *inf
 	memset(zz, 0, sizeof(*zz));
 	if (stat(filename, &st) != 0)
 	{
-		fprintf(stderr, "%s could not be found: %s\n", filename, strerror(errno));
+		warning("%s could not be found: %s", filename, strerror(errno));
 		return NULL;
 	}
 	if (!S_ISREG(st.st_mode))
 	{
-		fprintf(stderr, "%s is not a file\n", filename);
+		warning("%s is not a file", filename);
 		return NULL;
 	}
 	zz->zi = ziopenfile(filename, mode);
 	if (!zz->zi || !realpath(filename, zz->fullPath))
 	{
-		fprintf(stderr, "%s could not be opened: %s\n", filename, strerror(errno));
+		warning("%s could not be opened: %s", filename, strerror(errno));
 		return NULL;
 	}
 	zz->fileSize = st.st_size;
@@ -589,12 +589,12 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		{
 			// once over the header, start inflating
 			zz->ladder[0].txsyn = ZZ_EXPLICIT_COMPRESSED;
-			fprintf(stderr, "Deflate transfer syntax found - not supported yet\n");
+			warning("Deflate transfer syntax found - not supported yet");
 			return false;
 		}
 		else if (strcmp(transferSyntaxUid, UID_BigEndianExplicitTransferSyntax) == 0)
 		{
-			fprintf(stderr, "Big endian transfer syntax found - not supported\n");
+			warning("Big endian transfer syntax found - not supported");
 			return false;
 		}
 		// else continue to believe it is explicit little-endian, which really is the only sane thing to use
@@ -627,7 +627,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		// Entered into a group or sequence, copy parameters
 		if (zz->ladderidx >= MAX_LADDER)
 		{
-			fprintf(stderr, "Too deep group/sequence nesting - giving up\n");
+			warning("Too deep group/sequence nesting - giving up");
 			return false;	// stop parsing and give up!
 		}
 		zz->ladderidx++;

@@ -128,6 +128,13 @@ struct zzopts	// list of command-line options; NULL-terminate it
 	int argstart; ///< where in list our arguments start (less than the return value of the zzutil() call)
 };
 
+#define warning(...) do { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while (0)
+#ifndef NDEBUG
+#define debug(...) do { fprintf(stdout, __VA_ARGS__); fprintf(stderr, "\n"); } while (0)
+#else
+#define debug(...)
+#endif
+
 /// Maximum amount of recursiveness in a DICOM file. Note that this includes
 /// all of groups, sequences and items, but not private groups.
 #define MAX_LADDER 24
