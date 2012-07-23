@@ -22,6 +22,8 @@
 
 struct zzio;
 
+#define ZZIO_BUFFERSIZE    8096 // default buffer size
+
 // flags
 #define ZZIO_ZLIB         8
 

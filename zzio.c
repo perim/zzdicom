@@ -37,8 +37,6 @@
 #define ZZIO_WRITABLE     4
 #define ZZIO_PIPE         8
 
-#define ZZIO_BUFFERSIZE    8096 // default buffer size
-
 struct zzio
 {
 	int fd;
