@@ -165,7 +165,11 @@ int zifd(struct zzio *zi);
 /// Duplicate all reads and/or writes to another zzio file descriptor.
 /// You can combine read and write redirections. Attempts to seek outside a 
 /// single read/write buffer will break this functionality.
-void zitee(struct zzio *zz, struct zzio *tee, int flags);
+void zitee(struct zzio *zi, struct zzio *tee, int flags);
+
+/// Return true if we can rewind the given zzio file descriptor. Will
+/// return false for pipes and sockets.
+bool zirewindable(struct zzio *zi);
 
 /* --------------------------------------------------------------------- */
 // Private functions below - only for unit testing

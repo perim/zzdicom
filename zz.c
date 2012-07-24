@@ -487,7 +487,8 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	}
 
 	// Try explicit VR
-	if (zz->ladder[zz->ladderidx].txsyn != ZZ_IMPLICIT && key != DCM_Item && key != DCM_ItemDelimitationItem && key != DCM_SequenceDelimitationItem)
+	if (zz->ladder[zz->ladderidx].txsyn != ZZ_IMPLICIT && key != DCM_Item && key != DCM_ItemDelimitationItem
+	    && key != DCM_SequenceDelimitationItem && header.group != 0x0000)
 	{
 		uint32_t rlen;
 		zz->current.vr = ZZ_VR(header.buffer.evr.vr[0], header.buffer.evr.vr[1]);
@@ -796,16 +797,23 @@ void zziterinit(struct zzfile *zz)
 {
 	if (zz)
 	{
-		zisetreadpos(zz->zi, zz->ladder[0].pos);
+		if (zirewindable(zz->zi))
+		{
+			zisetreadpos(zz->zi, zz->ladder[0].pos);
+		}
+		else
+		{
+			zz->fileSize = UNLIMITED;
+		}
 		zz->currNesting = 0;
 		zz->nextNesting = 0;
 		zz->ladderidx = 0;
 		zz->prividx = -1;
 		zz->privmax = -1;
+		zz->current.pos = -1;
 		zz->current.group = 0;
 		zz->current.element = 0;
 		zz->current.length = 0;
-		zz->current.pos = -1;
 		zz->current.pxstate = ZZ_NOT_PIXEL;
 	}
 }
@@ -830,7 +838,7 @@ bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len
 			}
 			// note if this conditional is not entered, we will try to parse the contents of the tag
 		}
-		if (doread && zzread(zz, group, element, len))
+		if (doread && !zieof(zz->zi) && zzread(zz, group, element, len))
 		{
 			return true;
 		}

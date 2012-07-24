@@ -525,7 +525,7 @@ bool zisetreadpos(struct zzio *zi, long pos)
 	else if (pos > zi->readpos + zi->readbuflen || pos < zi->readpos)
 	{
 		// Seeking outside of buffer
-		ASSERT(zi, !(zi->flags & ZZIO_SOCKET || zi->flags & ZZIO_PIPE), "Cannot before buffer with sockets or pipes");
+		ASSERT(zi, !(zi->flags & ZZIO_SOCKET || zi->flags & ZZIO_PIPE), "Cannot seek before buffer with sockets or pipes");
 		ASSERT(zi, !zi->reader, "Cannot seek outside of buffer range with reader set");
 		if (zi->reader) { return false; }	// TODO make error message
 		return zi_reposition_read(zi, pos, -1);
@@ -616,7 +616,7 @@ struct zzio *ziclose(struct zzio *zi)
 
 bool zieof(const struct zzio *zi)
 {
-	return (zi->eofmarker && zi->readpos + zi->readbufpos > zi->readbuflen)
+	return (zi->eofmarker && zi->readbufpos >= zi->readbuflen)
 	        || ((zi->flags & ZZIO_READABLE) 
 	            && !(zi->flags & ZZIO_SOCKET)
 	            && !(zi->flags & ZZIO_PIPE)
@@ -861,4 +861,9 @@ void zitee(struct zzio *zi, struct zzio *target, int flags)
 {
 	zi->tee = target;
 	zi->teeflags = flags;
+}
+
+bool zirewindable(struct zzio *zi)
+{
+	return !(zi->flags & ZZIO_SOCKET || zi->flags & ZZIO_PIPE);
 }
