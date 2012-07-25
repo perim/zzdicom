@@ -59,7 +59,7 @@ static inline void znwpad(int num, struct zzfile *zz) { int i; for (i = 0; i < n
 static inline void znw2at(uint16_t val, long pos, struct zzfile *zz) { ziwriteu16at(zz->zi, htons(val), pos); }
 static inline void znw4at(uint32_t val, long pos, struct zzfile *zz) { ziwriteu32at(zz->zi, htons(val), pos); }
 static inline void znwstart(struct zzfile *zz, int pdutype) { int i; ziresetwritebuffer(zz->zi); zz->net.pdutype = pdutype; if (DEBUGPRINT) printf("D: "); for (i = 0; i < 6; i++) phex(" -- "); }
-static inline void znwsendbuffer(struct zzfile *zz) { ziflush(zz->zi); }
+static inline void znwsendbuffer(struct zzfile *zz) { if (DEBUGPRINT) printf("\n"); ziflush(zz->zi); colcount = 0; }
 // --- Reading
 static inline void znrskip(int num, struct zzfile *zz) { int i; for (i = 0; i < num; i++) zigetc(zz->zi); }
 static inline uint8_t znr1(struct zzfile *zz) { uint8_t tmp = zigetc(zz->zi); return tmp; }
@@ -643,7 +643,7 @@ bool zzlisten(struct zzfile *zz, int port, const char *myaetitle, int flags)
 			printf("server: got ipv6 connection from %s\n", s);
 		}
 
-		if (!fork())
+		if (!(flags & ZZNET_FORK) || !fork())
 		{
 			// this is the child process
 			close(sockfd); // child doesn't need the listener

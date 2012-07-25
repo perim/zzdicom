@@ -27,11 +27,16 @@ int main(void)
 			// Now send back an echo response
 			znwechoresp(zz, mesID);
 			break;
+		case 0x07:
+			// FIXME, parse and log before quitting
+			zz = zzclose(zz);
+			return 0;
 		default:
 			printf("Unknown PDU type: %x\n", (unsigned)zz->net.pdutype);
 			break;
 		}
 		zigetc(zz->zi); // Force read of PDU type for next packet
 	} while (zz->net.pdutype != UNLIMITED);
+	zz = zzclose(zz);
 	return 0;
 }
