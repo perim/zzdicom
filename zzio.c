@@ -867,3 +867,13 @@ bool zirewindable(struct zzio *zi)
 {
 	return !(zi->flags & ZZIO_SOCKET || zi->flags & ZZIO_PIPE);
 }
+
+void ziresetwritebuffer(struct zzio *zi)
+{
+	// This makes relative addresses to start of a series of write
+	// operations work as expected.
+	zi->writepos = 0;
+
+	zi->writebufpos = 0;
+	zi->writebuflen = 0;
+}

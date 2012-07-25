@@ -171,6 +171,9 @@ void zitee(struct zzio *zi, struct zzio *tee, int flags);
 /// return false for pipes and sockets.
 bool zirewindable(struct zzio *zi);
 
+/// Clear write buffer history
+void ziresetwritebuffer(struct zzio *zi);
+
 /* --------------------------------------------------------------------- */
 // Private functions below - only for unit testing
 

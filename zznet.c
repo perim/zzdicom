@@ -58,7 +58,7 @@ static inline void znwuid(const char *uid, struct zzfile *zz) { int size = strle
 static inline void znwpad(int num, struct zzfile *zz) { int i; for (i = 0; i < num; i++) { ziputc(zz->zi, 0); phex(" 00 "); } }
 static inline void znw2at(uint16_t val, long pos, struct zzfile *zz) { ziwriteu16at(zz->zi, htons(val), pos); }
 static inline void znw4at(uint32_t val, long pos, struct zzfile *zz) { ziwriteu32at(zz->zi, htons(val), pos); }
-static inline void znwstart(struct zzfile *zz, int pdutype) { int i; zisetwritepos(zz->zi, 0); zz->net.pdutype = pdutype; if (DEBUGPRINT) printf("D: "); for (i = 0; i < 6; i++) phex(" -- "); }
+static inline void znwstart(struct zzfile *zz, int pdutype) { int i; ziresetwritebuffer(zz->zi); zz->net.pdutype = pdutype; if (DEBUGPRINT) printf("D: "); for (i = 0; i < 6; i++) phex(" -- "); }
 static inline void znwsendbuffer(struct zzfile *zz) { ziflush(zz->zi); }
 // --- Reading
 static inline void znrskip(int num, struct zzfile *zz) { int i; for (i = 0; i < num; i++) zigetc(zz->zi); }
@@ -79,9 +79,9 @@ static long headerwrite(long bytes, char *buffer, const void *data)
 	buffer[1] = 0x00;		// reserved
 	if (zz->net.pdutype == 0x04)	// P-DATA needs PDV fragmenting for some inexplicable reason
 	{
-		*size1 = htonl(bytes + 5);	// put size of data + PDV header size
+		*size1 = htonl(bytes + 6);	// put size of data + PDV header size
 		// We do the only sane thing, however, and keep only one PDV for each PDU
-		*size2 = htonl(bytes);		// put size of PDV
+		*size2 = htonl(bytes + 2);	// put size of PDV + pres context id and mes ctrl header
 		buffer[10] = zz->net.psctx;	// current presentation context
 		buffer[11] = 0x00;		// FIXME -- message control header!
 		return 12;
@@ -93,6 +93,7 @@ static long headerwrite(long bytes, char *buffer, const void *data)
 	return 6;
 }
 
+// TODO, set pdu type to UNLIMITED on error
 static long readbuffer(char **bufptr, long *buflen, void *data)
 {
 	struct zzfile *zz = (struct zzfile *)data;
@@ -100,6 +101,7 @@ static long readbuffer(char **bufptr, long *buflen, void *data)
 	char buf[6];
 	long result = read(fd, buf, 6);	// FIXME -- loop in case of interruption
 	uint32_t *size1 = (uint32_t *)(buf + 2);
+	long retsize = 0;
 
 	assert(result == 6);
 	zz->net.pdutype = buf[0];		// PDU type
@@ -128,8 +130,9 @@ static long readbuffer(char **bufptr, long *buflen, void *data)
 			do
 			{
 				errno = 0;
-				result = read(fd, modptr, psize);
+				result = read(fd, modptr + retsize, psize - retsize);
 				sum -= result;
+				retsize += result;
 			} while (sum > 0 && (errno == EAGAIN || errno == EWOULDBLOCK));
 			assert(sum == 0);
 			count += psize + 4;
@@ -145,13 +148,14 @@ static long readbuffer(char **bufptr, long *buflen, void *data)
 		do
 		{
 			errno = 0;
-			result = read(fd, *bufptr, zz->net.pdusize);
+			result = read(fd, *bufptr + retsize, zz->net.pdusize - retsize);
 			sum -= result;
+			retsize += result;
 		} while (sum > 0 && (errno == EAGAIN || errno == EWOULDBLOCK));
 		assert(sum == 0);
 		assert(result == zz->net.pdusize);
 	}
-	return zz->net.pdusize;
+	return retsize;
 }
 
 struct zzfile *zznetwork(const char *interface, const char *myaetitle, struct zzfile *zz)
@@ -162,27 +166,12 @@ struct zzfile *zznetwork(const char *interface, const char *myaetitle, struct zz
 	}
 	strcpy(zz->net.aet, myaetitle);
 	zz->ladder[0].item = -1;
+	zz->ladder[0].txsyn = ZZ_IMPLICIT; // default
+	zz->ladder[0].type = ZZ_BASELINE;
 	zz->current.frame = -1;
 	zz->frames = -1;
 	zz->pxOffsetTable = -1;
 	return zz;
-}
-
-/// Special built-in support for echo requests
-static void C_ECHO_req_recv(struct zzfile *zz)
-{
-	uint16_t group, element, mesID;
-	long len;
-
-	// Read ping
-	while (zzread(zz, &group, &element, &len))
-	{
-		switch (ZZ_KEY(group, element))
-		{
-		case DCM_MessageID: mesID = zzgetuint16(zz, 0); break;
-		default: break;	// ignore
-		}
-	}
 }
 
 void znwechoreq(struct zzfile *zz)
@@ -332,6 +321,8 @@ static bool PDU_Associate_Request(struct zzfile *zz)
 	char pdu;
 	long pos, usize;
 	uint8_t val8;
+	char uid[MAX_LEN_UI];
+	const char *impl = "zzdicom";
 
 	memset(calledaet, 0, sizeof(calledaet));
 	memset(callingaet, 0, sizeof(callingaet));
@@ -412,6 +403,7 @@ static bool PDU_Associate_Request(struct zzfile *zz)
 		znw2(0, zz);			// size of packet, fill in later
 		znw1(cid, zz);			// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
 		znw1(0, zz);			// reserved, shall be zero
+		zz->net.psctx = cid; // FIXME ??
 		if (!foundAcceptableTx)
 		{
 			znw1(4, zz);		// 4 == we found no acceptable transfer syntax for this presentation context
@@ -428,11 +420,13 @@ static bool PDU_Associate_Request(struct zzfile *zz)
 		znw1(0, zz);			// reserved, shall be zero
 		if (txsyns[ZZ_EXPLICIT])
 		{
-			znwuid(UID_LittleEndianExplicitTransferSyntax, zz); // See PS 3.8, section 7.1.1.2.
+			znwuid(UID_LittleEndianExplicitTransferSyntax, zz); // See PS 3.8, section 7.1.1.2
+			zz->ladder[0].txsyn = ZZ_EXPLICIT;
 		}
 		else
 		{
-			znwuid(UID_LittleEndianImplicitTransferSyntax, zz);  // See PS 3.8, section 7.1.1.2.
+			znwuid(UID_LittleEndianImplicitTransferSyntax, zz);  // See PS 3.8, section 7.1.1.2
+			zz->ladder[0].txsyn = ZZ_IMPLICIT;
 		}
 
 		// Set size of this presentation context item
@@ -464,9 +458,10 @@ static bool PDU_Associate_Request(struct zzfile *zz)
 	}
 
 	// Write User Information Item Fields, see PS 3.8, Table 9-16
+	zzmakeuid(uid, sizeof(uid));		// FIXME, now generating random UID instead
 	znw1(0x50, zz);
 	znw1(0, zz);				// reserved, shall be zero
-	znw2(8, zz);				// size of payload that follows
+	znw2(16 + strlen(uid) + strlen(impl), zz);	// size of payload that follows
 	znw1(0x51, zz);				// define maximum length of data field sub-item
 	znw1(0, zz);				// reserved, shall be zero
 	znw2(4, zz);				// size of following field
@@ -478,6 +473,12 @@ static bool PDU_Associate_Request(struct zzfile *zz)
 	{
 		znw4(ZZIO_BUFFERSIZE, zz);
 	}
+	znw1(0x52, zz);				// define implementation class uid
+	znw1(0, zz);				// reserved, shall be zero
+	znwuid(uid, zz);
+	znw1(0x55, zz);				// define implementation name
+	znw1(0, zz);
+	znwuid(impl, zz);			// re-using uid writer here
 	znwsendbuffer(zz);
 	return true;
 }
@@ -657,13 +658,12 @@ bool zzlisten(struct zzfile *zz, int port, const char *myaetitle, int flags)
 				zisetreadpos(zz->zi, zireadpos(zz->zi) - 1);	// reset read marker
 				switch (zz->net.pdutype)
 				{
-				case 0x01: printf("Associate RQ received\n"); PDU_Associate_Request(zz); break;
-				case 0x02: printf("ASSOCIATE-AC received\n"); PDU_Associate_Accept(zz); break;
-				case 0x04: printf("PData received\n"); abort(); break; // TODO
-				default: printf("Unknown type: %x\n", (unsigned)zz->net.pdutype); abort(); break; // FIXME
+				case 0x01: printf("ASSOCIATE-RQ received\n"); PDU_Associate_Request(zz); break;
+				case 0x02: printf("ASSOCIATE-AC received\n"); PDU_Associate_Accept(zz); break; // ? FIXME
+				default: return true;
 				}
 			}
-			close(new_fd);
+			close(new_fd); // FIXME, close also for return case above somehow
 			exit(0);
 		}
 		close(new_fd);  // parent doesn't need this
