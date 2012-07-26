@@ -201,20 +201,6 @@ void znwechoresp(struct zzfile *zz, long mesID)
 	zz->ladder[zz->ladderidx].txsyn = txsyn;
 }
 
-static void PDU_ReleaseRQ(struct zzfile *zz)
-{
-	znwstart(zz, 0x05);
-	znw4(0, zz);				// reserved, shall be zero
-	znwsendbuffer(zz);
-}
-
-static void PDU_ReleaseRP(struct zzfile *zz)
-{
-	znwstart(zz, 0x06);
-	znw4(0, zz);				// reserved, shall be zero
-	znwsendbuffer(zz);
-}
-
 static void PDU_Abort(struct zzfile *zz, char source, char diag)
 {
 	znwstart(zz, 0x07);
@@ -309,6 +295,44 @@ static bool PDU_Associate_Accept(struct zzfile *zz)
 		assert(usize >= itemsize + 4);
 		usize -= itemsize + 4;
 	}
+	return true;
+}
+
+// Read a PDU ABORT packet
+bool PDU_Abort_Parse(struct zznetwork *zn)
+{
+	struct zzfile *in = zn->in;
+        struct zzfile *out = zn->out;
+	uint8_t val8;
+	uint8_t source;
+	uint8_t reason;
+
+	val8 = znr1(in); assert(val8 == 0);
+	val8 = znr1(in); assert(val8 == 0);
+	source = znr1(in); assert(source != 1 && source <= 2);
+	reason = znr1(in); assert(reason <= 6);
+	switch (reason)
+	{
+	case 0: printf("abort: no reason specified\n"); break;
+	case 1: printf("abort: unrecognized PDU\n"); break;
+	case 2: printf("abort: unexpected PDU\n"); break;
+	case 3: printf("abort: reserved\n"); break;
+	case 4: printf("abort: unrecognized PDU parameter\n"); break;
+	case 5: printf("abort: unexpected PDU parameter\n"); break;
+	case 6: printf("abort: invalid PDU parameter value\n"); break;
+	}
+	return true;
+}
+
+bool PDU_Release_Handle(struct zznetwork *zn)
+{
+	uint32_t reserved = znr4(zn->in);
+	assert(reserved == 0);
+
+	// Respond
+	znwstart(zn->out, 0x06);
+	znw4(0, zn->out);
+	znwsendbuffer(zn->out);
 	return true;
 }
 

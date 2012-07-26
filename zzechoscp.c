@@ -38,8 +38,12 @@ int main(void)
 			// Now send back an echo response
 			znwechoresp(zn->out, mesID);
 			break;
+		case 0x05:
+			PDU_Release_Handle(zn);
+			zznetclose(zn);
+			return 0;
 		case 0x07:
-			// FIXME, parse and log before quitting
+			PDU_Abort_Parse(zn);
 			zznetclose(zn);
 			return 0;
 		default:

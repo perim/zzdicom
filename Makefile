@@ -77,8 +77,8 @@ cppcheck:
 	cppcheck -j 4 -q zz.c zzwrite.c zzdump.c zzverify.c zzmkrandom.c
 	cppcheck -j 4 -q zzcopy.c zztexture.c zzsql.c zzio.c
 	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c zznetwork.c
-	cppcheck -j 4 -q zzdiscp.c zzdiscu.c zzdinetwork.c
-	cppcheck -j 4 -q zznetwork.c zzpixel.c zzini.c
+	cppcheck -j 4 -q zzdiscp.c zzdiscu.c zzdinetwork.c zznet.c
+	cppcheck -j 4 -q zzpixel.c zzini.c zzechoscp.c
 	cppcheck -j 4 -q tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
 	cppcheck -j 4 -q tests/testnet.c tests/initest.c
 

@@ -18,6 +18,8 @@ void znwechoreq(struct zzfile *zz);
 void znwechoresp(struct zzfile *zz, long mesID);
 
 bool PDU_Associate_Request(struct zznetwork *zn);
+bool PDU_Abort_Parse(struct zznetwork *zn);
+bool PDU_Release_Handle(struct zznetwork *zn);
 void zznetregister(struct zznetwork *zn);
 
 #endif
