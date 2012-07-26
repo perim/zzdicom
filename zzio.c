@@ -60,7 +60,8 @@ struct zzio
 	// for header making
 	headerwritefunc *writer;
 	readbufferfunc *reader;
-	void *userdata;
+	void *userdatawriter;
+	void *userdatareader;
 	char *header;
 
 	// for error reporting
@@ -325,7 +326,7 @@ void zisetwriter(struct zzio *zi, headerwritefunc writefunc, long buffersize, vo
 {
 	ASSERT_OR_RETURN(zi, , !(zi->flags & ZZIO_WRITABLE && zi->flags & ZZIO_READABLE && !(zi->flags & ZZIO_SOCKET)), "Cannot use splitter on file modification");
 	zi->writer = writefunc;
-	zi->userdata = userdata;
+	zi->userdatawriter = userdata;
 	free(zi->header);
 	zi->header = calloc(1, buffersize);
 }
@@ -334,7 +335,7 @@ void zisetreader(struct zzio *zi, readbufferfunc readfunc, void *userdata)
 {
 	ASSERT_OR_RETURN(zi, , !(zi->flags & ZZIO_WRITABLE && zi->flags & ZZIO_READABLE && !(zi->flags & ZZIO_SOCKET)), "Cannot use splitter on file modification");
 	zi->reader = readfunc;
-	zi->userdata = userdata;
+	zi->userdatareader = userdata;
 	zi->readbuflen = 0;
 	zi->readpos = 0;
 }
@@ -361,7 +362,7 @@ long zibytesread(struct zzio *zi)	// not including packet headers?
 
 static inline void writeheader(struct zzio *zi, long length)
 {
-	long size = zi->writer(length, zi->header, zi->userdata);
+	long size = zi->writer(length, zi->header, zi->userdatawriter);
 	long chunk = zi_write_raw(zi, zi->header, size);
 	ASSERT(zi, chunk == size, "Header write failure");
 }
@@ -474,7 +475,7 @@ static inline bool zi_reposition_read(struct zzio *zi, long pos, long reqlen)
 	zi->readbufpos = 0;
 	if (zi->reader)	// packetizer
 	{
-		zi->readbuflen = zi->reader(&zi->readbuf, &zi->readbufsize, zi->userdata);
+		zi->readbuflen = zi->reader(&zi->readbuf, &zi->readbufsize, zi->userdatareader);
 		zi->readpos += zi->readbuflen;
 	}
 	else

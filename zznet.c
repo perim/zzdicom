@@ -1,9 +1,10 @@
 // Support for the DICOM network protocol. Apologies for the code that follows, it is hard to write elegant code to support
 // such a hideous, bloated and grossly inefficient, over-engineered monstrousity.
 
-#include "zznet.h"
+#include "zznetwork.h"
 #include "zzio.h"
 #include "zzwrite.h"
+#include "zznet.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -19,15 +20,6 @@
 
 #define UID_StandardApplicationContext "1.2.840.10008.3.1.1.1"
 #define UID_VerificationSOPClass "1.2.840.10008.1.1"
-
-/// Multi-family socket end-point address
-union socketfamily
-{
-    struct sockaddr sa;
-    struct sockaddr_in sa_in;
-    struct sockaddr_in6 sa_in6;
-    struct sockaddr_storage sa_stor;
-};
 
 enum psctxs_list
 {
@@ -66,9 +58,6 @@ static inline uint8_t znr1(struct zzfile *zz) { uint8_t tmp = zigetc(zz->zi); re
 static inline uint16_t znr2(struct zzfile *zz) { uint16_t tmp; ziread(zz->zi, &tmp, 2); tmp = ntohs(tmp); return tmp; }
 static inline uint32_t znr4(struct zzfile *zz) { uint32_t tmp; ziread(zz->zi, &tmp, 4); tmp = ntohl(tmp); return tmp; }
 
-#define BACKLOG 10
-#define MAXDATASIZE 100 // max number of bytes we can get at once
-
 static long headerwrite(long bytes, char *buffer, const void *data)
 {
 	struct zzfile *zz = (struct zzfile *)data;
@@ -103,6 +92,7 @@ static long readbuffer(char **bufptr, long *buflen, void *data)
 	uint32_t *size1 = (uint32_t *)(buf + 2);
 	long retsize = 0;
 
+printf("%02x %02x %02x %02x %02x %02x\n", (unsigned)buf[0], (unsigned)buf[1], (unsigned)buf[2], (unsigned)buf[3], (unsigned)buf[4], (unsigned)buf[5]);
 	assert(result == 6);
 	zz->net.pdutype = buf[0];		// PDU type
 	zz->net.pdusize = ntohl(*size1);	// PDU size
@@ -156,22 +146,6 @@ static long readbuffer(char **bufptr, long *buflen, void *data)
 		assert(result == zz->net.pdusize);
 	}
 	return retsize;
-}
-
-struct zzfile *zznetwork(const char *interface, const char *myaetitle, struct zzfile *zz)
-{
-	if (interface)
-	{
-		strcpy(zz->net.interface, interface);	// TODO use sstrcpy
-	}
-	strcpy(zz->net.aet, myaetitle);
-	zz->ladder[0].item = -1;
-	zz->ladder[0].txsyn = ZZ_IMPLICIT; // default
-	zz->ladder[0].type = ZZ_BASELINE;
-	zz->current.frame = -1;
-	zz->frames = -1;
-	zz->pxOffsetTable = -1;
-	return zz;
 }
 
 void znwechoreq(struct zzfile *zz)
@@ -313,8 +287,10 @@ static bool PDU_Associate_Accept(struct zzfile *zz)
 }
 
 // Read a PDU ASSOCIATE-RQ packet and send a PDU ASSOCIATE-AC in return
-static bool PDU_Associate_Request(struct zzfile *zz)
+bool PDU_Associate_Request(struct zznetwork *zn)
 {
+	struct zzfile *zz = zn->in;
+	struct zzfile *out = zn->out;
 	uint32_t msize, size;
 	char callingaet[17];
 	char calledaet[17];
@@ -340,17 +316,17 @@ static bool PDU_Associate_Request(struct zzfile *zz)
 	znrskip(size, zz);				// skip Application Context Item
 
 	// Start writing response
-	znwstart(zz, 0x02);
-	znw2(1, zz);				// version bitfield
-	znw2(0, zz);				// reserved, shall be zero
-	znwaet(calledaet, zz);			// called AE Title
-	znwaet(zz->net.aet, zz);		// calling AE Title
-	znwpad(32, zz);				// reserved, shall be zero
+	znwstart(out, 0x02);
+	znw2(1, out);				// version bitfield
+	znw2(0, out);				// reserved, shall be zero
+	znwaet(calledaet, out);			// called AE Title
+	znwaet(zz->net.aet, out);		// calling AE Title
+	znwpad(32, out);			// reserved, shall be zero
 
 	// Application Context Item (useless fluff)
-	znw1(0x10, zz);				// PDU type
-	znw1(0, zz);				// reserved, shall be zero
-	znwuid(UID_StandardApplicationContext, zz);	// See PS 3.8, section 7.1.1.2.
+	znw1(0x10, out);			// PDU type
+	znw1(0, out);				// reserved, shall be zero
+	znwuid(UID_StandardApplicationContext, out);	// See PS 3.8, section 7.1.1.2.
 
 	// Read presentation Contexts
 	pdu = znr1(zz);
@@ -397,40 +373,42 @@ static bool PDU_Associate_Request(struct zzfile *zz)
 		}
 
 		// Now generate a response to this presentation context
-		znw1(0x21, zz);			// PDU type
-		znw1(0, zz);			// reserved, shall be zero
-		pos = ziwritepos(zz->zi);
-		znw2(0, zz);			// size of packet, fill in later
-		znw1(cid, zz);			// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
-		znw1(0, zz);			// reserved, shall be zero
-		zz->net.psctx = cid; // FIXME ??
+		znw1(0x21, out);		// PDU type
+		znw1(0, out);			// reserved, shall be zero
+		pos = ziwritepos(out->zi);
+		znw2(0, out);			// size of packet, fill in later
+		znw1(cid, out);			// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
+		znw1(0, out);			// reserved, shall be zero
+		out->net.psctx = cid; // FIXME ??
 		if (!foundAcceptableTx)
 		{
-			znw1(4, zz);		// 4 == we found no acceptable transfer syntax for this presentation context
+			znw1(4, out);		// 4 == we found no acceptable transfer syntax for this presentation context
 		}
 		else
 		{
 			// FIXME, check for not supported abstract syntaxes as well, and respond with 3 if not supported
-			znw1(0, zz);		// 0 == accepted presentation context
+			znw1(0, out);		// 0 == accepted presentation context
 		}
-		znw1(0, zz);			// reserved, shall be zero
+		znw1(0, out);			// reserved, shall be zero
 
 		// Chosen transfer Syntax, see PS 3.8 Table 9-15
-		znw1(0x40, zz);			// PDU type
-		znw1(0, zz);			// reserved, shall be zero
+		znw1(0x40, out);			// PDU type
+		znw1(0, out);			// reserved, shall be zero
 		if (txsyns[ZZ_EXPLICIT])
 		{
-			znwuid(UID_LittleEndianExplicitTransferSyntax, zz); // See PS 3.8, section 7.1.1.2
+			znwuid(UID_LittleEndianExplicitTransferSyntax, out); // See PS 3.8, section 7.1.1.2
 			zz->ladder[0].txsyn = ZZ_EXPLICIT;
+			out->ladder[0].txsyn = ZZ_EXPLICIT;
 		}
 		else
 		{
-			znwuid(UID_LittleEndianImplicitTransferSyntax, zz);  // See PS 3.8, section 7.1.1.2
+			znwuid(UID_LittleEndianImplicitTransferSyntax, out);  // See PS 3.8, section 7.1.1.2
 			zz->ladder[0].txsyn = ZZ_IMPLICIT;
+			out->ladder[0].txsyn = ZZ_IMPLICIT;
 		}
 
 		// Set size of this presentation context item
-		znw2at(ziwritepos(zz->zi) - pos - 2, pos, zz);
+		znw2at(ziwritepos(out->zi) - pos - 2, pos, out);
 	}
 
 	// Read User Information (fluff)
@@ -459,27 +437,27 @@ static bool PDU_Associate_Request(struct zzfile *zz)
 
 	// Write User Information Item Fields, see PS 3.8, Table 9-16
 	zzmakeuid(uid, sizeof(uid));		// FIXME, now generating random UID instead
-	znw1(0x50, zz);
-	znw1(0, zz);				// reserved, shall be zero
-	znw2(16 + strlen(uid) + strlen(impl), zz);	// size of payload that follows
-	znw1(0x51, zz);				// define maximum length of data field sub-item
-	znw1(0, zz);				// reserved, shall be zero
-	znw2(4, zz);				// size of following field
+	znw1(0x50, out);
+	znw1(0, out);				// reserved, shall be zero
+	znw2(16 + strlen(uid) + strlen(impl), out);	// size of payload that follows
+	znw1(0x51, out);			// define maximum length of data field sub-item
+	znw1(0, out);				// reserved, shall be zero
+	znw2(4, out);				// size of following field
 	if (zz->net.maxpdatasize < ZZIO_BUFFERSIZE) // FIXME, reallocate buffer for larger pdata sizes
 	{
-		znw4(zz->net.maxpdatasize, zz);
+		znw4(zz->net.maxpdatasize, out);
 	}
 	else
 	{
-		znw4(ZZIO_BUFFERSIZE, zz);
+		znw4(ZZIO_BUFFERSIZE, out);
 	}
-	znw1(0x52, zz);				// define implementation class uid
-	znw1(0, zz);				// reserved, shall be zero
-	znwuid(uid, zz);
-	znw1(0x55, zz);				// define implementation name
-	znw1(0, zz);
-	znwuid(impl, zz);			// re-using uid writer here
-	znwsendbuffer(zz);
+	znw1(0x52, out);			// define implementation class uid
+	znw1(0, out);				// reserved, shall be zero
+	znwuid(uid, out);
+	znw1(0x55, out);			// define implementation name
+	znw1(0, out);
+	znwuid(impl, out);			// re-using uid writer here
+	znwsendbuffer(out);
 	return true;
 }
 
@@ -538,207 +516,8 @@ static void PDU_AssociateRQ(struct zzfile *zz, const char *calledAET, const char
 	znwsendbuffer(zz);
 }
 
-/// Reap dead child processes
-static void sigchld_handler(int s)
+void zznetregister(struct zznetwork *zn)
 {
-	(void)s;
-	while(waitpid(-1, NULL, WNOHANG) > 0);
-}
-
-bool zzlisten(struct zzfile *zz, int port, const char *myaetitle, int flags)
-{
-	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
-	struct addrinfo hints, *servinfo, *p;
-	socklen_t sin_size;
-	struct sigaction sa;
-	int yes = 1;
-	char s[INET6_ADDRSTRLEN];
-	int rv;
-	char portstr[10];
-	union socketfamily their_addr; // connector's address information
-
-	(void)myaetitle;
-	(void)flags;
-
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE; // use my IP
-
-	sprintf(portstr, "%d", port);
-	if ((rv = getaddrinfo(NULL, portstr, &hints, &servinfo)) != 0)
-	{
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-		return false;
-	}
-
-	// loop through all the results and bind to the first we can
-	for (p = servinfo; p != NULL; p = p->ai_next)
-	{
-		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-		{
-			perror("server: socket");
-			continue;
-		}
-
-		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
-		{
-			perror("setsockopt");
-			exit(1);
-		}
-
-		if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1)
-		{
-			close(sockfd);
-			perror("server: bind");
-			continue;
-		}
-
-		break;
-	}
-
-	if (p == NULL) 
-	{
-		fprintf(stderr, "server: failed to bind\n");
-		return false;
-	}
-
-	freeaddrinfo(servinfo); // all done with this structure
-
-	if (listen(sockfd, BACKLOG) == -1)
-	{
-		perror("listen");
-		return false;
-	}
-
-	sa.sa_handler = sigchld_handler; // reap all dead processes
-	sigemptyset(&sa.sa_mask);
-	sa.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &sa, NULL) == -1)
-	{
-		perror("sigaction");
-		return false;
-	}
-
-	printf("server: waiting for connections...\n");
-
-	while (true)
-	{
-		sin_size = sizeof(their_addr);
-		new_fd = accept(sockfd, &their_addr.sa, &sin_size);
-		if (new_fd == -1)
-		{
-			perror("accept");
-			continue;
-		}
-
-		if (their_addr.sa.sa_family == AF_INET)
-		{
-			inet_ntop(their_addr.sa_stor.ss_family, &their_addr.sa_in.sin_addr, s, sizeof(s));	// ipv4
-			printf("server: got ipv4 connection from %s\n", s);
-		}
-		else
-		{
-			inet_ntop(their_addr.sa_stor.ss_family, &their_addr.sa_in6.sin6_addr, s, sizeof(s));	// ipv6
-			printf("server: got ipv6 connection from %s\n", s);
-		}
-
-		if (!(flags & ZZNET_FORK) || !fork())
-		{
-			// this is the child process
-			close(sockfd); // child doesn't need the listener
-			zz->zi = ziopensocket(new_fd, 0);
-			zisetreader(zz->zi, readbuffer, zz);
-			zisetwriter(zz->zi, headerwrite, 12, zz);
-			while (true) // FIXME -- while (ziconnected(zz->zi))
-			{
-				printf("Awaiting type\n");
-				zigetc(zz->zi);					// trigger read of packet
-				printf("Type %ld received\n", zz->net.pdutype);
-				zisetreadpos(zz->zi, zireadpos(zz->zi) - 1);	// reset read marker
-				switch (zz->net.pdutype)
-				{
-				case 0x01: printf("ASSOCIATE-RQ received\n"); PDU_Associate_Request(zz); break;
-				case 0x02: printf("ASSOCIATE-AC received\n"); PDU_Associate_Accept(zz); break; // ? FIXME
-				default: return true;
-				}
-			}
-			close(new_fd); // FIXME, close also for return case above somehow
-			exit(0);
-		}
-		close(new_fd);  // parent doesn't need this
-	}
-
-	return true;
-}
-
-bool zzconnect(struct zzfile *zz, const char *host, int port, const char *theiraetitle, const char *sopclass, int flags)
-{
-	int sockfd, numbytes;
-	char buf[MAXDATASIZE];
-	struct addrinfo hints, *servinfo, *p;
-	int rv;
-	char s[INET6_ADDRSTRLEN];
-	char portstr[10];
-
-	(void)flags;
-	(void)sopclass;
-	(void)theiraetitle;
-
-	if (!zz) return NULL;
-
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-
-	sprintf(portstr, "%d", port);
-	if ((rv = getaddrinfo(host, portstr, &hints, &servinfo)) != 0)
-	{
-		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-		return NULL;
-	}
-
-	// loop through all the results and connect to the first we can
-	for (p = servinfo; p != NULL; p = p->ai_next)
-	{
-		if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-		{
-			perror("client: socket");
-			continue;
-		}
-
-		if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1)
-		{
-			close(sockfd);
-			perror("client: connect");
-			continue;
-		}
-		break;
-	}
-
-	if (p == NULL)
-	{
-		fprintf(stderr, "client: failed to connect\n");
-		return NULL;
-	}
-
-	inet_ntop(p->ai_family, p->ai_addr, s, sizeof(s));
-	printf("client: connecting to %s\n", s);
-
-	freeaddrinfo(servinfo); // all done with this structure
-
-	if ((numbytes = recv(sockfd, buf, MAXDATASIZE - 1, 0)) == -1)
-	{
-		perror("recv");
-		return NULL;
-	}
-
-	buf[numbytes] = '\0';
-
-	printf("client: received '%s'\n", buf);
-
-	zz->zi = ziopensocket(sockfd, 0);
-	zisetreader(zz->zi, readbuffer, zz);
-	zisetwriter(zz->zi, headerwrite, 12, zz);
-	return true;
+	zisetreader(zn->in->zi, readbuffer, zn->in);
+	zisetwriter(zn->out->zi, headerwrite, 12, zn->out);
 }
