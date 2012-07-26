@@ -6,7 +6,7 @@
 int main(void)
 {
 	struct zznetwork *zn = NULL;
-	uint16_t group, element, mesID;
+	uint16_t group, element, mesID = 1;
 	long len;
 
 	zn = zznetlisten("", 5104, ZZNET_NO_FORK);

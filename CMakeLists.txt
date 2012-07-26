@@ -36,7 +36,7 @@ target_link_libraries(zzfix zzdicom)
 add_executable(zzmkrandom zzmkrandom.c)
 target_link_libraries(zzmkrandom zzdicom)
 
-add_executable(zzechoscp zzechoscp.c zznet.c zznet.h)
+add_executable(zzechoscp zzechoscp.c zznet.c zznet.h zznetwork.c zznetwork.h)
 target_link_libraries(zzechoscp zzdicom)
 
 add_subdirectory(nifti)
