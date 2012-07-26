@@ -51,12 +51,23 @@ static inline void znwpad(int num, struct zzfile *zz) { int i; for (i = 0; i < n
 static inline void znw2at(uint16_t val, long pos, struct zzfile *zz) { ziwriteu16at(zz->zi, htons(val), pos); }
 static inline void znw4at(uint32_t val, long pos, struct zzfile *zz) { ziwriteu32at(zz->zi, htons(val), pos); }
 static inline void znwstart(struct zzfile *zz, int pdutype) { int i; ziresetwritebuffer(zz->zi); zz->net.pdutype = pdutype; if (DEBUGPRINT) printf("D: "); for (i = 0; i < 6; i++) phex(" -- "); }
-static inline void znwsendbuffer(struct zzfile *zz) { if (DEBUGPRINT) printf("\n"); ziflush(zz->zi); colcount = 0; }
 // --- Reading
 static inline void znrskip(int num, struct zzfile *zz) { int i; for (i = 0; i < num; i++) zigetc(zz->zi); }
 static inline uint8_t znr1(struct zzfile *zz) { uint8_t tmp = zigetc(zz->zi); return tmp; }
 static inline uint16_t znr2(struct zzfile *zz) { uint16_t tmp; ziread(zz->zi, &tmp, 2); tmp = ntohs(tmp); return tmp; }
 static inline uint32_t znr4(struct zzfile *zz) { uint32_t tmp; ziread(zz->zi, &tmp, 4); tmp = ntohl(tmp); return tmp; }
+
+static inline void znwsendbuffer(struct zzfile *zz)
+{
+	if (DEBUGPRINT) printf("\n");
+	zz->net.endofmessage = true;
+	ziflush(zz->zi);
+	zz->net.endofmessage = false;
+	colcount = 0;
+}
+
+#define CONTROL_COMMAND_PDV   0x01 
+#define CONTROL_LAST_PDV      0x02
 
 static long headerwrite(long bytes, char *buffer, const void *data)
 {
@@ -72,7 +83,15 @@ static long headerwrite(long bytes, char *buffer, const void *data)
 		// We do the only sane thing, however, and keep only one PDV for each PDU
 		*size2 = htonl(bytes + 2);	// put size of PDV + pres context id and mes ctrl header
 		buffer[10] = zz->net.psctx;	// current presentation context
-		buffer[11] = 0x00;		// FIXME -- message control header!
+		buffer[11] = 0x00;		// construct message control header...
+		if (zz->current.group == 0x0000)
+		{
+			buffer[11] |= CONTROL_COMMAND_PDV;  // ... this is a command PDV
+		}
+		if (zz->net.endofmessage) // are we on our last buffer?
+		{
+			buffer[11] |= CONTROL_LAST_PDV;  // ... this is the last PDV
+		}
 		return 12;
 	}
 	else
@@ -150,19 +169,26 @@ static long readbuffer(char **bufptr, long *buflen, void *data)
 void znwechoreq(struct zzfile *zz)
 {
 	// first presentation context is always verification, and is always accepted, no need to check
+	// command group is always implicit little endian... *sigh*
+	enum zztxsyn txsyn = zz->ladder[zz->ladderidx].txsyn;
+	zz->ladder[zz->ladderidx].txsyn = ZZ_IMPLICIT;
 	znwstart(zz, 0x04);
 	zzwUL(zz, DCM_CommandGroupLength, 0);		// value to be written later
 	zzwUI(zz, DCM_AffectedSOPClassUID, UID_VerificationSOPClass);
 	zzwUS(zz, DCM_CommandField, 0x0030);
 	zzwUS(zz, DCM_MessageID, zz->net.lastMesID++);
 	zzwUS(zz, DCM_DataSetType, 0x0101);		// "null value"
-	znw4at(ziwritepos(zz->zi) - 8, 8, zz);		// set command length
+	ziwriteu32at(zz->zi, ziwritepos(zz->zi) - 8, 8); // set command length
 	znwsendbuffer(zz);
+	zz->ladder[zz->ladderidx].txsyn = txsyn;
 }
 
 void znwechoresp(struct zzfile *zz, long mesID)
 {
 	// first presentation context is always verification, and is always accepted, no need to check
+	// command group is always implicit little endian... *sigh*
+	enum zztxsyn txsyn = zz->ladder[zz->ladderidx].txsyn;
+	zz->ladder[zz->ladderidx].txsyn = ZZ_IMPLICIT;
 	znwstart(zz, 0x04);
 	zzwUL(zz, DCM_CommandGroupLength, 0);		// value to be written later
 	zzwUI(zz, DCM_AffectedSOPClassUID, UID_VerificationSOPClass);
@@ -170,8 +196,9 @@ void znwechoresp(struct zzfile *zz, long mesID)
 	zzwUS(zz, DCM_MessageIDBeingRespondedTo, mesID);
 	zzwUS(zz, DCM_DataSetType, 0x0101);		// "null value"
 	zzwUS(zz, DCM_Status, 0x0000);			// "Success", always
-	znw4at(ziwritepos(zz->zi) - 8, 8, zz);	// set command length
+	ziwriteu32at(zz->zi, ziwritepos(zz->zi) - 8, 8); // set command length
 	znwsendbuffer(zz);
+	zz->ladder[zz->ladderidx].txsyn = txsyn;
 }
 
 static void PDU_ReleaseRQ(struct zzfile *zz)

@@ -55,6 +55,10 @@ static inline void writetag(struct zzfile *zz, zzKey key, enum VR vr, uint32_t s
 	const uint16_t element = ZZ_ELEMENT(key);
 	char dest[MAX_LEN_VR];
 
+	zz->current.element = element;
+	zz->current.group = group;
+	zz->current.vr = vr;
+	zz->current.length = size;
 	if (!zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT || group == 0xfffe)
 	{
 		implicit(zz->zi, group, element, size);
@@ -72,10 +76,6 @@ static inline void writetag(struct zzfile *zz, zzKey key, enum VR vr, uint32_t s
 			explicit2(zz->zi, group, element, zzvr2str(vr, dest), size); break;
 		}
 	}
-	zz->current.element = element;
-	zz->current.group = group;
-	zz->current.vr = vr;
-	zz->current.length = size;
 }
 
 void zzwCopy(struct zzfile *zz, const struct zzfile *orig)

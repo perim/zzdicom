@@ -617,7 +617,7 @@ struct zzio *ziclose(struct zzio *zi)
 
 bool zieof(const struct zzio *zi)
 {
-	return (zi->eofmarker && zi->readbufpos >= zi->readbuflen)
+	return ((zi->flags & ZZIO_READABLE) && zi->eofmarker && zi->readbufpos >= zi->readbuflen)
 	        || ((zi->flags & ZZIO_READABLE) 
 	            && !(zi->flags & ZZIO_SOCKET)
 	            && !(zi->flags & ZZIO_PIPE)
