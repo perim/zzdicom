@@ -182,12 +182,15 @@ void MainWindow::openFile(QString filename)
 	struct zzfile szz;
 	struct zzfile *zz = zzopen(filename.toAscii().constData(), "r", &szz);
 
+	if (!zz)
+	{
+		qFatal("%s could not be opened", filename.toAscii().constData());
+	}
 	if (zzt)
 	{
 		zzt = zztexturefree(zzt);
 	}
 	zzt = zzcopytotexture(zz, &szzt);
-	zz = zzclose(zz);
 	ui->glviewer->setVolume(zzt);
 	ui->glviewer->setDepth(0.0);
 	ui->glviewer3D->setVolume(zzt);
@@ -201,7 +204,6 @@ void MainWindow::openFile(QString filename)
 	ui->treeViewTags->resizeColumnToContents(1);
 
 	nesting = 0;
-	zz = zzopen(filename.toAscii().constData(), "r", &szz);
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len))
 	{

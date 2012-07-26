@@ -92,7 +92,6 @@ static long readbuffer(char **bufptr, long *buflen, void *data)
 	uint32_t *size1 = (uint32_t *)(buf + 2);
 	long retsize = 0;
 
-printf("%02x %02x %02x %02x %02x %02x\n", (unsigned)buf[0], (unsigned)buf[1], (unsigned)buf[2], (unsigned)buf[3], (unsigned)buf[4], (unsigned)buf[5]);
 	assert(result == 6);
 	zz->net.pdutype = buf[0];		// PDU type
 	zz->net.pdusize = ntohl(*size1);	// PDU size
