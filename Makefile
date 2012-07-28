@@ -73,14 +73,15 @@ clean:
 	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov gmon.out
 	rm -rf coverage_report
 
+CPPCHECK=cppcheck -j 4 -q --enable=performance,portability,missingInclude --std=posix
 cppcheck:
-	cppcheck -j 4 -q zz.c zzwrite.c zzdump.c zzverify.c zzmkrandom.c
-	cppcheck -j 4 -q zzcopy.c zztexture.c zzsql.c zzio.c
-	cppcheck -j 4 -q zzread.c zzanon.c zzstudies.c zznetwork.c
-	cppcheck -j 4 -q zzdiscp.c zzdiscu.c zzdinetwork.c zznet.c
-	cppcheck -j 4 -q zzpixel.c zzini.c zzechoscp.c
-	cppcheck -j 4 -q tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
-	cppcheck -j 4 -q tests/testnet.c tests/initest.c
+	$(CPPCHECK) zz.c zzwrite.c zzdump.c zzverify.c zzmkrandom.c
+	$(CPPCHECK) zzcopy.c zztexture.c zzsql.c zzio.c
+	$(CPPCHECK) zzread.c zzanon.c zzstudies.c zznetwork.c
+	$(CPPCHECK) zzdiscp.c zzdiscu.c zzdinetwork.c zznet.c
+	$(CPPCHECK) zzpixel.c zzini.c zzechoscp.c
+	$(CPPCHECK) tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
+	$(CPPCHECK) tests/testnet.c tests/initest.c
 
 check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet tests/initest
 	tests/initest
