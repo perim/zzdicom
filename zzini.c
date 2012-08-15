@@ -1,10 +1,8 @@
 // quick and dirty read-only ini parser
 
 #include <errno.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <stdint.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>

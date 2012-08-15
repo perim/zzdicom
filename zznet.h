@@ -17,6 +17,7 @@ void znwechoreq(struct zzfile *zz);
 /// Send an echo response. Add echo message ID received as parameter.
 void znwechoresp(struct zzfile *zz, long mesID);
 
+void PDU_AssociateRJ(struct zzfile *zz, char result, char source, char diag);
 bool PDU_Associate_Request(struct zznetwork *zn);
 bool PDU_Abort_Parse(struct zznetwork *zn);
 bool PDU_Release_Handle(struct zznetwork *zn);

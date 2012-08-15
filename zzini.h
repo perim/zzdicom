@@ -7,8 +7,6 @@ extern "C" {
 
 // quick and dirty read-only ini parser
 
-#include <stdbool.h>
-
 struct zzini
 {
 	char *addr;

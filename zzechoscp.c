@@ -3,11 +3,25 @@
 #include "zznetwork.h"
 #include "zznet.h"
 
-int main(void)
+enum
+{
+	OPT_REJECT,
+	OPT_COUNT
+};
+
+extern const char *versionString;
+
+static struct zzopts opts[] =
+	{ { "--reject", "Reject all incoming transmissions", false, false, 0, 0 }, // OPT_REJECT
+	  { NULL, NULL, false, false, 0, 0 } };              // OPT_COUNT
+
+int main(int argc, char **argv)
 {
 	struct zznetwork *zn = NULL;
 	uint16_t group, element, mesID = 1;
 	long len;
+
+	(void) zzutil(argc, argv, 0, "", "DICOM network test server", opts);
 
 	zn = zznetlisten("", 5104, ZZNET_NO_FORK);
 	strcpy(zn->out->net.aet, "ECHOSCU");
@@ -21,6 +35,13 @@ int main(void)
 		{
 		case 0x01:
 			printf("ASSOCIATE-RQ received\n");
+			if (opts[OPT_REJECT].found)
+			{
+				PDU_AssociateRJ(zn->out, 0x01, 0x01, 0x01);
+				zznetclose(zn);
+				return 0;
+				break;
+			}
 			PDU_Associate_Request(zn);
 			break;
 		case 0x04:

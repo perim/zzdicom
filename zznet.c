@@ -211,7 +211,7 @@ static void PDU_Abort(struct zzfile *zz, char source, char diag)
 	znwsendbuffer(zz);
 }
 
-static void PDU_AssociateRJ(struct zzfile *zz, char result, char source, char diag)
+void PDU_AssociateRJ(struct zzfile *zz, char result, char source, char diag)
 {
 	znwstart(zz, 0x03);
 	znw2(1, zz);				// version bitfield
