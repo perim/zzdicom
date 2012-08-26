@@ -13,11 +13,13 @@
 enum
 {
 	OPT_STDIN,
+	OPT_FAKEDELIM,
 	OPT_COUNT
 };
 
 static struct zzopts opts[] =
 	{ { "--stdin", "Read data from standard input", true, false, 0, 0 }, // OPT_STDIN
+	  { "--fakedelim", "Generate fake delimiters for items and sequences", false, false, 0, 0 }, // OPT_FAKEDELIM
 	  { NULL, NULL, false, false, 0, 0 } };              // OPT_COUNT
 
 static const char *txsyn2str(enum zztxsyn syn)
@@ -227,7 +229,7 @@ void dumpcsa(struct zzfile *zz)
 
 void dump(struct zzfile *zz)
 {
-	uint16_t group, element;
+	int group, element;
 	long len;
 	const char *vm, *description, *csa = NULL;
 	const struct part6 *tag;
@@ -244,6 +246,15 @@ void dump(struct zzfile *zz)
 
 	while (zziternext(zz, &group, &element, &len))
 	{
+		if (group < 0)
+		{
+			if (opts[OPT_FAKEDELIM].found)
+			{
+				for (i = 0; i < zz->currNesting; i++) printf("  ");
+				printf("(%04x, %04x)\n", (unsigned)(-group), (unsigned)(-element));
+			}
+			continue;
+		}
 		// Extra checks
 		if (!zz->ladder[zz->ladderidx].csahack)
 		{

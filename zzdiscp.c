@@ -30,10 +30,40 @@ static struct zzopts opts[] =
 	{ { "--trace", "Save a network trace dump to \"zzdiscp.dcm\"", false, false, 0, 0 }, // OPT_TRACE
 	  { NULL, NULL, false, false, 0, 0 } };              // OPT_COUNT
 
+static void receive_access_request(struct zznetwork *zzn)
+{
+	bool processingAccess = true;
+	int nesting = zzn->in->ladderidx;
+	int group, element;
+	long len;
+
+	while (processingAccess && zziternext(zzn->in, &group, &element, &len))
+	{
+		// TODO -- handle fake delimiters
+		switch (ZZ_KEY(group, element))
+		{
+		// TODO, collect, verify then dump info to sql db for later processing
+		case DCM_DiAccessAuthorizing: // PN
+		case DCM_DiAccessTechnicalContact: // PN
+		case DCM_DiAccessTechnicalContactPhone: // LO
+		case DCM_DiAccessMessage: // LT
+		case DCM_DiAccessInstitutionDepartmentName: // LO
+		case DCM_DiAccessEquipmentSequence: // SQ
+			break;
+		case DCM_SequenceDelimitationItem:
+			processingAccess = false; // done with request
+			break;
+		default:
+			break; // non-recognized field, ignore it
+		}
+	}
+	zzwCS(zzn->out, DCM_DiAccessStatus, "QUEUED");
+}
+
 static void zzdiserviceprovider(struct zznetwork *zzn)
 {
 	char str[80];
-	uint16_t group, element;
+	int group, element;
 	long len;
 	bool loop = true;
 	bool newservice = false;
@@ -66,6 +96,13 @@ static void zzdiserviceprovider(struct zznetwork *zzn)
 				zzwItem_end(zzn->out, NULL);
 				zzwSQ_end(zzn->out, NULL);
 				zzwCS(zzn->out, DCM_DiInfoStatus, "SUCCESS"); // signal done
+			}
+			else if (strcmp(str, "ACCESS") == 0)
+			{
+				// TODO : Queue up access request for later processing
+				zzwCS(zzn->out, DCM_DiNetworkServiceStatus, "ACCEPTED");
+				receive_access_request(zzn);
+				zzwCS(zzn->out, DCM_DiAccessStatus, "QUEUED");
 			}
 			else
 			{

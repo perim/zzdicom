@@ -18,7 +18,7 @@ static struct zzopts opts[] =
 int main(int argc, char **argv)
 {
 	struct zznetwork *zn = NULL;
-	uint16_t group, element, mesID = 1;
+	int group, element, mesID = 1;
 	long len;
 
 	(void) zzutil(argc, argv, 0, "", "DICOM network test server", opts);

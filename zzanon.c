@@ -16,7 +16,7 @@ static char fill[MAX_FILL];
 void anonymize(char *filename)
 {
 	struct zzfile szz, *zz;
-	uint16_t group, element, nexttag = 0;
+	int group, element, nexttag = 0;
 	long len;
 	int i;
 
@@ -27,9 +27,13 @@ void anonymize(char *filename)
 	}
 
 	zziterinit(zz);
-	while (zziternext(zz, &group, &element, &len) && nexttag < ARRAY_SIZE(taglist))
+	while (zziternext(zz, &group, &element, &len) && nexttag < (int)ARRAY_SIZE(taglist))
 	{
-		if (group > 0x0040 && group != 0xfffe)
+		if (group < 0)
+		{
+			continue; // ignore fake delimeters
+		}
+		else if (group > 0x0040 && group != 0xfffe)
 		{
 			break;	// no reason to look into groups we do not change
 		}

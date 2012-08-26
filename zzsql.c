@@ -60,7 +60,7 @@ static int callback(void *nada, int cols, char **data, char **colnames)
 bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 {
 	char modified[MAX_LEN_DATETIME];
-	uint16_t group, element;
+	int group, element;
 	char studyInstanceUid[MAX_LEN_UI];
 	char seriesInstanceUid[MAX_LEN_UI];
 	char patientsName[MAX_LEN_PN];

@@ -177,8 +177,8 @@ struct zzfile
 	{
 		enum VR		vr;
 		long		length;
-		uint16_t	group;
-		uint16_t	element;
+		int		group;
+		int		element;
 		long		pos;		// start of a current tag's data segment
 		long		frame;		// current frame number, or -1, zero indexed
 		char		warning[MAX_LEN_LO];	// if !valid, this string is set to an explanation
@@ -249,7 +249,7 @@ char *zzgetstring(struct zzfile *zz, char *input, long strsize);
 bool zztostring(struct zzfile *zz, char *input, int strsize, int charsize);
 
 /// From the current file position, start reading DICOM tag information.
-bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len);
+bool zzread(struct zzfile *zz, int *group, int *element, long *len);
 
 struct zzfile *zzopen(const char *filename, const char *mode, struct zzfile *infile);
 struct zzfile *zzstdin(struct zzfile *infile);
@@ -262,7 +262,7 @@ int zzutil(int argc, char **argv, int minArgs, const char *usage, const char *he
 
 /// Utility iterator that wraps zzread. Passing in a NULL pointer for zz makes it a no-op.
 void zziterinit(struct zzfile *zz);
-bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len);
+bool zziternext(struct zzfile *zz, int *group, int *element, long *len);
 
 /// Extra low-level verification of current tag. Resides in zzverify.c
 bool zzverify(struct zzfile *zz);

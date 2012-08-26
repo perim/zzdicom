@@ -426,7 +426,7 @@ static void ladder_reduce(struct zzfile *zz, zzKey key)
 	}
 }
 
-bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
+bool zzread(struct zzfile *zz, int *group, int *element, long *len)
 {
 	char transferSyntaxUid[MAX_LEN_UI];
 	// Represent the three different variants of tag headers in one union
@@ -437,6 +437,45 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 		union { uint32_t len; struct { char vr[2]; uint16_t len; } evr; } buffer;
 	} header;
 	zzKey key;
+
+	zz->currNesting = zz->nextNesting;
+
+	// Did we leave a group, sequence or item? We can drop out of multiple at the same time.
+	// Considering only ladder size and position here, so that we can generate fake delimiters.
+	while (zz->ladderidx > 0)
+	{
+		long bytesread = zireadpos(zz->zi) - zz->ladder[zz->ladderidx].pos + 1;
+		long size = (zz->ladder[zz->ladderidx].size >= 0) ? zz->ladder[zz->ladderidx].size : INT32_MAX;	// for 32bit systems where UNLIMITED is -1
+
+		if (zz->ladder[zz->ladderidx].type == ZZ_GROUP && bytesread > size)
+		{
+			zz->ladderidx--;	// end parsing this group now
+			continue;
+		}
+		else if (zz->ladder[zz->ladderidx].type == ZZ_ITEM && bytesread > size)
+		{
+			//zz->currNesting--;
+			zz->nextNesting--;
+			zz->ladderidx--;	// end parsing this item now
+			zz->current.group = *group = -(int)ZZ_GROUP(DCM_ItemDelimitationItem);
+			zz->current.element = *element = -(int)ZZ_ELEMENT(DCM_ItemDelimitationItem);
+			return true;
+		}
+		else if (zz->ladder[zz->ladderidx].type == ZZ_SEQUENCE && bytesread > size)
+		{
+			//zz->currNesting--;
+			if (ZZ_KEY(zz->ladder[zz->ladderidx].group, zz->ladder[zz->ladderidx].element) == DCM_PerFrameFunctionalGroupsSequence)
+			{
+				zz->current.frame = -1;	// out of frames scope
+			}
+			zz->nextNesting--;
+			zz->ladderidx--;	// end parsing this sequence now
+			zz->current.group = *group = -(int)ZZ_GROUP(DCM_SequenceDelimitationItem);
+			zz->current.element = *element = -(int)ZZ_ELEMENT(DCM_SequenceDelimitationItem);
+			return true;
+		}
+		break;		// no further cause for regress found
+	}
 
 	if (ziread(zz->zi, &header, 8) != 8)		// group+element then either VR + 0, VR+VL, or just VL
 	{
@@ -449,7 +488,6 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	zz->previous.ladderidx = zz->ladderidx;
 	zz->current.group = *group = header.group;
 	zz->current.element = *element = header.element;
-	zz->currNesting = zz->nextNesting;
 	key = ZZ_KEY(header.group, header.element);
 
 	// Check if we should reduce ladder depth
@@ -818,7 +856,7 @@ void zziterinit(struct zzfile *zz)
 	}
 }
 
-bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
+bool zziternext(struct zzfile *zz, int *group, int *element, long *len)
 {
 	// Check if we should read the next tag -- try to iterate over as many tags as possible, even if data is totally fubar
 	if (zz && !zieof(zz->zi) && !zierror(zz->zi)

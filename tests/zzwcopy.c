@@ -12,7 +12,7 @@
 void copy(const char *destination, const char *source)
 {
 	struct zzfile szzdst, szzsrc, *dst = NULL, *src;
-	uint16_t group, element;
+	int group, element;
 	long len;
 	const struct part6 *tag;
 
@@ -21,6 +21,7 @@ void copy(const char *destination, const char *source)
 	zziterinit(src);
 	while (zziternext(src, &group, &element, &len))
 	{
+		if (group < 0) continue; // skip fake delimeters
 		if (group > 0x002) // Skip header, as we want to recreate it
 		{
 			if (!dst)
@@ -59,6 +60,7 @@ void copy(const char *destination, const char *source)
 	zziterinit(src);
 	while (zziternext(src, &group, &element, &len))
 	{
+		if (group < 0) continue; // skip fake delimeters
 		zzverify(src);
 		if (!src->current.valid)
 		{

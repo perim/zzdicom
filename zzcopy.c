@@ -24,7 +24,7 @@ static struct zzopts opts[] =
 void copy(const char *destination, const char *source)
 {
 	struct zzfile szzdst, szzsrc, *dst = NULL, *src;
-	uint16_t group, element;
+	int group, element;
 	long len;
 	const struct part6 *tag;
 	long samples_per_pixel = 1, x = 0, y = 0, z = 0, bits_per_sample = 16;
@@ -40,7 +40,11 @@ void copy(const char *destination, const char *source)
 	zziterinit(src);
 	while (zziternext(src, &group, &element, &len))
 	{
-		if (group > 0x002) // Skip header, as we want to recreate it
+		if (group < 0)
+		{
+			continue; // ignore fake delimeters
+		}
+		else if (group > 0x002) // Skip header, as we want to recreate it
 		{
 			if (!dst)
 			{
