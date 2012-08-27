@@ -60,7 +60,7 @@ void zero16bbw(uint16_t *data, int width, int height, int depth, int bx1, int by
 void manip(const char *source, int bx1, int by1, int bx2, int by2)
 {
 	struct zzfile szzsrc, *src;
-	int group, element;
+	uint16_t group, element;
 	long len;
 	const char *vm, *description;
 	const struct part6 *tag;
@@ -77,10 +77,6 @@ void manip(const char *source, int bx1, int by1, int bx2, int by2)
 	zziterinit(src);
 	while (zziternext(src, &group, &element, &len))
 	{
-		if (group < 0)
-		{
-			continue; // ignore fake delimeters
-		}
 		tag = zztag(group, element);
 		if ((src->current.vr == NO || src->current.vr == UN) && tag && src->ladder[src->ladderidx].txsyn == ZZ_IMPLICIT && group != 0xfffe)
 		{

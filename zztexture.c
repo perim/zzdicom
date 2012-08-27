@@ -16,7 +16,7 @@
 // TODO factorize this up a bit... it grew to monster size!
 struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 {
-	int group, element;
+	uint16_t group, element;
 	long len;
 	int bitspersample = 0, components = 0;
 	unsigned char *bytes;

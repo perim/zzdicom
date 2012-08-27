@@ -34,7 +34,7 @@ static void receive_access_request(struct zznetwork *zzn)
 {
 	bool processingAccess = true;
 	int nesting = zzn->in->ladderidx;
-	int group, element;
+	uint16_t group, element;
 	long len;
 
 	while (processingAccess && zziternext(zzn->in, &group, &element, &len))
@@ -63,7 +63,7 @@ static void receive_access_request(struct zznetwork *zzn)
 static void zzdiserviceprovider(struct zznetwork *zzn)
 {
 	char str[80];
-	int group, element;
+	uint16_t group, element;
 	long len;
 	bool loop = true;
 	bool newservice = false;

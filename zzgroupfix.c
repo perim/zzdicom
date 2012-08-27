@@ -10,7 +10,7 @@
 void fix(char *filename)
 {
 	struct zzfile szz, *zz;
-	int group, element, lastgroup = 0xffff;
+	uint16_t group, element, lastgroup = 0xffff;
 	long len, groupsize = 0, grouppos = 0;
 
 	zz = zzopen(filename, "r", &szz);
@@ -18,7 +18,7 @@ void fix(char *filename)
 	zziterinit(zz);
 	while (zziternext(zz, &group, &element, &len))
 	{
-		if (group != lastgroup && group >= 0)
+		if (group != lastgroup)
 		{
 			if (groupsize != 0)
 			{

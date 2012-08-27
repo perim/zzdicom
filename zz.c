@@ -426,7 +426,7 @@ static void ladder_reduce(struct zzfile *zz, zzKey key)
 	}
 }
 
-bool zzread(struct zzfile *zz, int *group, int *element, long *len)
+bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 {
 	char transferSyntaxUid[MAX_LEN_UI];
 	// Represent the three different variants of tag headers in one union
@@ -439,6 +439,7 @@ bool zzread(struct zzfile *zz, int *group, int *element, long *len)
 	zzKey key;
 
 	zz->currNesting = zz->nextNesting;
+	zz->current.fake = false;
 
 	// Did we leave a group, sequence or item? We can drop out of multiple at the same time.
 	// Considering only ladder size and position here, so that we can generate fake delimiters.
@@ -454,24 +455,24 @@ bool zzread(struct zzfile *zz, int *group, int *element, long *len)
 		}
 		else if (zz->ladder[zz->ladderidx].type == ZZ_ITEM && bytesread > size)
 		{
-			//zz->currNesting--;
 			zz->nextNesting--;
 			zz->ladderidx--;	// end parsing this item now
-			zz->current.group = *group = -(int)ZZ_GROUP(DCM_ItemDelimitationItem);
-			zz->current.element = *element = -(int)ZZ_ELEMENT(DCM_ItemDelimitationItem);
+			zz->current.group = *group = ZZ_GROUP(DCM_ItemDelimitationItem);
+			zz->current.element = *element = ZZ_ELEMENT(DCM_ItemDelimitationItem);
+			zz->current.fake = true;
 			return true;
 		}
 		else if (zz->ladder[zz->ladderidx].type == ZZ_SEQUENCE && bytesread > size)
 		{
-			//zz->currNesting--;
 			if (ZZ_KEY(zz->ladder[zz->ladderidx].group, zz->ladder[zz->ladderidx].element) == DCM_PerFrameFunctionalGroupsSequence)
 			{
 				zz->current.frame = -1;	// out of frames scope
 			}
 			zz->nextNesting--;
 			zz->ladderidx--;	// end parsing this sequence now
-			zz->current.group = *group = -(int)ZZ_GROUP(DCM_SequenceDelimitationItem);
-			zz->current.element = *element = -(int)ZZ_ELEMENT(DCM_SequenceDelimitationItem);
+			zz->current.group = *group = ZZ_GROUP(DCM_SequenceDelimitationItem);
+			zz->current.element = *element = ZZ_ELEMENT(DCM_SequenceDelimitationItem);
+			zz->current.fake = true;
 			return true;
 		}
 		break;		// no further cause for regress found
@@ -856,7 +857,7 @@ void zziterinit(struct zzfile *zz)
 	}
 }
 
-bool zziternext(struct zzfile *zz, int *group, int *element, long *len)
+bool zziternext(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 {
 	// Check if we should read the next tag -- try to iterate over as many tags as possible, even if data is totally fubar
 	if (zz && !zieof(zz->zi) && !zierror(zz->zi)

@@ -24,7 +24,7 @@
 static bool checkContents(const char *testfile, bool reqperfection)
 {
 	struct zzfile szz, *zz;
-	int group, element;
+	uint16_t group, element;
 	long len;
 	bool retval = false;
 

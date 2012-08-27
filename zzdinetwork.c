@@ -94,7 +94,7 @@ bool zzdinegotiation(struct zznetwork *zzn)
 {
 	char str[80];
 	bool loop;
-	int group, element;
+	uint16_t group, element;
 	long len;
 
 	zzn->in->utf8 = zzn->out->utf8 = true;

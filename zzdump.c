@@ -229,7 +229,7 @@ void dumpcsa(struct zzfile *zz)
 
 void dump(struct zzfile *zz)
 {
-	int group, element;
+	uint16_t group, element;
 	long len;
 	const char *vm, *description, *csa = NULL;
 	const struct part6 *tag;
@@ -246,12 +246,12 @@ void dump(struct zzfile *zz)
 
 	while (zziternext(zz, &group, &element, &len))
 	{
-		if (group < 0)
+		if (zz->current.fake)
 		{
 			if (opts[OPT_FAKEDELIM].found)
 			{
 				for (i = 0; i < zz->currNesting; i++) printf("  ");
-				printf("(%04x, %04x)\n", (unsigned)(-group), (unsigned)(-element));
+				printf("(%04x, %04x) --\n", group, element);
 			}
 			continue;
 		}
