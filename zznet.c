@@ -223,7 +223,7 @@ void PDU_AssociateRJ(struct zzfile *zz, char result, char source, char diag)
 }
 
 // Read a PDU ASSOCIATE-AC packet
-static bool PDU_Associate_Accept(struct zzfile *zz)
+bool PDU_Associate_Accept(struct zzfile *zz)
 {
 	long usize;
 	uint8_t val8;
@@ -389,14 +389,16 @@ bool PDU_Associate_Request(struct zznetwork *zn)
 		bool txsyns[ZZ_TX_LAST], foundAcceptableTx = false;
 
 		memset(txsyns, 0, sizeof(txsyns));	// set all to false
-		znr1(zz);				// reserved, shall be zero
+		val8 = znr1(zz);			// reserved, shall be zero
+		assert(val8 == 0);
 		psize = znr2(zz);			// size of packet
 		cid = znr1(zz);				// presentation context ID; must be odd; see PS 3.8 section 7.1.1.13
 		znrskip(3, zz);
 
 		// Abstract Syntax (SOP Class) belonging to Presentation Syntax, see PS 3.8 Table 9-14
 		pdu = znr1(zz);				// PDU type
-		znr1(zz);				// reserved, shall be zero
+		val8 = znr1(zz);			// reserved, shall be zero
+		assert(val8 == 0);
 		isize = znr2(zz);			// size of packet
 		memset(auid, 0, sizeof(auid));
 		ziread(zz->zi, auid, isize);	  	// See PS 3.8, section 7.1.1.2.
@@ -406,7 +408,8 @@ bool PDU_Associate_Request(struct zznetwork *zn)
 		{
 			// Transfer Syntax(es) belonging to Abstract Syntax
 			// (for AC, only one transfer syntax is allowed), see PS 3.8 Table 9-15
-			znr1(zz);			// reserved, shall be zero
+			val8 = znr1(zz);		// reserved, shall be zero
+			assert(val8 == 0);
 			isize = znr2(zz);		// size of packet
 			memset(tuid, 0, sizeof(tuid));
 			ziread(zz->zi, tuid, isize);	// See PS 3.8, section 7.1.1.2.
@@ -512,9 +515,11 @@ bool PDU_Associate_Request(struct zznetwork *zn)
 }
 
 // FIXME, the UIDs probably need to be padded to even size, like everything else
-static void PDU_AssociateRQ(struct zzfile *zz, const char *calledAET, const char *sopclass)
+void PDU_AssociateRQ(struct zzfile *zz, const char *calledAET, const char *sopclass)
 {
 	long pos;
+	const char *impl = "zzdicom";
+	char uid[MAX_LEN_UI];
 
 	znwstart(zz, 0x01);
 	znw2(1, zz);				// version bitfield
@@ -550,19 +555,24 @@ static void PDU_AssociateRQ(struct zzfile *zz, const char *calledAET, const char
 	znwuid(UID_LittleEndianExplicitTransferSyntax, zz);  // See PS 3.8, section 7.1.1.2.
 
 	// Set size of this presentation context item
-	znw2at(ziwritepos(zz->zi) - pos - 4, pos, zz);
+	znw2at(ziwritepos(zz->zi) - pos - 2, pos, zz);
 
 	// User Information Item Fields, see PS 3.8, Table 9-16
+	zzmakeuid(uid, sizeof(uid));		// FIXME, now generating random UID instead
 	znw1(0x50, zz);
 	znw1(0, zz);				// reserved, shall be zero
-	znw2(8, zz);				// size of packet
+	znw2(16 + strlen(uid) + strlen(impl), zz);	// size of payload that follows
 	znw1(0x51, zz);				// define maximum length of data field sub-item
 	znw1(0, zz);				// reserved, shall be zero
 	znw2(4, zz);				// size of following field
-	znw4(0, zz);				// zero means unlimited size allowed
+	znw4(ZZIO_BUFFERSIZE, zz);		// zero means unlimited size allowed
+	znw1(0x52, zz);				// define implementation class uid
+	znw1(0, zz);				// reserved, shall be zero
+	znwuid(uid, zz);
+	znw1(0x55, zz);				// define implementation name
+	znw1(0, zz);
+	znwuid(impl, zz);			// re-using uid writer here
 
-	// Now set size of entire message
-	znw4at(ziwritepos(zz->zi) - 6, 2, zz);
 	znwsendbuffer(zz);
 }
 

@@ -7,7 +7,7 @@ COMMONVERIFY = zzverify.o
 COMMONNET = zznet.o zznetwork.o
 COMMONDINET = zzdinetwork.o zznetwork.o
 PART6 = part6.o
-PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzmkrandom zzdiscp zzdiscu zzpixel
+PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzechoscu zzmkrandom zzdiscp zzdiscu zzpixel
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h zzdinetwork.h zzditags.h zznetwork.h
 
 all: CFLAGS += -Os -fstack-protector -DNDEBUG
@@ -61,6 +61,9 @@ zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON) $(COMMONWRITE)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE)
 
 zzechoscp: zzechoscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONNET)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONNET)
+
+zzechoscu: zzechoscu.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONNET)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONNET)
 
 zzdiscp: zzdiscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET)

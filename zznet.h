@@ -22,5 +22,7 @@ bool PDU_Associate_Request(struct zznetwork *zn);
 bool PDU_Abort_Parse(struct zznetwork *zn);
 bool PDU_Release_Handle(struct zznetwork *zn);
 void zznetregister(struct zznetwork *zn);
+void PDU_AssociateRQ(struct zzfile *zz, const char *calledAET, const char *sopclass);
+bool PDU_Associate_Accept(struct zzfile *zz);
 
 #endif

@@ -3,6 +3,7 @@
 #include "zznetwork.h"
 #include "zznet.h"
 
+#if 0
 enum
 {
 	OPT_REJECT,
@@ -12,6 +13,9 @@ enum
 static struct zzopts opts[] =
 	{ { "--reject", "Reject all incoming transmissions", false, false, 0, 0 }, // OPT_REJECT
 	  { NULL, NULL, false, false, 0, 0 } };              // OPT_COUNT
+#endif
+
+#define UID_VerificationSOPClass "1.2.840.10008.1.1"
 
 int main(int argc, char **argv)
 {
@@ -19,11 +23,18 @@ int main(int argc, char **argv)
 	uint16_t group, element, mesID = 1;
 	long len;
 
-	(void) zzutil(argc, argv, 0, "", "DICOM network test server", opts);
+	(void) zzutil(argc, argv, 2, "<host> <port>", "DICOM network test client", NULL);
 
-	zn = zznetlisten("", 5104, ZZNET_NO_FORK);
-	strcpy(zn->out->net.aet, "ECHOSCP");
+	// zznetconnect(const char *interface, const char *host, int port, int flags)
+	zn = zznetconnect("", argv[1], atoi(argv[2]), 0);
+	if (!zn)
+	{
+		fprintf(stderr, "Failed to connect\n");
+		return -1;
+	}
+	strcpy(zn->out->net.aet, "ECHOSCU");
 	zznetregister(zn);
+	PDU_AssociateRQ(zn->out, "ANYSCP", UID_VerificationSOPClass);
 	zigetc(zn->in->zi);	// trigger read of first packet
 	do
 	{
@@ -33,14 +44,11 @@ int main(int argc, char **argv)
 		{
 		case 0x01:
 			printf("ASSOCIATE-RQ received\n");
-			if (opts[OPT_REJECT].found)
-			{
-				PDU_AssociateRJ(zn->out, 0x01, 0x01, 0x01);
-				zznetclose(zn);
-				return 0;
-				break;
-			}
 			PDU_Associate_Request(zn);
+			break;
+		case 0x02:
+			printf("ASSOCIATE-AC received\n");
+			PDU_Associate_Accept(zn->in);
 			break;
 		case 0x04:
 			zziterinit(zn->in);
