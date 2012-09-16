@@ -219,7 +219,7 @@ void dumpcsa(struct zzfile *zz)
 				strcpy(pstart, "\033[22m\033[33m(");
 				snprintf(pstop, sizeof(pstop) - 1, ")\033[0m%*s", (int)(PADLEN - charlen - 2), "");
 			}
-			debug("\033[22m\033[32m(----,----)\033[0m %s %s%s%s # %4d, %d %s",
+			printf("\033[22m\033[32m(----,----)\033[0m %s %s%s%s # %4d, %d %s\n",
 			       vr, pstart, value, pstop, sum, nitems, str);
 			memset(str, 0, sizeof(str));
 			memset(vr, 0, sizeof(vr));
