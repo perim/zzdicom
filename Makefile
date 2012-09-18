@@ -76,13 +76,13 @@ clean:
 	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov gmon.out
 	rm -rf coverage_report
 
-CPPCHECK=cppcheck -j 4 -q --enable=performance,portability,missingInclude --std=posix
+CPPCHECK=cppcheck -j 4 -q --enable=portability,missingInclude --std=posix
 cppcheck:
 	$(CPPCHECK) zz.c zzwrite.c zzdump.c zzverify.c zzmkrandom.c
 	$(CPPCHECK) zzcopy.c zztexture.c zzsql.c zzio.c
 	$(CPPCHECK) zzread.c zzanon.c zzstudies.c zznetwork.c
 	$(CPPCHECK) zzdiscp.c zzdiscu.c zzdinetwork.c zznet.c
-	$(CPPCHECK) zzpixel.c zzini.c zzechoscp.c
+	$(CPPCHECK) zzpixel.c zzini.c zzechoscp.c zzechoscu.c
 	$(CPPCHECK) tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
 	$(CPPCHECK) tests/testnet.c tests/initest.c
 
