@@ -3,17 +3,17 @@
 #include "zznetwork.h"
 #include "zznet.h"
 
-#if 0
 enum
 {
-	OPT_REJECT,
+	OPT_AET,
+	OPT_CAE,
 	OPT_COUNT
 };
 
 static struct zzopts opts[] =
-	{ { "--reject", "Reject all incoming transmissions", false, false, 0, 0 }, // OPT_REJECT
+	{ { "--aet <AET>", "Our AE title", false, false, 1, 0 }, // OPT_AET
+	  { "--cae <AET>", "Destination AE title", false, false, 1, 0 }, // OPT_CAE
 	  { NULL, NULL, false, false, 0, 0 } };              // OPT_COUNT
-#endif
 
 #define UID_VerificationSOPClass "1.2.840.10008.1.1"
 
@@ -22,19 +22,27 @@ int main(int argc, char **argv)
 	struct zznetwork *zn = NULL;
 	uint16_t group, element, mesID = 1;
 	long len;
+	const char *aet = "ECHOSCU";
+	const char *cae = "ANY-SCP";
+	int argstart = zzutil(argc, argv, 2, "<host> <port>", "DICOM network test client", opts);
 
-	(void) zzutil(argc, argv, 2, "<host> <port>", "DICOM network test client", NULL);
-
-	// zznetconnect(const char *interface, const char *host, int port, int flags)
-	zn = zznetconnect("", argv[1], atoi(argv[2]), 0);
+	zn = zznetconnect("", argv[argstart], atoi(argv[argstart + 1]), 0);
 	if (!zn)
 	{
 		fprintf(stderr, "Failed to connect\n");
 		return -1;
 	}
-	strcpy(zn->out->net.aet, "ECHOSCU");
+	if (opts[OPT_AET].found)
+	{
+		aet = argv[opts[OPT_AET].argstart + 1];
+	}
+	if (opts[OPT_CAE].found)
+	{
+		cae = argv[opts[OPT_CAE].argstart + 1];
+	}
+	strcpy(zn->out->net.aet, aet);
 	zznetregister(zn);
-	PDU_AssociateRQ(zn->out, "ANYSCP", UID_VerificationSOPClass);
+	PDU_AssociateRQ(zn->out, cae, UID_VerificationSOPClass);
 	zigetc(zn->in->zi);	// trigger read of first packet
 	do
 	{
