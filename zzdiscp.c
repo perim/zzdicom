@@ -5,6 +5,7 @@
 #include "zzditags.h"
 #include "zznetwork.h"
 #include "zzdinetwork.h"
+#include "zzsql.h"
 
 #include <assert.h>
 #include <unistd.h>
@@ -24,6 +25,8 @@ enum
 	OPT_COUNT
 };
 
+static char rbuf[4096];
+
 extern const char *versionString;
 
 static struct zzopts opts[] =
@@ -36,19 +39,43 @@ static void receive_access_request(struct zznetwork *zzn)
 	int nesting = zzn->in->ladderidx;
 	uint16_t group, element;
 	long len;
+	char uid[MAX_LEN_UI];
+	char authorizing[MAX_LEN_PN];
+	char techcontact[MAX_LEN_PN];
+	char techphone[MAX_LEN_LO];
+	char institution[MAX_LEN_LO];
+	char *message = NULL;
 
+	memset(uid, 0, sizeof(uid));
+	memset(authorizing, 0, sizeof(authorizing));
+	memset(techcontact, 0, sizeof(techcontact));
+	memset(techphone, 0, sizeof(techphone));
+	memset(institution, 0, sizeof(institution));
 	while (processingAccess && zziternext(zzn->in, &group, &element, &len))
 	{
-		// TODO -- handle fake delimiters
 		switch (ZZ_KEY(group, element))
 		{
-		// TODO, collect, verify then dump info to sql db for later processing
-		case DCM_DiAccessAuthorizing: // PN
-		case DCM_DiAccessTechnicalContact: // PN
-		case DCM_DiAccessTechnicalContactPhone: // LO
-		case DCM_DiAccessMessage: // LT
-		case DCM_DiAccessInstitutionDepartmentName: // LO
 		case DCM_DiAccessEquipmentSequence: // SQ
+			break; // ignore
+		case DCM_DiAccessAuthorizing: // PN
+			zzgetstring(zzn->in, authorizing, sizeof(authorizing) - 1);
+			break;
+		case DCM_DiAccessTechnicalContact: // PN
+			zzgetstring(zzn->in, techcontact, sizeof(techcontact) - 1);
+			break;
+		case DCM_DiAccessTechnicalContactPhone: // LO
+			zzgetstring(zzn->in, techphone, sizeof(techphone) - 1);
+			break;
+		case DCM_DiAccessMessage: // LT
+			len = MIN(len, (long)4096); // safety measure
+			message = calloc(1, len);
+			zzgetstring(zzn->in, message, len);
+			break;
+		case DCM_DiAccessInstitutionDepartmentName: // LO
+			zzgetstring(zzn->in, institution, sizeof(institution) - 1);
+			break;
+		case DCM_DiNetworkServiceUID: // UI
+			zzgetstring(zzn->in, uid, sizeof(uid) - 1);
 			break;
 		case DCM_SequenceDelimitationItem:
 			processingAccess = false; // done with request
@@ -57,7 +84,24 @@ static void receive_access_request(struct zznetwork *zzn)
 			break; // non-recognized field, ignore it
 		}
 	}
+	// TODO, verify that all required data sent first, and no collisions/duplicates
+	if (!message || uid[0] == '\0')
+	{
+		// TODO, use bitfield to denote required fields? then clear missing fields in a loop while printing them to log?
+		fprintf(stderr, "Missing essential data for access request\n");
+	}
 	zzwCS(zzn->out, DCM_DiAccessStatus, "QUEUED");
+	// dump info to sql db for later processing
+	struct zzdb szdb, *zdb = zzdbopen(&szdb);
+	sprintf(rbuf, "INSERT INTO accessrequests(uid, message, authorizing, technicalcontactname, technicalcontactphone, message, aetitle) "
+	        "VALUES(\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"AETITLE\")",
+	        uid, message != NULL ? message : "", authorizing, techcontact, techphone, message);
+	if (!zzquery(zdb, rbuf, NULL, NULL))
+	{
+		fprintf(stderr, "Failed to insert access request into database\n");
+	}
+	zdb = zzdbclose(zdb);
+	free(message);
 }
 
 static void zzdiserviceprovider(struct zznetwork *zzn)
@@ -73,6 +117,9 @@ static void zzdiserviceprovider(struct zznetwork *zzn)
 	{
 		switch (ZZ_KEY(group, element))
 		{
+		case DCM_DiNetworkServiceUID:
+			// hack for INFO, which does not receive anything
+			break;
 		case DCM_DiNetworkServiceSequence:
 			newservice = true; // now waiting for DiNetworkService
 			break;
@@ -106,7 +153,7 @@ static void zzdiserviceprovider(struct zznetwork *zzn)
 			}
 			else
 			{
-				zzwCS(zzn->out, DCM_DiNetworkServiceStatus, "NO SUCH SERVICE");
+				zzwCS(zzn->out, DCM_DiNetworkServiceStatus, "NO SERVICE");
 			}
 			ziflush(zzn->out->zi);
 			zzdireceiving(zzn);

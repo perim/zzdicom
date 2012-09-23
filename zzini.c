@@ -14,6 +14,7 @@ struct zzini *zziniopen(struct zzini *zi, const char *filename)
 {
 	struct stat st;
 
+	memset(zi, 0, sizeof(*zi));
 	if (stat(filename, &st) != 0)
 	{
 		fprintf(stderr, "%s could not be found: %s\n", filename, strerror(errno));

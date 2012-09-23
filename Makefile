@@ -1,5 +1,5 @@
-CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -Werror -g -luuid -march=native -mtune=native
-COMMON = zz.o zzio.o
+CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -Werror -g -luuid -march=native -mtune=native -std=gnu99
+COMMON = zz.o zzio.o zzini.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
 COMMONTEXTURE = zztexture.o
@@ -8,7 +8,7 @@ COMMONNET = zznet.o zznetwork.o
 COMMONDINET = zzdinetwork.o zznetwork.o
 PART6 = part6.o
 PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzechoscu zzmkrandom zzdiscp zzdiscu zzpixel
-HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h zzdinetwork.h zzditags.h zznetwork.h
+HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h zzdinetwork.h zzditags.h zznetwork.h zzini.h
 
 all: CFLAGS += -Os -fstack-protector -DNDEBUG
 all: sqlinit.h $(PROGRAMS)
@@ -66,8 +66,8 @@ zzechoscp: zzechoscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONNET)
 zzechoscu: zzechoscu.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONNET)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONNET)
 
-zzdiscp: zzdiscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONDINET)
+zzdiscp: zzdiscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET) $(COMMONSQL)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONDINET) $(COMMONSQL) -lsqlite3
 
 zzdiscu: zzdiscu.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONDINET)

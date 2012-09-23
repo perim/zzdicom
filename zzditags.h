@@ -36,12 +36,13 @@
 #define DCM_DiStorageMD5Hash                     ZZ_KEY(DIGROUP, 0x2007) // LO, MD5 hash of file
 #define DCM_DiStorageMethod                      ZZ_KEY(DIGROUP, 0x2008) // CS, "NEW" or "UPDATE" or "REQUESTED" (if retrieve)
 #define DCM_DiStorageRetrieveUID                 ZZ_KEY(DIGROUP, 0x2009) // UI, req if above is "REQUESTED", UID of request, not present otherwise
+#define DCM_DiStorageCommitment                  ZZ_KEY(DIGROUP, 0x200a) // CS, "FULL" (require storage commitment) or "FAST" (recovery exists)
 #define DCM_DiStorageSize                        ZZ_KEY(DIGROUP, 0x2090) // UX (new VR, unsigned 64bit), size of object to follow
 #define DCM_DiStorageSequence                    ZZ_KEY(DIGROUP, 0x2091) // SQ, contains file to store
-#define DCM_DiStorageResultSequence              ZZ_KEY(DIGROUP, 0x2101) // SQ, contains responses to storage items
-#define DCM_DiStorageMethodStatus                ZZ_KEY(DIGROUP, 0x2102) // CS, "ACCEPTED", "DUPLICATE" (if new), "OLDER" (if update), 
+#define DCM_DiStorageResultSequence              ZZ_KEY(DIGROUP, 0x2102) // SQ, contains responses to storage items
+#define DCM_DiStorageMethodStatus                ZZ_KEY(DIGROUP, 0x2104) // CS, "ACCEPTED", "DUPLICATE" (if new), "OLDER" (if update), 
                                                                          // or "REJECTED" (not allowed to update)
-#define DCM_DiStorageResultStatus                ZZ_KEY(DIGROUP, 0x2103) // CS, "ACCEPTED", or "CHECKSUM ERROR", "DISK FULL" or generic "FAILED"
+#define DCM_DiStorageResultStatus                ZZ_KEY(DIGROUP, 0x2106) // CS, "ACCEPTED", or "CHECKSUM ERROR", "DISK FULL", or generic "FAILED"
 
 // query
 #define DCM_DiQuerySequence                      ZZ_KEY(DIGROUP, 0x3001) // SQ, one item only, each tag in the item is AND'ed for query
@@ -55,7 +56,7 @@
                                                                          // retrieve, server responds back with a storage request
                                                                          /// where DCM_DiStorageMethod is "REQUESTED"
 #define DCM_DiRetrieveStatus                     ZZ_KEY(DIGROUP, 0x4002) // CS, if present in storage item, means failure, can be
-                                                                         // "PERMISSION DENIED" or "NOT FOUND" or "BUSY"
+                                                                         // "PERMISSION DENIED", "NOT FOUND" or "BUSY"
 
 // access request
 #define DCM_DiAccessAuthorizing                  ZZ_KEY(DIGROUP, 0x5001) // PN, name of person authorizing access (deliberately no phone #!)
@@ -66,16 +67,16 @@
 #define DCM_DiAccessEquipmentSequence            ZZ_KEY(DIGROUP, 0x5006) // SQ, insert < C.7.5.2 Enhanced General Equipment Module >
 #define DCM_DiAccessPrivilegeRequested           ZZ_KEY(DIGROUP, 0x5007) // LO, may have multiple items, containing service labels
                                                                          // and optional extras like "UPDATE" (update stored series)
-#define DCM_DiAccessUID                          ZZ_KEY(DIGROUP, 0x5008) // UI, unique UID for this request
 #define DCM_DiAccessAETITLE                      ZZ_KEY(DIGROUP, 0x5009) // AE, hospital unique AETITLE for this modality
 #define DCM_DiAccessIP                           ZZ_KEY(DIGROUP, 0x500a) // LO, IP address of modality (if applicable)
 #define DCM_DiAccessPort                         ZZ_KEY(DIGROUP, 0x500a) // LO, port address of modality service (if applicable)
 #define DCM_DiAccessServiceContact               ZZ_KEY(DIGROUP, 0x500b) // PN, name(s) of person to call if modality has a problem
 #define DCM_DiAccessServiceContactPhone          ZZ_KEY(DIGROUP, 0x500c) // LO, phone number(s) of person to call if modality has a problem
 #define DCM_DiAccessPublicKey                    ZZ_KEY(DIGROUP, 0x500d) // LT, public key of modality
-#define DCM_DiAccessAuthenticationMethods        ZZ_KEY(DIGROUP, 0x500e) // CS, 1-n, methods to authenticate modality users, defined values: "NONE"
-#define DCM_DiAccessStatus                       ZZ_KEY(DIGROUP, 0x5099) // CS, "QUEUED", or "FAILED" if contents are invalid,
-                                                                         // or "AETITLE IN USE", or "UID NOT UNIQUE"
+#define DCM_DiAccessAuthenticationMethods        ZZ_KEY(DIGROUP, 0x500e) // CS, 1-n, methods used to authenticate modality users, defined 
+                                                                         // values: "NONE" and "LOCAL"
+#define DCM_DiAccessStatus                       ZZ_KEY(DIGROUP, 0x5099) // CS, "QUEUED", or "FAILED" if contents are invalid
+#define DCM_DiAccessStatusMessage                ZZ_KEY(DIGROUP, 0x509a) // LT, if above is FAILED, comment on why
 
 // info request
 #define DCM_DiInfoEquipmentSequence              ZZ_KEY(DIGROUP, 0x6002) // SQ, insert < C.7.5.2 Enhanced General Equipment Module >
