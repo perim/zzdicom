@@ -36,9 +36,8 @@ static void implicit(struct zzio *zi, uint16_t group, uint16_t element, uint32_t
 
 static void genericfile(struct zzfile *zz, const char *sopclass)
 {
-	char uid[MAX_LEN_UI];
 	zzwUI(zz, DCM_SOPClassUID, sopclass);
-	zzwUI(zz, DCM_SOPInstanceUID, zzanonuid(uid, sizeof(uid)));
+	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.5.6.7");
 	if (rand() % 2 == 0) zzwEmpty(zz, DCM_StudyDate, DA);
 	if (rand() % 2 == 0) zzwEmpty(zz, DCM_StudyTime, TM);
 	if (rand() % 2 == 0) zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
@@ -54,10 +53,7 @@ static void genericfile(struct zzfile *zz, const char *sopclass)
 	zzwLO(zz, DCM_PatientID, "zzmkrandom"); // marker used for testing
 	zzwEmpty(zz, DCM_PatientsBirthDate, DA);
 	zzwEmpty(zz, DCM_PatientsSex, CS);
-	if (rand() % 3 == 0)
-		zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17.18.19.20.21.22.23.24.25.26");
-	else
-		zzwUI(zz, DCM_StudyInstanceUID, zzanonuid(uid, sizeof(uid)));
+	zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17.18.19.20.21.22.23.24.25.26");
 	zzwUI(zz, DCM_SeriesInstanceUID, "1.2.3.4.2");
 	zzwEmpty(zz, DCM_StudyID, SH);
 	if (rand() % 2 == 0)
