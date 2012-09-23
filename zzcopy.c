@@ -40,7 +40,7 @@ void copy(const char *destination, const char *source)
 	zziterinit(src);
 	while (zziternext(src, &group, &element, &len))
 	{
-		if (group > 0x002) // Skip header, as we want to recreate it
+		if (group > 0x002 && !src->current.fake) // Skip header, as we want to recreate it
 		{
 			if (!dst)
 			{
