@@ -64,7 +64,7 @@ const char *zzinivalue(struct zzini *zi, const char *section, const char *key, c
 	ptr += keysize; // skip key
 	while (ptr < endptr && *ptr++ != '=') ; // skip past = sign
 	while (ptr < endptr && *ptr == ' ') ptr++; // skip any leading spaces
-	if (ptr < endptr)
+	if (buffer && ptr < endptr)
 	{
 		memset(buffer, 0, bufsize);
 		for (spanptr = ptr; *spanptr != '\n' && spanptr != endptr; spanptr++) ;
