@@ -18,12 +18,17 @@ bool zzverify(struct zzfile *zz)
 	}
 	if (zz->current.group != 0xfffe && zz->previous.group != 0xffff && zz->previous.group != 0xfffe && zz->previous.ladderidx == zz->ladderidx)
 	{
-		if (zz->current.group == zz->previous.group && zz->current.element <= zz->previous.element)
+		if (zz->current.group == zz->previous.group && zz->current.element == zz->previous.element)
+		{
+			zz->current.valid = false;
+			strcpy(zz->current.warning, "Duplicate tag");
+		}
+		else if (zz->current.group == zz->previous.group && zz->current.element <= zz->previous.element)
 		{
 			zz->current.valid = false;
 			strcpy(zz->current.warning, "Out of order tag");
 		}
-		if (zz->current.group < zz->previous.group)
+		else if (zz->current.group < zz->previous.group)
 		{
 			zz->current.valid = false;
 			strcpy(zz->current.warning, "Out of order group");

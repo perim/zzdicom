@@ -244,6 +244,7 @@ int main(int argc, char **argv)
 	addCheck(zz);
 	zzwOBnoise(zz, DCM_PixelData, 255);
 	zzwOBnoise(zz, DCM_DataSetTrailingPadding, 0);
+	zzwOBnoise(zz, DCM_DataSetTrailingPadding, 0); // duplicate tag
 	zz = zzclose(zz);
 
 	result = checkContents("samples/brokensq.dcm", false);
