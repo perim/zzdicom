@@ -1,10 +1,12 @@
 #include "zzsql.h"
 
+#include <assert.h>
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdarg.h>
 
 #include "sqlinit.h"	// creates sqlinit global
 
@@ -46,20 +48,10 @@ time_t zzundatetime(const char *datetime)
 	return mktime(&tmval);
 }
 
-static int callback(void *nada, int cols, char **data, char **colnames)
-{
-	char *modified = (char *)nada;
-
-	(void)cols;	// ignore
-	(void)colnames;
-	strcpy(modified, data[0]);
-	return 0;
-}
-
 // return whether we did update local db
 bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 {
-	char modified[MAX_LEN_DATETIME];
+	char *modified = NULL;
 	uint16_t group, element;
 	char studyInstanceUid[MAX_LEN_UI];
 	char seriesInstanceUid[MAX_LEN_UI];
@@ -68,7 +60,6 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	long len;
 	bool done = false;
 
-	modified[0] = '\0';
 	memset(studyInstanceUid, 0, sizeof(studyInstanceUid));
 	memset(seriesInstanceUid, 0, sizeof(seriesInstanceUid));
 	memset(patientsName, 0, sizeof(patientsName));
@@ -100,23 +91,28 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	}
 
 	// Check if date on file is newer, if so, skip the update and return false
-	sprintf(rbuf, "SELECT lastmodified FROM instances WHERE filename=\"%s\"", zz->fullPath);
-	zzquery(zdb, rbuf, callback, modified);
-	if (modified[0] != '\0' && zz->modifiedTime <= zzundatetime(modified))
+	struct zzdbiter zq = zzdbquery(zdb, "SELECT lastmodified FROM instances WHERE filename=@s", zz->fullPath);
+	if (zzdbnext(zdb, &zq, "@s", &modified))
 	{
-		printf("%s is unchanged (%d <= %d)\n", zz->fullPath, (int)zz->modifiedTime, (int)zzundatetime(modified));
-		return false;
+		printf("MODIFIED: %s (%d) vs %d\n", modified, (int)zz->modifiedTime, (int)zzundatetime(modified));
+		if (modified[0] != '\0' && zz->modifiedTime <= zzundatetime(modified))
+		{
+			printf("%s is unchanged (%d <= %d)\n", zz->fullPath, (int)zz->modifiedTime, (int)zzundatetime(modified));
+			zzdbdone(zdb, zq);
+			return false;
+		}
 	}
+	zzdbdone(zdb, zq);
 
-	zzquery(zdb, "BEGIN TRANSACTION", NULL, NULL);
-	sprintf(rbuf, "INSERT OR REPLACE INTO instances(filename, sopclassuid, instanceuid, size, lastmodified, seriesuid) values (\"%s\", \"%s\", \"%s\", \"%lu\", \"%s\", \"%s\")",
-		zz->fullPath, zz->sopClassUid, zz->sopInstanceUid, zz->fileSize, zzdatetime(zz->modifiedTime), seriesInstanceUid);
-	zzquery(zdb, rbuf, NULL, NULL);
-	sprintf(rbuf, "INSERT OR REPLACE INTO series(seriesuid, modality, studyuid) values (\"%s\", \"%s\", \"%s\")", seriesInstanceUid, modality, studyInstanceUid);
-	zzquery(zdb, rbuf, NULL, NULL);
-	sprintf(rbuf, "INSERT OR REPLACE INTO studies(studyuid, patientsname) values (\"%s\", \"%s\")", studyInstanceUid, patientsName);
-	zzquery(zdb, rbuf, NULL, NULL);
-	zzquery(zdb, "COMMIT", NULL, NULL);
+	zzdbdone(zdb, zzdbquery(zdb, "BEGIN TRANSACTION"));
+	zzdbdone(zdb, zzdbquery(zdb, "INSERT OR REPLACE INTO instances(filename, sopclassuid, instanceuid, size, "
+	         "lastmodified, seriesuid) values (@s1, @s2, @s3, @d, @s4, @s5)", zz->fullPath,
+	         zz->sopClassUid, zz->sopInstanceUid, zz->fileSize, zzdatetime(zz->modifiedTime), seriesInstanceUid));
+	zzdbdone(zdb, zzdbquery(zdb, "INSERT OR REPLACE INTO series(seriesuid, modality, studyuid) values (@s6, @s7, @s8)",
+	         seriesInstanceUid, modality, studyInstanceUid));
+	zzdbdone(zdb, zzdbquery(zdb, "INSERT OR REPLACE INTO studies(studyuid, patientsname) values (@s9, @s10)",
+	         studyInstanceUid, patientsName));
+	zzdbdone(zdb, zzdbquery(zdb, "COMMIT"));
 	return true;
 }
 
@@ -156,4 +152,178 @@ struct zzdb *zzdbopen(struct zzdb *zdb)
 	}
 	zdb->sqlite = db;
 	return zdb;
+}
+
+static void mydbrow(struct zzdb *zdb, struct zzdbiter *zq, char const *fmt, va_list arg)
+{
+	int index = 0;
+	int64_t *int_temp = 0;
+	double *float_temp;
+	char *string_temp;
+	const unsigned char **strref_temp;
+	char ch;
+	int result;
+	const void **ptr_temp;
+
+	while ((ch = *fmt++))
+	{
+		if ('@' == ch)
+		{
+			switch (ch = *fmt++)
+			{
+			case 'f':
+				float_temp = va_arg(arg, double *);
+				*float_temp = sqlite3_column_double(zq->stmt, index++);
+				printf("GET PARAM(%d)%%f=%f\n", index - 1, *float_temp);
+				break;
+			case 's':
+				strref_temp = va_arg(arg, const unsigned char **);
+				*strref_temp = sqlite3_column_text(zq->stmt, index++);
+				printf("GET PARAM(%d)%%s=%s\n", index - 1, *strref_temp);
+				break;
+			case 'd':
+				int_temp = va_arg(arg, int64_t *);
+				*int_temp = sqlite3_column_int(zq->stmt, index++);
+				printf("GET PARAM(%d)%%d=%ld\n", index - 1, (long)*int_temp);
+				break;
+			case 'l':
+				assert(index > 0);
+				if (index <= 0) break; // oops
+				int_temp = va_arg(arg, int64_t *);
+				*int_temp = sqlite3_column_bytes(zq->stmt, index - 1);
+				break;
+			case 'p':
+				ptr_temp = va_arg(arg, const void **);
+				*ptr_temp = sqlite3_column_blob(zq->stmt, index++);
+				printf("GET PARAM(%d)%%p=%p\n", index - 1, *ptr_temp);
+				break;
+			}
+		}
+	}
+}
+
+static void mydbquery(struct zzdb *zdb, struct zzdbiter *zq, char const *fmt, va_list arg)
+{
+	int index = 1;
+	int64_t int_temp = 0;
+	double float_temp;
+	char *string_temp;
+	char ch;
+	int result;
+	void *ptr_temp;
+
+	while ((ch = *fmt++))
+	{
+		if ('@' == ch)
+		{
+			result = SQLITE_OK;
+			switch (ch = *fmt++)
+			{
+			case 'f':
+				float_temp = va_arg(arg, double);
+				printf("PARAM(%d)%%f=%f\n", index, float_temp);
+				result = sqlite3_bind_double(zq->stmt, index, float_temp);
+				index++;
+				break;
+			case 's':
+				string_temp = va_arg(arg, char *);
+				printf("PARAM(%d)%%s=%s\n", index, string_temp);
+				result = sqlite3_bind_text(zq->stmt, index, string_temp, strlen(string_temp), SQLITE_TRANSIENT);
+				int_temp = 0;
+				index++;
+				break;
+			case 'd':
+				int_temp = va_arg(arg, int64_t);
+				printf("PARAM(%d)%%d=%ld\n", index, (long)int_temp);
+				result = sqlite3_bind_int(zq->stmt, index, int_temp);
+				index++;
+				break;
+			case 'l':
+				int_temp = va_arg(arg, int64_t);
+				printf("PARAM(%d)%%l=%ld\n", index + 1, (long)int_temp);
+				break;
+			case 'p':
+				ptr_temp = va_arg(arg, void *);
+				printf("PARAM(%d)%%p=%p\n", index, ptr_temp);
+				result = sqlite3_bind_blob(zq->stmt, index, ptr_temp, int_temp, SQLITE_STATIC);
+				index++;
+				int_temp = 0;
+				break;
+			case 'm':
+				ptr_temp = va_arg(arg, void *);
+				printf("PARAM(%d)%%m=%p\n", index, ptr_temp);
+				result = sqlite3_bind_blob(zq->stmt, index, ptr_temp, int_temp, free);
+				index++;
+				int_temp = 0;
+				break;
+			}
+			if (result != SQLITE_OK)
+			{
+				fprintf(stderr, "Bind failed: %s\n", sqlite3_errmsg(zdb->sqlite));
+			}
+		}
+	}
+}
+
+// @d - 64bit int
+// @f - 64bit double
+// @s - utf8 string
+// @p - binary blob, blob must not be freed before db connection is closed
+// @m - malloced binary blob, ownership of memory transferred to database
+// @l - length of next blob ???
+// if multiple instances of each type is used in a format string, add an incremented number
+// behind the letter, eg first integer is @d, second is @d2, third is @d3, and so on.
+struct zzdbiter zzdbquery(struct zzdb *zdb, char const *fmt, ...)
+{
+	struct zzdbiter zq;
+	va_list arg;
+	memset(&zq, 0, sizeof(zq));
+	int result = sqlite3_prepare_v2(zdb->sqlite, fmt, strlen(fmt), &zq.stmt, NULL);
+	if (result != SQLITE_OK)
+	{
+		fprintf(stderr, "Prepare failed: %s\n", sqlite3_errmsg(zdb->sqlite));
+		return zq;
+	}
+	va_start(arg, fmt);
+	mydbquery(zdb, &zq, fmt, arg);
+	va_end(arg);
+	zq.retval = sqlite3_step(zq.stmt);
+	return zq;
+}
+
+void zzdbdone(struct zzdb *zdb, struct zzdbiter zq)
+{
+	if (zq.stmt)
+	{
+		sqlite3_finalize(zq.stmt);
+	}
+}
+
+// @l must be AFTER pointer, in this case, unlike above
+// no @m
+bool zzdbnext(struct zzdb *zdb, struct zzdbiter *zq, const char *fmt, ...)
+{
+	va_list arg;
+	if (zq->index > 0)
+	{
+		zq->retval = sqlite3_step(zq->stmt);
+	}
+	if (zq->retval == SQLITE_ROW && fmt)
+	{
+		va_start(arg, fmt);
+		mydbrow(zdb, zq, fmt, arg);
+		va_end(arg);
+		zq->index++;
+		return true;
+	}
+	else
+	{
+		if (zq->retval != SQLITE_DONE)
+		{
+			fprintf(stderr, "Step failed: %s\n", sqlite3_errmsg(zdb->sqlite));
+		}
+		sqlite3_finalize(zq->stmt);
+		zq->stmt = NULL;
+		return false;
+	}
 }

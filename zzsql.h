@@ -18,6 +18,13 @@ struct zzdb
 	sqlite3 *sqlite;
 };
 
+struct zzdbiter
+{
+	sqlite3_stmt *stmt;
+	int index;
+	int retval;
+};
+
 bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz);
 struct zzdb *zzdbopen(struct zzdb *indb);
 struct zzdb *zzdbclose(struct zzdb *zdb);
@@ -27,6 +34,10 @@ bool zzquery(struct zzdb *zdb, const char *statement, int (*callback)(void*,int,
 // TODO move
 time_t zzundatetime(const char *datetime);
 const char *zzdatetime(time_t value);
+
+struct zzdbiter zzdbquery(struct zzdb *zdb, char const *fmt, ...);
+bool zzdbnext(struct zzdb *zdb, struct zzdbiter *zq, const char *fmt, ...);
+void zzdbdone(struct zzdb *zdb, struct zzdbiter zq);
 
 #ifdef __cplusplus
 }

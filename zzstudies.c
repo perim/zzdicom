@@ -10,31 +10,13 @@
 #include <string.h>
 #include <ctype.h>
 
-static int counter = 0;
-
-static int callback(void *nada, int cols, char **data, char **colnames)
-{
-	char name[40];
-
-	(void)nada;	// ignore
-	(void)cols;
-	(void)colnames;
-
-	memset(name, 0, sizeof(name));
-	strncpy(name, data[1], sizeof(name) - 3);
-	name[sizeof(name) - 1] = '\0';	// add trailing dots if cut off
-	name[sizeof(name) - 2] = '.';
-	name[sizeof(name) - 3] = '.';
-	name[sizeof(name) - 4] = '.';
-	printf("%03d | %-42s | %s\n", counter, name, data[0]);
-	counter++;
-	return 0;
-}
-
 int main(int argc, char **argv)
 {
 	struct zzdb szdb, *zdb;
 	char lines[100];
+	const char *studyuid, *patientsname;
+	int counter = 0;
+	char name[40];
 
 	zzutil(argc, argv, 0, "", "List all studies in local DICOM database", NULL);
 	zdb = zzdbopen(&szdb);
@@ -49,7 +31,20 @@ int main(int argc, char **argv)
 	lines[sizeof(lines)-1] = '\0';
 	printf("idx | %-42s | %s\n", "PATIENT NAME", "STUDY UID");
 	printf("%s\n", lines);
-	zzquery(zdb, "SELECT studyuid,patientsname FROM studies", callback, NULL);
+
+	struct zzdbiter iter = zzdbquery(zdb, "SELECT studyuid,patientsname FROM studies");
+	while (zzdbnext(zdb, &iter, "@s @s", &studyuid, &patientsname))
+	{
+		memset(name, 0, sizeof(name));
+		strncpy(name, patientsname, sizeof(name) - 3);
+		name[sizeof(name) - 1] = '\0';	// add trailing dots if cut off
+		name[sizeof(name) - 2] = '.';
+		name[sizeof(name) - 3] = '.';
+		name[sizeof(name) - 4] = '.';
+		printf("%03d | %-42s | %s\n", counter, name, studyuid);
+		counter++;
+	}
+
 	zdb = zzdbclose(zdb);
 
 	return 0;

@@ -84,9 +84,9 @@ cppcheck:
 	$(CPPCHECK) zzdiscp.c zzdiscu.c zzdinetwork.c zznet.c
 	$(CPPCHECK) zzpixel.c zzini.c zzechoscp.c zzechoscu.c
 	$(CPPCHECK) tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
-	$(CPPCHECK) tests/testnet.c tests/initest.c
+	$(CPPCHECK) tests/testnet.c tests/initest.c tests/sqltest.c
 
-check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet tests/initest
+check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet tests/initest tests/sqltest
 	tests/initest
 	tests/zz1 2> /dev/null
 	tests/zzw
@@ -98,6 +98,7 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet 
 	./zzmkrandom 54632 samples/random.dcm
 	tests/zzwcopy
 	tests/testnet
+	tests/sqltest
 	./zzdump --version > /dev/null
 	./zzdump --help > /dev/null
 	./zzdump --usage > /dev/null
@@ -117,6 +118,7 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet 
 memcheck:
 	valgrind --leak-check=yes -q tests/zzw
 	valgrind --leak-check=yes -q ./tests/zziotest
+	valgrind --leak-check=yes -q ./tests/sqltest
 	valgrind --leak-check=yes -q ./zzanon ANON samples/tw1.dcm
 	valgrind --leak-check=yes -q ./zzcopy samples/spine.dcm samples/copy.dcm
 	valgrind --leak-check=yes -q ./zzpixel --zero 200 200 300 300 samples/copy.dcm
@@ -135,6 +137,9 @@ tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
 
 tests/zziotest: tests/zziotest.c $(HEADERS) $(COMMON)
 	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
+
+tests/sqltest: tests/sqltest.c $(HEADERS) $(COMMON) $(COMMONSQL)
+	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) -I. $(CFLAGS) -lsqlite3
 
 tests/testnet: tests/testnet.c $(HEADERS) $(COMMON) $(COMMONWRITE) zznetwork.o
 	$(CC) -o $@ $< $(COMMON) $(COMMONWRITE) -I. $(CFLAGS) zznetwork.o -lpthread
