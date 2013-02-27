@@ -98,21 +98,21 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 		if (modified[0] != '\0' && zz->modifiedTime <= zzundatetime(modified))
 		{
 			printf("%s is unchanged (%d <= %d)\n", zz->fullPath, (int)zz->modifiedTime, (int)zzundatetime(modified));
-			zzdbdone(zdb, zq);
+			zzdbdone(zq);
 			return false;
 		}
 	}
-	zzdbdone(zdb, zq);
+	zzdbdone(zq);
 
-	zzdbdone(zdb, zzdbquery(zdb, "BEGIN TRANSACTION"));
-	zzdbdone(zdb, zzdbquery(zdb, "INSERT OR REPLACE INTO instances(filename, sopclassuid, instanceuid, size, "
+	zzdbdone(zzdbquery(zdb, "BEGIN TRANSACTION"));
+	zzdbdone(zzdbquery(zdb, "INSERT OR REPLACE INTO instances(filename, sopclassuid, instanceuid, size, "
 	         "lastmodified, seriesuid) values (@s1, @s2, @s3, @d, @s4, @s5)", zz->fullPath,
 	         zz->sopClassUid, zz->sopInstanceUid, zz->fileSize, zzdatetime(zz->modifiedTime), seriesInstanceUid));
-	zzdbdone(zdb, zzdbquery(zdb, "INSERT OR REPLACE INTO series(seriesuid, modality, studyuid) values (@s6, @s7, @s8)",
+	zzdbdone(zzdbquery(zdb, "INSERT OR REPLACE INTO series(seriesuid, modality, studyuid) values (@s6, @s7, @s8)",
 	         seriesInstanceUid, modality, studyInstanceUid));
-	zzdbdone(zdb, zzdbquery(zdb, "INSERT OR REPLACE INTO studies(studyuid, patientsname) values (@s9, @s10)",
+	zzdbdone(zzdbquery(zdb, "INSERT OR REPLACE INTO studies(studyuid, patientsname) values (@s9, @s10)",
 	         studyInstanceUid, patientsName));
-	zzdbdone(zdb, zzdbquery(zdb, "COMMIT"));
+	zzdbdone(zzdbquery(zdb, "COMMIT"));
 	return true;
 }
 
@@ -154,7 +154,7 @@ struct zzdb *zzdbopen(struct zzdb *zdb)
 	return zdb;
 }
 
-static void mydbrow(struct zzdb *zdb, struct zzdbiter *zq, char const *fmt, va_list arg)
+static void mydbrow(struct zzdbiter *zq, char const *fmt, va_list arg)
 {
 	int index = 0;
 	int64_t *int_temp = 0;
@@ -291,7 +291,7 @@ struct zzdbiter zzdbquery(struct zzdb *zdb, char const *fmt, ...)
 	return zq;
 }
 
-void zzdbdone(struct zzdb *zdb, struct zzdbiter zq)
+void zzdbdone(struct zzdbiter zq)
 {
 	if (zq.stmt)
 	{
@@ -311,7 +311,7 @@ bool zzdbnext(struct zzdb *zdb, struct zzdbiter *zq, const char *fmt, ...)
 	if (zq->retval == SQLITE_ROW && fmt)
 	{
 		va_start(arg, fmt);
-		mydbrow(zdb, zq, fmt, arg);
+		mydbrow(zq, fmt, arg);
 		va_end(arg);
 		zq->index++;
 		return true;

@@ -37,7 +37,7 @@ const char *zzdatetime(time_t value);
 
 struct zzdbiter zzdbquery(struct zzdb *zdb, char const *fmt, ...);
 bool zzdbnext(struct zzdb *zdb, struct zzdbiter *zq, const char *fmt, ...);
-void zzdbdone(struct zzdb *zdb, struct zzdbiter zq);
+void zzdbdone(struct zzdbiter zq);
 
 #ifdef __cplusplus
 }
