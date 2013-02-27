@@ -12,8 +12,8 @@
 #define HEADER_SIZE 8
 #define PACKET_STEP 71
 #define STEPS 20
-#define FILENAME "/tmp/test.bin"
-#define TEENAME "/tmp/tee.bin"
+#define FILENAME "test.bin"
+#define TEENAME "tee.bin"
 
 static long header_write_func(long size, char *buffer, const void *userdata)
 {
@@ -44,7 +44,7 @@ static void verify1(const char *filename, bool splitter)
 
 	if (splitter)
 	{
-		FILE *fp = fopen(FILENAME, "r");
+		FILE *fp = fopen(filename, "r");
 		assert(fp);
 		while (!feof(fp))
 		{
@@ -62,7 +62,7 @@ static void verify1(const char *filename, bool splitter)
 	}
 	else
 	{
-		FILE *fp = fopen(FILENAME, "r");
+		FILE *fp = fopen(filename, "r");
 		assert(fp);
 		for (i = 0; i < STEPS * PACKET_STEP; i++)
 		{
