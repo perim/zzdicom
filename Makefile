@@ -1,4 +1,5 @@
 CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -Werror -g -luuid -march=native -mtune=native -std=gnu99
+LDFLAGS = -luuid
 COMMON = zz.o zzio.o zzini.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
@@ -34,43 +35,43 @@ sqlinit.h: SQL
 	echo ";" >> sqlinit.h
 
 zzanon: zzanon.c $(HEADERS) $(COMMON)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(LDFLAGS)
 
 zzdump: zzdump.c $(HEADERS) $(COMMON) $(PART6) $(COMMONVERIFY)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONVERIFY)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONVERIFY) $(LDFLAGS)
 
 zzcopy: zzcopy.c $(HEADERS) $(COMMON) $(PART6) $(COMMONWRITE)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONWRITE) -lCharLS
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(COMMONWRITE) $(LDFLAGS) -lCharLS
 
 zzpixel: zzpixel.c $(HEADERS) $(COMMON) $(PART6)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(PART6) $(LDFLAGS)
 
 zzgroupfix: zzgroupfix.c $(HEADERS) $(COMMON)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(LDFLAGS)
 
 zzread: zzread.c $(HEADERS) $(COMMON) $(COMMONSQL)
-	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
+	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) $(CFLAGS) $(LDFLAGS) -lsqlite3
 
 zzstudies: zzstudies.c $(HEADERS) $(COMMON) $(COMMONSQL)
-	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
+	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) $(CFLAGS) $(LDFLAGS) -lsqlite3
 
 zzprune: zzprune.c $(HEADERS) $(COMMON) $(COMMONSQL)
-	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) $(CFLAGS) -lsqlite3
+	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) $(CFLAGS) $(LDFLAGS) -lsqlite3
 
 zzmkrandom: zzmkrandom.c $(HEADERS) $(COMMON) $(COMMONWRITE)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(LDFLAGS)
 
 zzechoscp: zzechoscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONNET)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONNET)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONNET) $(LDFLAGS)
 
 zzechoscu: zzechoscu.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONNET)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONNET)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONNET) $(LDFLAGS)
 
 zzdiscp: zzdiscp.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET) $(COMMONSQL)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONDINET) $(COMMONSQL) -lsqlite3
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONDINET) $(COMMONSQL) $(LDFLAGS) -lsqlite3
 
 zzdiscu: zzdiscu.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET)
-	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONDINET)
+	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONDINET) $(LDFLAGS)
 
 clean:
 	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov gmon.out
@@ -133,28 +134,28 @@ checkall: debug cppcheck check memcheck tests/gdcmdatatest
 	tests/gdcmdatatest
 
 tests/zz1: tests/zz1.c $(HEADERS) $(COMMON)
-	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(LDFLAGS)
 
 tests/zziotest: tests/zziotest.c $(HEADERS) $(COMMON)
-	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS)
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(LDFLAGS)
 
 tests/sqltest: tests/sqltest.c $(HEADERS) $(COMMON) $(COMMONSQL)
-	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) -I. $(CFLAGS) -lsqlite3
+	$(CC) -o $@ $< $(COMMON) $(COMMONSQL) -I. $(CFLAGS) $(LDFLAGS) -lsqlite3
 
 tests/testnet: tests/testnet.c $(HEADERS) $(COMMON) $(COMMONWRITE) zznetwork.o
-	$(CC) -o $@ $< $(COMMON) $(COMMONWRITE) -I. $(CFLAGS) zznetwork.o -lpthread
+	$(CC) -o $@ $< $(COMMON) $(COMMONWRITE) -I. $(CFLAGS) $(LDFLAGS) zznetwork.o -lpthread
 
 tests/zzw: tests/zzw.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONVERIFY)
-	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY)
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY) $(LDFLAGS)
 
 tests/zzt: tests/zzt.c $(HEADERS) $(COMMON) $(COMMONTEXTURE)
-	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONTEXTURE) -lGL -lglut -lCharLS
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONTEXTURE) $(LDFLAGS) -lGL -lglut -lCharLS
 
 tests/zzwcopy: tests/zzwcopy.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONVERIFY) $(PART6)
-	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY) $(PART6)
+	$(CC) -o $@ $< $(COMMON) -I. $(CFLAGS) $(COMMONWRITE) $(COMMONVERIFY) $(PART6) $(LDFLAGS)
 
 tests/initest: tests/initest.c zzini.c zzini.h
-	$(CC) -o $@ $< -I. zzini.c $(CFLAGS)
+	$(CC) -o $@ $< -I. zzini.c $(CFLAGS) $(LDFLAGS)
 
 install:
 	install -t /usr/local/bin $(PROGRAMS)
