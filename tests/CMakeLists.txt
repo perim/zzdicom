@@ -15,6 +15,11 @@ target_link_libraries(zziotest zzdicom)
 set_target_properties(zziotest PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
 add_test(zziotest ${CMAKE_CURRENT_BINARY_DIR}/zziotest "samples/tw2.dcm" "${CMAKE_SOURCE_DIR}/samples/spine.dcm")
 
+add_executable(sqltest sqltest.c)
+target_link_libraries(sqltest zzdicom sqlite3)
+set_target_properties(sqltest PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
+add_test(zziotest ${CMAKE_CURRENT_BINARY_DIR}/sqltest)
+
 if(APPLE)
   # fixme - trouble with charls
 else(APPLE)
