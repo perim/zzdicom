@@ -49,7 +49,7 @@ static void sigchld_handler(int s)
 // FIXME: Use interface
 struct zznetwork *zznetlisten(const char *interface, int port, int flags)
 {
-	int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
+	int sockfd = 0, new_fd;  // listen on sock_fd, new connection on new_fd
 	struct addrinfo hints, *servinfo, *p;
 	socklen_t sin_size;
 	struct sigaction sa;
@@ -169,7 +169,7 @@ failure:
 // FIXME: Use interface
 struct zznetwork *zznetconnect(const char *interface, const char *host, int port, int flags)
 {
-	int sockfd;
+	int sockfd = 0;
 	struct addrinfo hints, *servinfo, *p;
 	int rv;
 	char s[INET6_ADDRSTRLEN];
