@@ -130,7 +130,7 @@ struct zzopts	// list of command-line options; NULL-terminate it
 
 #define warning(...) do { fprintf(stderr, __VA_ARGS__); fprintf(stderr, "\n"); } while (0)
 #ifndef NDEBUG
-#define debug(...) do { fprintf(stdout, __VA_ARGS__); fprintf(stderr, "\n"); } while (0)
+#define debug(...) do { fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); } while (0)
 #else
 #define debug(...)
 #endif
