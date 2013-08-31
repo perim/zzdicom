@@ -83,8 +83,13 @@ static void test1(int packetsize, bool splitter)
 	// Write
 	zi = ziopenwrite(FILENAME, packetsize, 0);
 	tee = ziopenwrite(TEENAME, packetsize, 0);
+	const char *err = zistrerror(zi);
+	assert(err[0] == '\0');
 	assert(zi);
 	assert(tee);
+	ziseteof(zi);
+	zicleareof(zi);
+	ziresetwritebuffer(zi);
 	zitee(zi, tee, ZZIO_TEE_WRITE);
 	if (splitter)
 	{
@@ -385,6 +390,9 @@ int main(int argc, char **argv)
 		srcfile = argv[1];
 		srcfile2 = argv[2];
 	}
+
+	assert(ziopenmodify("/dev/cannot-open", 4096, 0) == NULL);
+	assert(ziopenwrite("/dev/cannot-open", 4096, 0) == NULL);
 
 	// Round # 1 - getc, putc
 	test1(128, false);

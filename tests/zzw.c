@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/time.h>
 
 #include "byteorder.h"
 
@@ -287,6 +288,12 @@ int main(int argc, char **argv)
 		ziwrite(zz->zi, &length, 4);
 	}
 	zzwUL(zz, ZZ_KEY(0x0031, 0x0012), 1); // check that warning for bad private creator is triggered
+	zzwDA(zz, ZZ_KEY(0x0033, 0x1012), time(NULL));
+	struct timeval tv;
+	struct timezone tz;
+	gettimeofday(&tv, &tz);
+	zzwDT(zz, ZZ_KEY(0x0033, 0x1013), tv);
+	zzwTM(zz, ZZ_KEY(0x0033, 0x1014), tv);
 	addCheck(zz);
 	zz = zzclose(zz);
 

@@ -20,7 +20,6 @@ debug: sqlinit.h $(PROGRAMS)
 
 gcov: CFLAGS += -fprofile-arcs -ftest-coverage
 gcov: clean sqlinit.h $(PROGRAMS) check
-	rm -rf coverage_report
 	gcov *.c
 	lcov --directory ./ --capture --output-file lcov_tmp.info -b ./
 	lcov --extract lcov_tmp.info "$(pwd)/*" --output-file lcov.info
@@ -74,7 +73,7 @@ zzdiscu: zzdiscu.c $(HEADERS) $(COMMON) $(COMMONWRITE) $(COMMONDINET)
 	$(CC) -o $@ $< $(COMMON) $(CFLAGS) $(COMMONWRITE) $(COMMONDINET) $(LDFLAGS)
 
 clean:
-	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov gmon.out
+	rm -f *.o $(PROGRAMS) *.gcno *.gcda random.dcm *.gcov gmon.out tests/initest
 	rm -rf coverage_report
 
 CPPCHECK=cppcheck -j 4 -q --enable=portability,missingInclude --std=posix
@@ -109,8 +108,11 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet 
 	cat samples/tw2.dcm | ./zzdump --stdin > /dev/null
 	./zzdump samples/brokensq.dcm > /dev/null
 	./zzdump samples/spine.dcm > /dev/null
+	./zzdump samples/SIEMENS_GBS_III-16-ACR_NEMA_1-ULis2Bytes.dcm > /dev/null
+	./zzdump samples/SIEMENS_CSA2.dcm > /dev/null
 	./zzanon TEST samples/tw1.dcm
 	./zzanon TEST samples/tw2.dcm
+	- ./zzanon TEST samples/nonexistent.dcm 2> /dev/null
 	./zzcopy samples/spine.dcm samples/copy.dcm
 	./zzpixel --zero 200 200 300 300 samples/copy.dcm
 	./zzcopy --rgb samples/spine.dcm samples/copy.dcm

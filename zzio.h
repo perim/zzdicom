@@ -136,14 +136,6 @@ void ziflush(struct zzio *zi);
 ZZ_DECL_NONNULL(1)
 void zicommit(struct zzio *zi);
 
-// void zirepeat(struct zzio *zi, int ch, long num);	// repeat character ch num times (use memset in buffer, repeatedly if necessary)
-
-/// Write one byte at a certain position in the file without changing write position.
-/// If splitter is active, or operating on a socket, the position must be within the
-/// current buffer. Returns true on success.
-ZZ_DECL_NONNULL(1)
-bool ziwriteu8at(struct zzio *zi, uint8_t value, long pos);
-
 /// Write two bytes at a certain position in the file without changing write position.
 /// If splitter is active, or operating on a socket, the position must be within the
 /// current buffer. Returns true on success.

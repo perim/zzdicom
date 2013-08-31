@@ -22,8 +22,8 @@ Features
 --------
 The software was written with performance as a high priority, and the little it does, it does far
 faster than any other DICOM software that I have tested. Memory management is very simple and
-easy to validate. Unit test coverage of the core code is very high. The parser is very robust,
-and when it encounters problems it shall always fail gently.
+easy to validate. Unit test coverage of the core code is very high (over 90%). The parser is very 
+robust, and when it encounters problems it shall always fail gently.
 
 Installation
 ------------
@@ -104,3 +104,5 @@ cucumber.dcm -- (C) Andy Ellison, license CC BY-SA 3.0 (http://creativecommons.o
 minimal.hdr,
 minimal.img,
 minimal.nii -- public domain, copied from the nifti home page
+SIEMENS_GBS_III-16-ACR_NEMA_1-ULis2Bytes.dcm,
+SIEMENS_CSA2.dcm -- from gdcm test data package

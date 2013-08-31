@@ -50,6 +50,7 @@ int main(void)
         zziterinit(NULL);
         result = zziternext(NULL, NULL, NULL, &len);
         assert(result == false);
+        zzstdin(NULL);
 
 	// default false
 	assert(zzisverbose() == false);
@@ -73,6 +74,9 @@ int main(void)
 	zz = zzopen(filename, "r", &szz);
 	assert(zz == NULL);	// above created file pretends to be big-endian
 	close(fd);
+
+	assert(strlen_utf8("1") == 1);
+	assert(strlen_utf8("片仮名") == 3);
 
 	testuuid();
 

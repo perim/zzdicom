@@ -421,16 +421,6 @@ void ziflush(struct zzio *zi)
 }
 
 // TODO - Optimize me
-bool ziwriteu8at(struct zzio *zi, uint8_t value, long pos)
-{
-	long curr = ziwritepos(zi);
-	bool result = zisetwritepos(zi, pos);
-	ASSERT_OR_RETURN(zi, false, result, "Out of buffer bounds");
-	ziputc(zi, value);
-	return zisetwritepos(zi, curr);
-}
-
-// TODO - Optimize me
 bool ziwriteu16at(struct zzio *zi, uint16_t value, long pos)
 {
 	long curr = ziwritepos(zi);
