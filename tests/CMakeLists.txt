@@ -3,7 +3,7 @@ set(TEST_FLAGS "-I${PROJECT_SOURCE_DIR} -I${PROJECT_SOURCE_DIR}/tests")
 add_executable(zz1 zz1.c)
 target_link_libraries(zz1 zzdicom)
 set_target_properties(zz1 PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
-add_test(zzw ${CMAKE_CURRENT_BINARY_DIR}/zz1)
+add_test(zz1 ${CMAKE_CURRENT_BINARY_DIR}/zz1)
 
 add_executable(zzw zzw.c)
 target_link_libraries(zzw zzdicom)
@@ -15,10 +15,12 @@ target_link_libraries(zziotest zzdicom)
 set_target_properties(zziotest PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
 add_test(zziotest ${CMAKE_CURRENT_BINARY_DIR}/zziotest "samples/tw2.dcm" "${CMAKE_SOURCE_DIR}/samples/spine.dcm")
 
+add_test(zzread ${CMAKE_BINARY_DIR}/zzread "samples/spine.dcm")
+
 add_executable(sqltest sqltest.c)
 target_link_libraries(sqltest zzdicom sqlite3)
 set_target_properties(sqltest PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
-add_test(zziotest ${CMAKE_CURRENT_BINARY_DIR}/sqltest)
+add_test(zzsqltest ${CMAKE_CURRENT_BINARY_DIR}/sqltest)
 
 if(APPLE)
   # fixme - trouble with charls
