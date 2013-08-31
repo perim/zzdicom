@@ -1,4 +1,4 @@
-CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -Werror -g -luuid -march=native -mtune=native -std=gnu99
+CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -g -luuid -march=native -mtune=native -std=gnu99
 LDFLAGS = -luuid
 COMMON = zz.o zzio.o zzini.o
 COMMONSQL = zzsql.o
@@ -11,11 +11,11 @@ PART6 = part6.o
 PROGRAMS = zzanon zzcopy zzdump zzgroupfix zzread zzstudies zzprune zzechoscp zzechoscu zzmkrandom zzdiscp zzdiscu zzpixel
 HEADERS = zz.h zz_priv.h zzsql.h zzwrite.h part6.h zztexture.h zznet.h zzio.h zzdinetwork.h zzditags.h zznetwork.h zzini.h
 
-all: CFLAGS += -Os -fstack-protector -DNDEBUG
+all: CFLAGS += -Os -fstack-protector -DNDEBUG -Werror
 all: sqlinit.h $(PROGRAMS)
 
 debug: clean
-debug: CFLAGS += -O0 -DDEBUG -fstack-protector-all
+debug: CFLAGS += -O0 -DDEBUG -fstack-protector-all -Werror
 debug: sqlinit.h $(PROGRAMS)
 
 gcov: CFLAGS += -fprofile-arcs -ftest-coverage
@@ -87,7 +87,7 @@ cppcheck:
 	$(CPPCHECK) tests/zziotest.c tests/zzwcopy.c tests/zz1.c tests/zzt.c
 	$(CPPCHECK) tests/testnet.c tests/initest.c tests/sqltest.c
 
-check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet tests/initest tests/sqltest
+check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet tests/initest tests/sqltest zzmkrandom
 	tests/initest
 	tests/zz1 2> /dev/null
 	tests/zzw
@@ -99,6 +99,7 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet 
 	./zzmkrandom 54632 samples/random.dcm
 	tests/zzwcopy
 	tests/testnet
+	./zzread samples/spine.dcm
 	tests/sqltest
 	./zzdump --version > /dev/null
 	./zzdump --help > /dev/null

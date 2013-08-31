@@ -94,7 +94,7 @@ bool zzdbupdate(struct zzdb *zdb, struct zzfile *zz)
 	struct zzdbiter zq = zzdbquery(zdb, "SELECT lastmodified FROM instances WHERE filename=@s", zz->fullPath);
 	if (zzdbnext(zdb, &zq, "@s", &modified))
 	{
-		printf("MODIFIED: %s (%d) vs %d\n", modified, (int)zz->modifiedTime, (int)zzundatetime(modified));
+		//printf("MODIFIED: %s (%d) vs %d\n", modified, (int)zz->modifiedTime, (int)zzundatetime(modified));
 		if (modified[0] != '\0' && zz->modifiedTime <= zzundatetime(modified))
 		{
 			printf("%s is unchanged (%d <= %d)\n", zz->fullPath, (int)zz->modifiedTime, (int)zzundatetime(modified));
@@ -174,17 +174,17 @@ static void mydbrow(struct zzdbiter *zq, char const *fmt, va_list arg)
 			case 'f':
 				float_temp = va_arg(arg, double *);
 				*float_temp = sqlite3_column_double(zq->stmt, index++);
-				printf("GET PARAM(%d)%%f=%f\n", index - 1, *float_temp);
+				//printf("GET PARAM(%d)%%f=%f\n", index - 1, *float_temp);
 				break;
 			case 's':
 				strref_temp = va_arg(arg, const unsigned char **);
 				*strref_temp = sqlite3_column_text(zq->stmt, index++);
-				printf("GET PARAM(%d)%%s=%s\n", index - 1, *strref_temp);
+				//printf("GET PARAM(%d)%%s=%s\n", index - 1, *strref_temp);
 				break;
 			case 'd':
 				int_temp = va_arg(arg, int64_t *);
 				*int_temp = sqlite3_column_int(zq->stmt, index++);
-				printf("GET PARAM(%d)%%d=%ld\n", index - 1, (long)*int_temp);
+				//printf("GET PARAM(%d)%%d=%ld\n", index - 1, (long)*int_temp);
 				break;
 			case 'l':
 				assert(index > 0);
@@ -195,7 +195,7 @@ static void mydbrow(struct zzdbiter *zq, char const *fmt, va_list arg)
 			case 'p':
 				ptr_temp = va_arg(arg, const void **);
 				*ptr_temp = sqlite3_column_blob(zq->stmt, index++);
-				printf("GET PARAM(%d)%%p=%p\n", index - 1, *ptr_temp);
+				//printf("GET PARAM(%d)%%p=%p\n", index - 1, *ptr_temp);
 				break;
 			}
 		}
@@ -221,37 +221,37 @@ static void mydbquery(struct zzdb *zdb, struct zzdbiter *zq, char const *fmt, va
 			{
 			case 'f':
 				float_temp = va_arg(arg, double);
-				printf("PARAM(%d)%%f=%f\n", index, float_temp);
+				//printf("PARAM(%d)%%f=%f\n", index, float_temp);
 				result = sqlite3_bind_double(zq->stmt, index, float_temp);
 				index++;
 				break;
 			case 's':
 				string_temp = va_arg(arg, char *);
-				printf("PARAM(%d)%%s=%s\n", index, string_temp);
+				//printf("PARAM(%d)%%s=%s\n", index, string_temp);
 				result = sqlite3_bind_text(zq->stmt, index, string_temp, strlen(string_temp), SQLITE_TRANSIENT);
 				int_temp = 0;
 				index++;
 				break;
 			case 'd':
 				int_temp = va_arg(arg, int64_t);
-				printf("PARAM(%d)%%d=%ld\n", index, (long)int_temp);
+				//printf("PARAM(%d)%%d=%ld\n", index, (long)int_temp);
 				result = sqlite3_bind_int(zq->stmt, index, int_temp);
 				index++;
 				break;
 			case 'l':
 				int_temp = va_arg(arg, int64_t);
-				printf("PARAM(%d)%%l=%ld\n", index + 1, (long)int_temp);
+				//printf("PARAM(%d)%%l=%ld\n", index + 1, (long)int_temp);
 				break;
 			case 'p':
 				ptr_temp = va_arg(arg, void *);
-				printf("PARAM(%d)%%p=%p\n", index, ptr_temp);
+				//printf("PARAM(%d)%%p=%p\n", index, ptr_temp);
 				result = sqlite3_bind_blob(zq->stmt, index, ptr_temp, int_temp, SQLITE_STATIC);
 				index++;
 				int_temp = 0;
 				break;
 			case 'm':
 				ptr_temp = va_arg(arg, void *);
-				printf("PARAM(%d)%%m=%p\n", index, ptr_temp);
+				//printf("PARAM(%d)%%m=%p\n", index, ptr_temp);
 				result = sqlite3_bind_blob(zq->stmt, index, ptr_temp, int_temp, free);
 				index++;
 				int_temp = 0;
