@@ -665,7 +665,7 @@ bool zzread(struct zzfile *zz, uint16_t *group, uint16_t *element, long *len)
 	else if (header.element == 0x0000 || (key != DCM_PixelData && *len == UNLIMITED) || zz->current.vr == SQ || key == DCM_Item)
 	{
 		// Entered into a group or sequence, copy parameters
-		if (zz->ladderidx >= MAX_LADDER)
+		if (zz->ladderidx + 1 >= MAX_LADDER)
 		{
 			warning("Too deep group/sequence nesting - giving up");
 			return false;	// stop parsing and give up!

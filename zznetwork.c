@@ -111,6 +111,7 @@ struct zznetwork *zznetlisten(const char *interface, int port, int flags)
 	if (listen(sockfd, BACKLOG) == -1)
 	{
 		perror("listen");
+		close(sockfd);
 		goto failure;
 	}
 
@@ -120,6 +121,7 @@ struct zznetwork *zznetlisten(const char *interface, int port, int flags)
 	if (sigaction(SIGCHLD, &sa, NULL) == -1)
 	{
 		perror("sigaction");
+		close(sockfd);
 		goto failure;
 	}
 
@@ -191,6 +193,7 @@ struct zznetwork *zznetconnect(const char *interface, const char *host, int port
 	if ((rv = getaddrinfo(host, portstr, &hints, &servinfo)) != 0)
 	{
 		fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+		free(zzn);
 		return NULL;
 	}
 

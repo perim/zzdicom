@@ -393,6 +393,7 @@ int main(int argc, char **argv)
 
 	assert(ziopenmodify("/dev/cannot-open", 4096, 0) == NULL);
 	assert(ziopenwrite("/dev/cannot-open", 4096, 0) == NULL);
+	assert(ziopenfile("/dev/cannot-open", "abcd") == NULL); // test bad modes
 
 	// Round # 1 - getc, putc
 	test1(128, false);

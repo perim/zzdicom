@@ -281,7 +281,7 @@ struct zzio *ziopenfile(const char *path, const char *mode)
 		case 'r' : doread = true; break;
 		case 'w' : dowrite = true; break;
 		case '+' : dowrite = true; doread = true; break;
-		default : break; // TODO, error message?
+		default : return NULL;
 		}
 		p++;
 	}
