@@ -11,7 +11,7 @@
 #include <string.h>
 #include <ctype.h>
 
-int main(int argc, char **argv)
+int main(void)
 {
 	struct zzdb szdb, *zdb;
 	const char *studyuid, *patientsname;
