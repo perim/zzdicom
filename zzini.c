@@ -17,7 +17,7 @@ struct zzini *zziniopen(struct zzini *zi, const char *filename)
 	memset(zi, 0, sizeof(*zi));
 	if (stat(filename, &st) != 0)
 	{
-		fprintf(stderr, "%s could not be found: %s\n", filename, strerror(errno));
+		//fprintf(stderr, "%s could not be found: %s\n", filename, strerror(errno));
 		return NULL;
 	}
 	zi->size = st.st_size;
@@ -29,11 +29,22 @@ struct zzini *zziniopen(struct zzini *zi, const char *filename)
 		fclose(zi->fp);
 		return NULL;
 	}
-	if (madvise(zi->addr, zi->size, MADV_RANDOM | MADV_WILLNEED) != 0)
+	if (madvise((void *)zi->addr, zi->size, MADV_RANDOM | MADV_WILLNEED) != 0)
 	{
 		fprintf(stderr, "madvise failed: %s\n", strerror(errno));
 	}
 	return zi;
+}
+
+const char *zzinisection(struct zzini *zi, const char *previous)
+{
+	const char *ptr = previous ? previous++ : zi->addr;
+	const char *endptr = zi->addr + zi->size;
+	while (ptr < endptr && *ptr != '[') // scan for next section, line starting with '['
+	{
+		while (ptr < endptr && *ptr++ != '\n') ; // find next line
+	}
+	return ptr < endptr ? ++ptr : NULL;
 }
 
 const char *zzinivalue(struct zzini *zi, const char *section, const char *key, char *buffer, long bufsize)
@@ -77,7 +88,20 @@ const char *zzinivalue(struct zzini *zi, const char *section, const char *key, c
 
 struct zzini *zziniclose(struct zzini *zi)
 {
-	munmap(zi->addr, zi->size);
-	fclose(zi->fp);
+	if (zi->fp)
+	{
+		munmap((void *)zi->addr, zi->size);
+		fclose(zi->fp);
+	}
 	return NULL;
+}
+
+struct zzini *zzinibuffer(struct zzini *zi, const char *buffer, int size)
+{
+	memset(zi, 0, sizeof(*zi));
+	zi->size = size;
+	zi->fp = NULL;
+	zi->addr = buffer;
+	zi->cursection = NULL;
+	return zi;
 }

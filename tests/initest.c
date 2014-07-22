@@ -34,15 +34,6 @@ struct test_t tests[] =
 	{ NULL, NULL, NULL, NULL } // terminator
 };
 
-struct zzini *zzinimem(struct zzini *ini, const char *mem)
-{
-	ini->addr = (char *)mem;
-	ini->fp = NULL;
-	ini->cursection = NULL;
-	ini->size = strlen(mem);
-	return ini;
-}
-
 int main(void)
 {
 	const char *value;
@@ -52,12 +43,29 @@ int main(void)
 
 	ini = zziniopen(&zzi, "no-such-file");
 	assert(ini == NULL);
+
+	ini = zzinibuffer(&zzi, tests[7].file, strlen(tests[7].file));
+	const char *key = zzinisection(ini, NULL);
+	assert(strncmp(key, "section", 6) == 0);
+	ini = zziniclose(ini);
+
+	ini = zzinibuffer(&zzi, tests[3].file, strlen(tests[3].file));
+	key = zzinisection(ini, NULL);
+	assert(key == NULL);
+	ini = zziniclose(ini);
+
+	ini = zzinibuffer(&zzi, tests[6].file, strlen(tests[6].file));
+	key = zzinisection(ini, NULL);
+	assert(key == NULL);
+	ini = zziniclose(ini);
+
 	for (test = tests; test->file != NULL; test++)
 	{
-		ini = zzinimem(&zzi, test->file);
+		ini = zzinibuffer(&zzi, test->file, strlen(test->file));
 		value = zzinivalue(ini, test->section, test->key, buf, sizeof(buf));
 		assert(test->result != NULL || value == NULL);
 		assert(test->result == NULL || strcmp(test->result, value) == 0);
+		zziniclose(ini);
 	}
 	ini = zziniopen(&zzi, "samples/test.ini");
 	assert(ini != NULL);
