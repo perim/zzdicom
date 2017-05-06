@@ -59,7 +59,7 @@ static inline void writetag(struct zzfile *zz, zzKey key, enum VR vr, uint32_t s
 	zz->current.group = group;
 	zz->current.vr = vr;
 	zz->current.length = size;
-	if (!zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT || group == 0xfffe)
+	if (zz->ladder[zz->ladderidx].txsyn != ZZ_EXPLICIT || group == 0xfffe)
 	{
 		implicit(zz->zi, group, element, size);
 	}
@@ -417,7 +417,7 @@ void zzwDA(struct zzfile *zz, zzKey key, time_t datestamp)
 
 void zzwTM(struct zzfile *zz, zzKey key, struct timeval datetimestamp)
 {
-	char tmp[MAX_LEN_TM], frac[8];
+	char tmp[MAX_LEN_TM], frac[9];
 	struct tm stamp;
 	time_t datestamp = datetimestamp.tv_sec;
 
@@ -426,7 +426,7 @@ void zzwTM(struct zzfile *zz, zzKey key, struct timeval datetimestamp)
 	if (datetimestamp.tv_usec > 0)
 	{
 		memset(frac, 0, sizeof(frac));
-		snprintf(frac, 7, ".%06u", (unsigned)datetimestamp.tv_usec);
+		snprintf(frac, 8, ".%06u", (unsigned)datetimestamp.tv_usec);
 		strcat(tmp, frac);
 	}
 	wstr(zz, key, tmp, TM, 16);
@@ -434,7 +434,7 @@ void zzwTM(struct zzfile *zz, zzKey key, struct timeval datetimestamp)
 
 void zzwDT(struct zzfile *zz, zzKey key, struct timeval datetimestamp)
 {
-	char tmp[MAX_LEN_DT], frac[8];
+	char tmp[MAX_LEN_DT], frac[9];
 	struct tm stamp;
 	time_t datestamp = datetimestamp.tv_sec;
 
@@ -443,7 +443,7 @@ void zzwDT(struct zzfile *zz, zzKey key, struct timeval datetimestamp)
 	if (datetimestamp.tv_usec > 0)
 	{
 		memset(frac, 0, sizeof(frac));
-		snprintf(frac, 7, ".%06u", (unsigned)datetimestamp.tv_usec);
+		snprintf(frac, 8, ".%06u", (unsigned)datetimestamp.tv_usec);
 		strcat(tmp, frac);
 	}
 	wstr(zz, key, tmp, DT, 26);

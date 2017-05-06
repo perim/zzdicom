@@ -190,7 +190,7 @@ int zifd(struct zzio *zi);
 /// Duplicate all reads and/or writes to another zzio file descriptor.
 /// You can combine read and write redirections. Attempts to seek outside a 
 /// single read/write buffer will break this functionality.
-ZZ_DECL_NONNULL(1, 2)
+ZZ_DECL_NONNULL(1)
 void zitee(struct zzio *zi, struct zzio *tee, int flags);
 
 /// Return true if we can rewind the given zzio file descriptor. Will

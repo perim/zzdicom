@@ -1,4 +1,4 @@
-CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -g -luuid -march=native -mtune=native -std=gnu99
+CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -g -luuid -march=native -mtune=native -std=gnu99 -Wno-error=nonnull-compare
 LDFLAGS = -luuid
 COMMON = zz.o zzio.o zzini.o
 COMMONSQL = zzsql.o
