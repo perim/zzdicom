@@ -172,7 +172,7 @@ void copy(const char *destination, const char *source)
 				}
 				else if (opts[OPT_RGB].found && samples_per_pixel != 3)
 				{
-					char *rgb;
+					unsigned char *rgb;
 					uint16_t *mono;
 					long i, srcsize, dstsize;
 

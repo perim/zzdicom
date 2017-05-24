@@ -1,6 +1,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 #include "zz_priv.h"
 #include "byteorder.h"
@@ -16,14 +17,19 @@
 enum
 {
 	OPT_STDOUT,
+	OPT_BROKEN,
+	OPT_SEED,
 	OPT_COUNT
 };
 
 static struct zzopts opts[] =
 	{ { "--stdout", "Output result to stdout", false, false, 0, 0 },	// OPT_STDOUT
+	  { "--broken", "Generate broken DICOM that should still be parseable", false, false, 0, 0 },	// OPT_BROKEN
+	  { "--seed", "Make pseudo-random result with given random seed", false, false, 1, 0 },	// OPT_SEED
 	  { NULL, NULL, false, false, 0, 0 } };		// OPT_COUNT
 
 static long zseed = 0; // stored in instance number
+static bool broken = false; // generate broken DICOM
 	
 static inline bool explicit(struct zzfile *zz) { return zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT; }
 
@@ -34,34 +40,57 @@ static void implicit(struct zzio *zi, uint16_t group, uint16_t element, uint32_t
 	ziwrite(zi, &length, 4);
 }
 
+static bool randomly(struct zzfile *zz, zzKey key, enum VR vr)
+{
+	int chance = rand() % 5;
+	if (chance == 0)
+	{
+		zzwEmpty(zz, key, vr);
+		return false;
+	}
+	else if (chance == 1)
+	{
+		zzwMax(zz, key, vr);
+		return false;
+	}
+	return true;
+}
+
+static const char *randomDA()
+{
+	return "19790408";
+}
+
+static struct timeval randomTM()
+{
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	return tv;
+}
+
+static const char *randomPN()
+{
+	return "random^zzmk";
+}
+
 static void genericfile(struct zzfile *zz, const char *sopclass)
 {
-	zzwUI(zz, DCM_SOPClassUID, sopclass);
-	zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.5.6.7");
-	if (rand() % 2 == 0) zzwEmpty(zz, DCM_StudyDate, DA);
-	if (rand() % 2 == 0) zzwEmpty(zz, DCM_StudyTime, TM);
-	if (rand() % 2 == 0) zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
-	if (rand() % 2 == 0) zzwEmpty(zz, DCM_ReferringPhysiciansName, PN);
-	if (rand() % 2 == 0)
-	{
-		zzwEmpty(zz, DCM_PatientsName, PN);
-	}
-	else
-	{
-		zzwPN(zz, DCM_PatientsName, "random^zzmk");
-	}
+	if (randomly(zz, DCM_SOPClassUID, UI)) zzwUI(zz, DCM_SOPClassUID, sopclass);
+	if (randomly(zz, DCM_SOPInstanceUID, UI)) zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.5.6.7");
+	if (randomly(zz, DCM_StudyDate, DA)) zzwDAs(zz, DCM_StudyDate, randomDA());
+	if (randomly(zz, DCM_StudyTime, TM)) zzwTM(zz, DCM_StudyTime, randomTM());
+	if (randomly(zz, DCM_AccessionNumber, SH)) zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
+	if (randomly(zz, DCM_ReferringPhysiciansName, PN)) zzwPN(zz, DCM_ReferringPhysiciansName, randomPN());
+	if (randomly(zz, DCM_PatientsName, PN)) zzwPN(zz, DCM_PatientsName, randomPN());
 	zzwLO(zz, DCM_PatientID, "zzmkrandom"); // marker used for testing
-	zzwEmpty(zz, DCM_PatientsBirthDate, DA);
-	zzwEmpty(zz, DCM_PatientsSex, CS);
+	if (randomly(zz, DCM_PatientsBirthDate, DA)) zzwDAs(zz, DCM_PatientsBirthDate, randomDA());
+	if (randomly(zz, DCM_PatientsSex, CS)) zzwCS(zz, DCM_PatientsSex, "M");
 	zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17.18.19.20.21.22.23.24.25.26");
 	zzwUI(zz, DCM_SeriesInstanceUID, "1.2.3.4.2");
-	zzwEmpty(zz, DCM_StudyID, SH);
-	if (rand() % 2 == 0)
-		zzwEmpty(zz, DCM_SeriesNumber, IS);
-	else
-		zzwIS(zz, DCM_SeriesNumber, rand());
+	if (randomly(zz, DCM_StudyID, SH)) zzwSH(zz, DCM_StudyID, "StudyID");
+	if (randomly(zz, DCM_SeriesNumber, IS)) zzwIS(zz, DCM_SeriesNumber, rand());
 	zzwIS(zz, DCM_InstanceNumber, zseed);
-	if (rand() % 2 == 0) zzwEmpty(zz, DCM_Laterality, CS);
+	if (randomly(zz, DCM_Laterality, CS)) zzwCS(zz, DCM_Laterality, "R");
 }
 
 static void garbfill(struct zzfile *zz)
@@ -105,7 +134,7 @@ void addSQ(struct zzfile *zz)
 		zzwItem_begin(zz, pos2);
 			if (rand() % 5 > 2) garbfill(zz);
 		zzwItem_end(zz, pos2);
-		if (pos2 != NULL && rand() % 10 > 8)
+		if (broken && pos2 != NULL && rand() % 10 > 8)
 		{
 			implicit(zz->zi, 0xfffe, 0xe00d, 0); // this crashed dicom3tools; not really legal dicom
 		}
@@ -126,22 +155,26 @@ int main(int argc, char **argv)
 	struct zzfile szz, *zz = &szz;
 	int firstparam;
 
-	firstparam = zzutil(argc, argv, 1, "[<random seed [<output file>]>]", "Generate pseudo-random DICOM file for unit testing", opts);
-	if (argc - firstparam > 0)
+	firstparam = zzutil(argc, argv, 0, "[<output file>]", "Generate random or pseudo-random DICOM file for unit testing", opts);
+	if (opts[OPT_SEED].found)
 	{
-		zseed = atoi(argv[1]);
-		if (argc - firstparam > 1)
-		{
-			outputfile = argv[2];
-		}
+		zseed = atoi(argv[opts[OPT_SEED].argstart + 1]);
 	}
 	else
 	{
 		zseed = time(NULL) + getpid();
 	}
+	if (argc - firstparam > 0)
+	{
+		outputfile = argv[firstparam];
+	}
 	srand(zseed);
 
 	memset(zz, 0, sizeof(*zz));
+	if (opts[OPT_BROKEN].found)
+	{
+		broken = true;
+	}
 	if (!opts[OPT_STDOUT].found)
 	{
 		zz->zi = ziopenfile(outputfile, "w");
@@ -161,9 +194,13 @@ int main(int argc, char **argv)
 		zz->ladder[0].txsyn = ZZ_IMPLICIT;	// no header, implicit
 		break;
 	case 1:
-		zz->ladder[0].txsyn = ZZ_IMPLICIT;	// implicit header, buggy like CTN
-		zzwHeader(zz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianImplicitTransferSyntax);
-		break;
+		if (broken)
+		{
+			zz->ladder[0].txsyn = ZZ_IMPLICIT;	// implicit header, buggy like CTN
+			zzwHeader(zz, UID_SecondaryCaptureImageStorage, "1.2.3.4.0", UID_LittleEndianImplicitTransferSyntax);
+			break;
+		}
+		// fallthrough
 	case 2:
 		zz->ladder[0].txsyn = ZZ_EXPLICIT;	// no header, explicit
 		break;
@@ -216,7 +253,7 @@ int main(int argc, char **argv)
 	}
 
 	// Invent a new VR to check that the toolkit reads it correctly
-	if (explicit(zz) && rand() % 5 == 0)
+	if (broken && explicit(zz) && rand() % 5 == 0)
 	{
 		const uint16_t group = 0x0029;
 		const uint16_t element = 0x1090;

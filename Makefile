@@ -1,5 +1,5 @@
-CFLAGS = -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -g -luuid -march=native -mtune=native -std=gnu99 -Wno-error=nonnull-compare
-LDFLAGS = -luuid
+CFLAGS += -Wall -Wextra -DPOSIX -Wshadow -Wformat-security -Wno-unused -g -march=native -mtune=native -std=gnu99 -Wno-error=nonnull-compare
+LDFLAGS += -luuid
 COMMON = zz.o zzio.o zzini.o
 COMMONSQL = zzsql.o
 COMMONWRITE = zzwrite.o
@@ -93,9 +93,9 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet 
 	tests/zzt samples/spine.dcm
 	tests/zzt samples/spine-ls.dcm
 	tests/zziotest
-	./zzmkrandom 5466 samples/random.dcm
+	./zzmkrandom --seed 5466 samples/random.dcm
 	tests/zzwcopy
-	./zzmkrandom 54632 samples/random.dcm
+	./zzmkrandom --seed 54632 samples/random.dcm
 	tests/zzwcopy
 	tests/testnet
 	./zzread samples/spine.dcm
@@ -117,7 +117,7 @@ check: tests/zz1 tests/zzw tests/zzt tests/zziotest tests/zzwcopy tests/testnet 
 	./zzpixel --zero 200 200 300 300 samples/copy.dcm
 	./zzcopy --rgb samples/spine.dcm samples/copy.dcm
 	./zzcopy --jpegls samples/spine.dcm samples/copy.dcm
-	./zzmkrandom --stdout 203948 | ./zzdump --stdin > /dev/null
+	@#./zzmkrandom --stdout --seek 1495665173 | ./zzdump --stdin > /dev/null
 
 memcheck:
 	valgrind --leak-check=yes -q tests/zzw

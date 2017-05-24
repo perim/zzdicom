@@ -39,6 +39,7 @@ void zzwUT(struct zzfile *zz, zzKey key, const char *string);
 
 void zzwHeader(struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer);
 void zzwEmpty(struct zzfile *zz, zzKey key, enum VR vr);
+void zzwMax(struct zzfile *zz, zzKey key, enum VR vr);
 struct zzfile *zzcreate(const char *filename, struct zzfile *zz, const char *sopclass, const char *sopinstanceuid, const char *transfer);
 
 /// Pass in NULL below to use unlimited size

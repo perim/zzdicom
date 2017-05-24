@@ -495,3 +495,48 @@ void zzwEmpty(struct zzfile *zz, zzKey key, enum VR vr)
 	writetag(zz, key, vr, 0);
 	verboseprint(zz, "[]");
 }
+
+void zzwMax(struct zzfile *zz, zzKey key, enum VR vr)
+{
+	ssize_t size = 0;
+	switch (zz->current.vr)
+	{
+	case OW:
+	case OF:
+	case UT:
+	case OX:
+	case NO:
+	case HACK_VR:
+	case SQ:
+	case OB:
+	case UN:
+		size = -1;
+		break;
+	case AE: size = 128; break;
+	case AS: size = 32; break;
+	case CS: size = 128; break;
+	case DA: size = 80; break;
+	case DS: size = 128; break;
+	case DT: size = 208; break;
+	case IS: size = 96; break;
+	case LT: size = 40960; break;
+	case PN: size = 256; break;
+	case SH: size = 64; break;
+	case ST: size = 4096; break;
+	case TM: size = 128; break;
+	case UI: size = 64; break;
+	case LO: size = 256; break;
+	case AT: size = 32; break;
+	case UL: size = 32; break;
+	case US: size = 16; break;
+	case SS: size = 16; break;
+	case SL: size = 32; break;
+	case FL: size = 32; break;
+	case FD: size = 32; break;
+	}
+	writetag(zz, key, vr, size);
+	char *str = malloc(size);
+	memset(str, 0, size);
+	ziwrite(zz->zi, str, size);
+	verboseprint(zz, str);
+}
