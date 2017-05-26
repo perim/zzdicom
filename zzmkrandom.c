@@ -31,9 +31,9 @@ static struct zzopts opts[] =
 static long zseed = 0; // stored in instance number
 static bool broken = false; // generate broken DICOM
 	
-static inline bool explicit(struct zzfile *zz) { return zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT; }
+static inline bool is_explicit(struct zzfile *zz) { return zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT; }
 
-static void implicit(struct zzio *zi, uint16_t group, uint16_t element, uint32_t length)
+static void write_implicit(struct zzio *zi, uint16_t group, uint16_t element, uint32_t length)
 {
 	ziwrite(zi, &group, 2);
 	ziwrite(zi, &element, 2);
@@ -68,29 +68,44 @@ static struct timeval randomTM()
 	return tv;
 }
 
-static const char *randomPN()
+static const char *randomPN(bool utf8)
 {
-	return "random^zzmk";
+	const char *name = NULL;
+	switch (rand() % 3)
+	{
+	case 0: if (utf8) name = u8"必要"; else name = "^SOME_ISO^"; break;
+	case 1: if (utf8) name = u8"Приве́т नमस्ते שָׁלוֹם"; else name = "random^zzmk"; break;
+	case 2: name = "^DICOMTEST^^^"; break;
+	}
+	return name;
 }
 
 static void genericfile(struct zzfile *zz, const char *sopclass)
 {
+	bool utf8 = (rand() % 1 == 0);
+	if (randomly(zz, DCM_SpecificCharacterSet, CS)) zzwCS(zz, DCM_SpecificCharacterSet, utf8 ? "ISO_IR 192" : "ISO_IR 100");
 	if (randomly(zz, DCM_SOPClassUID, UI)) zzwUI(zz, DCM_SOPClassUID, sopclass);
 	if (randomly(zz, DCM_SOPInstanceUID, UI)) zzwUI(zz, DCM_SOPInstanceUID, "1.2.3.4.5.6.7");
 	if (randomly(zz, DCM_StudyDate, DA)) zzwDAs(zz, DCM_StudyDate, randomDA());
 	if (randomly(zz, DCM_StudyTime, TM)) zzwTM(zz, DCM_StudyTime, randomTM());
 	if (randomly(zz, DCM_AccessionNumber, SH)) zzwSH(zz, DCM_AccessionNumber, "1234567890123456");
-	if (randomly(zz, DCM_ReferringPhysiciansName, PN)) zzwPN(zz, DCM_ReferringPhysiciansName, randomPN());
-	if (randomly(zz, DCM_PatientsName, PN)) zzwPN(zz, DCM_PatientsName, randomPN());
+	if (randomly(zz, DCM_ReferringPhysiciansName, PN)) zzwPN(zz, DCM_ReferringPhysiciansName, randomPN(utf8));
+	if (randomly(zz, DCM_PatientsName, PN)) zzwPN(zz, DCM_PatientsName, randomPN(utf8));
 	zzwLO(zz, DCM_PatientID, "zzmkrandom"); // marker used for testing
 	if (randomly(zz, DCM_PatientsBirthDate, DA)) zzwDAs(zz, DCM_PatientsBirthDate, randomDA());
 	if (randomly(zz, DCM_PatientsSex, CS)) zzwCS(zz, DCM_PatientsSex, "M");
+	if (randomly(zz, DCM_PatientsWeight, DS)) zzwDSs(zz, DCM_PatientsWeight, "120");
 	zzwUI(zz, DCM_StudyInstanceUID, "1.2.3.4.5.6.7.8.9.10.11.12.13.14.15.16.17.18.19.20.21.22.23.24.25.26");
 	zzwUI(zz, DCM_SeriesInstanceUID, "1.2.3.4.2");
 	if (randomly(zz, DCM_StudyID, SH)) zzwSH(zz, DCM_StudyID, "StudyID");
 	if (randomly(zz, DCM_SeriesNumber, IS)) zzwIS(zz, DCM_SeriesNumber, rand());
 	zzwIS(zz, DCM_InstanceNumber, zseed);
+	double patpos[] = { drand48(), drand48(), drand48() };
+	if (randomly(zz, DCM_ImagePositionPatient, DS)) zzwDSdv(zz, DCM_ImagePositionPatient, 3, patpos);
+	if (broken && randomly(zz, DCM_PixelSpacing, DS)) zzwDSs(zz, DCM_PixelSpacing, "1.199166666667\\1.199166666667"); // out of order
 	if (randomly(zz, DCM_Laterality, CS)) zzwCS(zz, DCM_Laterality, "R");
+	if (randomly(zz, DCM_SliceLocation, DS)) zzwDSd(zz, DCM_SliceLocation, drand48());
+	// stop at above - group 0x0020, element 0x1041
 }
 
 static void garbfill(struct zzfile *zz)
@@ -112,7 +127,7 @@ static void zzwOBnoise(struct zzfile *zz, zzKey key, size_t size)
 
 	buf = malloc(size);
 	memset(buf, rand(), size);
-	if (!explicit(zz) && key == DCM_PixelData)
+	if (!is_explicit(zz) && key == DCM_PixelData)
 	{
 		zzwOW(zz, key, size / 2, (uint16_t *)buf);
 	}
@@ -136,14 +151,14 @@ void addSQ(struct zzfile *zz)
 		zzwItem_end(zz, pos2);
 		if (broken && pos2 != NULL && rand() % 10 > 8)
 		{
-			implicit(zz->zi, 0xfffe, 0xe00d, 0); // this crashed dicom3tools; not really legal dicom
+			write_implicit(zz->zi, 0xfffe, 0xe00d, 0); // this crashed dicom3tools; not really legal dicom
 		}
 	}
 	if (rand() % 3 == 0)
 	{
 		long val2, *pos2 = (rand() % 2) == 0 ? NULL : &val2;
 		zzwItem_begin(zz, pos2);
-		addSQ(zz);
+		if (rand() % 3 > 0) addSQ(zz);
 		zzwItem_end(zz, pos2);
 	}
 	zzwSQ_end(zz, pos);
@@ -219,7 +234,7 @@ int main(int argc, char **argv)
 
 	genericfile(zz, UID_SecondaryCaptureImageStorage);
 
-	if (explicit(zz) && rand() % 10 > 2)	// add SQ block
+	if (is_explicit(zz) && rand() % 10 > 2)	// add SQ block
 	{
 		addSQ(zz);
 	}
@@ -229,7 +244,7 @@ int main(int argc, char **argv)
 	// TODO, fix private tags namespace
 
 	// try to confuse parsers that rely on arbitrary characters in the data stream - pretend to be an explicit VR
-	if (!explicit(zz) && rand() % 10 > 8) zzwOBnoise(zz, ZZ_KEY(0x0029, 0x0009), 'S' + ('S' << 8));
+	if (!is_explicit(zz) && rand() % 10 > 8) zzwOBnoise(zz, ZZ_KEY(0x0029, 0x0009), 'S' + ('S' << 8));
 
 	if (rand() % 10 > 2)	// add UN block
 	{
@@ -253,7 +268,7 @@ int main(int argc, char **argv)
 	}
 
 	// Invent a new VR to check that the toolkit reads it correctly
-	if (broken && explicit(zz) && rand() % 5 == 0)
+	if (broken && is_explicit(zz) && rand() % 5 == 0)
 	{
 		const uint16_t group = 0x0029;
 		const uint16_t element = 0x1090;

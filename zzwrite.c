@@ -510,7 +510,8 @@ void zzwMax(struct zzfile *zz, zzKey key, enum VR vr)
 	case SQ:
 	case OB:
 	case UN:
-		size = -1;
+		assert(false);
+		size = 2;
 		break;
 	case AE: size = 128; break;
 	case AS: size = 32; break;
