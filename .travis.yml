@@ -1,0 +1,23 @@
+language: c
+
+matrix:
+  include:
+    - os: linux
+      compiler: gcc
+      addons:
+        apt:
+          packages:
+            - cmake
+            - libcharls-dev
+            - libsqlite0-dev
+            - freeglut3-dev
+
+script:
+  - mkdir -p build
+  - cd build
+  - cmake ..
+  - make
+
+branches:
+  only:
+    - master
