@@ -2,11 +2,13 @@
 
 #include <assert.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdarg.h>
+#include <pwd.h>
 
 #include "sqlinit.h"	// creates sqlinit global
 
@@ -122,14 +124,29 @@ struct zzdb *zzdbclose(struct zzdb *zdb)
 	return NULL;
 }
 
+static const char *user_home()
+{
+	const char *home = getenv("HOME");
+	if (home)
+	{
+		return home;
+	}
+	struct passwd *pw = getpwuid(getuid());
+	return pw->pw_dir;
+}
+
 struct zzdb *zzdbopen(struct zzdb *zdb)
 {
 	sqlite3 *db;
-	const char *dbname = "/home/per/.zzdb";
+	char dbname[PATH_MAX];
 	int rc;
 	bool exists;
 	char *zErrMsg = NULL;
 	struct stat buf;
+
+	memset(dbname, 0, sizeof(dbname));
+	strncpy(dbname, user_home(), sizeof(dbname) - 1);
+	strncat(dbname, "/.zzdb", sizeof(dbname) - 1);
 
 	// Check if exists
 	exists = (stat(dbname, &buf) == 0);

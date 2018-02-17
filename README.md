@@ -26,8 +26,18 @@ robust, and when it encounters problems it shall always fail gently.
 
 ## Installation
 
-Currently two build systems are available, a plain makefile and cmake. Using the cmake based system
-with an out of source build is recommended.
+To build:
+
+    mkdir -p build
+    cd build
+    cmake ..
+    make -j
+
+To run the tests, add:
+
+    make test
+
+Set the TEST_GL environment variable before running cmake if you want to run the OpenGL tests.
 
 ## The tools
 

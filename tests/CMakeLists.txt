@@ -24,7 +24,7 @@ add_test(zzsqltest ${CMAKE_CURRENT_BINARY_DIR}/sqltest)
 
 if(APPLE)
   # fixme - trouble with charls
-else(APPLE)
+elseif(DEFINED ENV{TEST_GL})
   add_executable(zzt zzt.c)
   target_link_libraries(zzt zzdicom ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} CharLS)
   set_target_properties(zzt PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
