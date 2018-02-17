@@ -1,4 +1,9 @@
-add_definitions(-Wno-misleading-indentation)
+# Ignore warnings for external code
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+	add_definitions(-Wno-misleading-indentation)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+	add_definitions(-Wno-format-nonliteral)
+endif()
 
 add_executable(zznifti2dcm zznifti2dcm.c nifti1.h znzlib.h nifti1_io.h znzlib.c nifti1_io.c)
 target_link_libraries(zznifti2dcm zzdicom z m)

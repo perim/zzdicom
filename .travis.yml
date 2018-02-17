@@ -16,6 +16,20 @@ matrix:
             - freeglut3-dev
       env:
         - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+    - os: linux
+      compiler: clang
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-5.0
+          packages:
+            - clang-5.0
+            - cmake
+            - libcharls-dev
+            - libsqlite0-dev
+            - freeglut3-dev
+      env:
+        - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
 
 before_install:
   - eval "${MATRIX_EVAL}"
@@ -25,6 +39,7 @@ script:
   - cd build
   - cmake ..
   - make
+  - make test
 
 branches:
   only:
