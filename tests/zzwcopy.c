@@ -74,8 +74,13 @@ void copy(const char *destination, const char *source)
 	src = zzclose(src);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
-	copy("samples/zzwcopy.dcm", "samples/random.dcm");
+	if (argc < 3)
+	{
+		printf("Usage: <dest> <source>\n");
+		exit(1);
+	}
+	copy(argv[1], argv[2]);
 	return 0;
 }
