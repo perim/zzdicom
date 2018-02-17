@@ -539,5 +539,5 @@ void zzwMax(struct zzfile *zz, zzKey key, enum VR vr)
 	char *str = malloc(size);
 	memset(str, 0, size);
 	ziwrite(zz->zi, str, size);
-	verboseprint(zz, str);
+	verboseprint(zz, "%s", str);
 }
