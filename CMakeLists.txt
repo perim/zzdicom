@@ -19,6 +19,9 @@ endif()
 add_executable(zzanon zzanon.c)
 target_link_libraries(zzanon zzdicom)
 
+add_executable(zzpixel zzpixel.c part6.c part6.h)
+target_link_libraries(zzpixel zzdicom)
+
 add_executable(zzdump zzdump.c part6.c part6.h)
 target_link_libraries(zzdump zzdicom)
 
@@ -46,3 +49,5 @@ target_link_libraries(zzechoscp zzdicom)
 add_subdirectory(nifti)
 add_subdirectory(tests)
 add_test(zz1 ${CMAKE_CURRENT_BINARY_DIR}/tests/zz1 Hello)
+
+install(TARGETS zzanon zzpixel zzdump zzcopy zzprune zzfix zzmkrandom RUNTIME DESTINATION bin)

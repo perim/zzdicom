@@ -37,9 +37,10 @@ before_install:
 script:
   - mkdir -p build
   - cd build
-  - cmake ..
+  - cmake -DCMAKE_INSTALL_PREFIX:PATH=~/ ..
   - make
   - CTEST_OUTPUT_ON_FAILURE=1 make test
+  - make install
 
 branches:
   only:
