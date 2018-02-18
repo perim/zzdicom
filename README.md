@@ -52,14 +52,12 @@ dcmdump. It also runs a number of validation checks on each tag, and prints erro
 by line.
 * zzgroupfix - will run fix erroneous group size tags, useful as some software relies on these being
 correct if they are present.
-* zzread - will update the local DICOM database with the given files.
-* zzstudies - pretty prints a list of all studies in the local DICOM database to standard out.
 * zzprune - checks and updates all entries in the local DICOM database, removing entries that no
 longer refer to an existing file.
 * zzmkrandom - generates a pseudo-random DICOM file for use in manual testing or a unit testing 
 framework. You can pass a random seed on the command line, or let it generate its own random
 seed. The random seed used is saved in the Instance Number tag.
-* zzpixel - manipulates pixel values in a DICOM file.
+* zzpixel - manipulates pixel values in a DICOM file. Note that this also makes changes in-place.
 * zzcopy - copy and convert DICOM files. Can transform from grayscale to RGB, or compress with
 the JPEG-LS lossless algorithm.
 
@@ -69,6 +67,10 @@ In the nifti directory, you can also find these very experimental tools:
 * zznifti2dcm - convert file from nifti to DICOM format, losing a lot of data in the process.
 * zzniftistitch - convert a file from nifti to DICOM format, retrieving positioning and patient
 information from the original DICOM series.
+
+### Continuous integration
+
+[![Build Status](https://travis-ci.org/perim/zzdicom.svg?branch=master)](https://travis-ci.org/perim/zzdicom)
 
 ## Credits
 
