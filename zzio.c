@@ -577,15 +577,15 @@ long ziwrite(struct zzio *zi, const void *buf, long count)
 
 	do
 	{
-		// Write as much as we can into buffer
+		// Write as much as we can into buffer (for optimal packetizing)
 		len = MIN(remaining, zi->writebufsize - zi->writebufpos);
 		memcpy(zi->writebuf + zi->writebufpos, buf + (count - remaining), len);
 		zi->writebuflen += MAX(0, zi->writebufpos + len - zi->writebuflen); // extend length of buffer depending on where we are in it
 		zi->writebufpos += len;
-
-		// Is buffer full now and we need more?
 		remaining -= len;
 		assert(remaining >= 0);
+
+		// Is buffer full now and we need more?
 		if (remaining > 0)
 		{
 			ziflush(zi); // buffer blown, so flush it

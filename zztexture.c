@@ -7,7 +7,8 @@
 #include <errno.h>
 #include <limits.h>
 #include <sys/mman.h>
-#include <CharLS/interface.h>
+#include <CharLS/publictypes.h>
+#include <CharLS/charls.h>
 
 #include "zztexture.h"
 
@@ -178,7 +179,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 			checkError();
 			if (zz->ladder[zz->ladderidx].txsyn == ZZ_EXPLICIT_JPEGLS)
 			{
-				enum JLS_ERROR err;
+				enum CharlsApiResult err;
 				const long bufsize = zzt->pixelsize.x * zzt->pixelsize.y * components * (bitspersample / 8);
 				unsigned char *buffer = malloc(bufsize), *src;
 				long i = 0;
@@ -195,7 +196,7 @@ struct zztexture *zzcopytotexture(struct zzfile *zz, struct zztexture *zzt)
 						src = bytes;
 						assert(src[0] == 0xff);
 						assert(src[1] == 0xd8);
-						err = JpegLsDecode(buffer, bufsize, src, len, NULL);
+						err = JpegLsDecode(buffer, bufsize, src, len, NULL, NULL);
 						assert(err == 0);
 						glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, i++, zzt->pixelsize.x, zzt->pixelsize.y, 1, GL_LUMINANCE, size, buffer);
 						checkError();
