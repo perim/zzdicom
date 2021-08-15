@@ -8,7 +8,11 @@ find_library(LIBUUID_LIBRARIES uuid)
 
 enable_testing()
 
-set(ZZ_FLAGS -g -O2 -Wall -Wformat=2 -Werror)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+	set(ZZ_FLAGS -g -O2 -Wall -Wformat=2 -Werror -Wno-unused-but-set-variable)
+else()
+	set(ZZ_FLAGS -g -O2 -Wall -Wformat=2 -Werror)
+endif()
 
 add_library(zzdicom zzio.c zzio.h zz.c zzwrite.c zzsql.c zzverify.c zz_priv.h zzwrite.h zzsql.h zztexture.c zztexture.h)
 target_link_libraries(zzdicom ${OPENGL_LIBRARIES} ${LIBUUID_LIBRARIES})
@@ -55,11 +59,7 @@ target_compile_options(zzmkrandom PRIVATE ${ZZ_FLAGS})
 
 add_executable(zzechoscp zzechoscp.c zznet.c zznet.h zznetwork.c zznetwork.h)
 target_link_libraries(zzechoscp zzdicom)
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	target_compile_options(zzechoscp PRIVATE ${ZZ_FLAGS} -Wno-unused-function -Wno-unused-but-set-variable)
-else()
-	target_compile_options(zzechoscp PRIVATE ${ZZ_FLAGS} -Wno-unused-function)
-endif()
+target_compile_options(zzechoscp PRIVATE ${ZZ_FLAGS} -Wno-unused-function)
 
 add_subdirectory(nifti)
 add_subdirectory(tests)

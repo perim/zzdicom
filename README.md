@@ -68,10 +68,6 @@ In the nifti directory, you can also find these very experimental tools:
 * zzniftistitch - convert a file from nifti to DICOM format, retrieving positioning and patient
 information from the original DICOM series.
 
-### Continuous integration
-
-[![Build Status](https://travis-ci.org/perim/zzdicom.svg?branch=master)](https://travis-ci.org/perim/zzdicom)
-
 ## Credits
 
 This project would not have been possible without reusing some content from the DCMTK and GDCM
