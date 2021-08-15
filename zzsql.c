@@ -12,8 +12,6 @@
 
 #include "sqlinit.h"	// creates sqlinit global
 
-static char rbuf[4096];
-
 bool zzquery(struct zzdb *zdb, const char *statement, int (*callback)(void*,int,char**,char**), void *cbdata)
 {
 	int rc;
@@ -176,10 +174,8 @@ static void mydbrow(struct zzdbiter *zq, char const *fmt, va_list arg)
 	int index = 0;
 	int64_t *int_temp = 0;
 	double *float_temp;
-	char *string_temp;
 	const unsigned char **strref_temp;
 	char ch;
-	int result;
 	const void **ptr_temp;
 
 	while ((ch = *fmt++))

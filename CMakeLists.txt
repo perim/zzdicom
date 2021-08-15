@@ -1,50 +1,65 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.1)
 project(zzdicom)
 
+set(OpenGL_GL_PREFERENCE LEGACY)
 find_package(OpenGL)
 find_package(GLUT)
 find_library(LIBUUID_LIBRARIES uuid)
 
 enable_testing()
 
-add_definitions(-Wall -Werror -Wformat=2 -Wno-unused)
+set(ZZ_FLAGS -g -O2 -Wall -Wformat=2 -Werror)
 
 add_library(zzdicom zzio.c zzio.h zz.c zzwrite.c zzsql.c zzverify.c zz_priv.h zzwrite.h zzsql.h zztexture.c zztexture.h)
 target_link_libraries(zzdicom ${OPENGL_LIBRARIES} ${LIBUUID_LIBRARIES})
 set_target_properties(zzdicom PROPERTIES COMPILE_FLAGS "-I /usr/local/include")
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	target_compile_options(zzdicom PRIVATE -Wno-nonnull-compare)
+	target_compile_options(zzdicom PRIVATE -Wno-nonnull-compare ${ZZ_FLAGS})
 endif()
 
 add_executable(zzanon zzanon.c)
 target_link_libraries(zzanon zzdicom)
+target_compile_options(zzanon PRIVATE ${ZZ_FLAGS})
 
 add_executable(zzpixel zzpixel.c part6.c part6.h)
 target_link_libraries(zzpixel zzdicom)
+target_compile_options(zzpixel PRIVATE ${ZZ_FLAGS})
 
 add_executable(zzdump zzdump.c part6.c part6.h)
 target_link_libraries(zzdump zzdicom)
+target_compile_options(zzdump PRIVATE ${ZZ_FLAGS})
 
 add_executable(zzcopy zzcopy.c part6.c part6.h)
 target_link_libraries(zzcopy zzdicom CharLS)
+target_compile_options(zzcopy PRIVATE ${ZZ_FLAGS})
 
 add_executable(zzread zzread.c)
 target_link_libraries(zzread zzdicom sqlite3)
+target_compile_options(zzread PRIVATE ${ZZ_FLAGS})
 
 add_executable(zzstudies zzstudies.c)
 target_link_libraries(zzstudies zzdicom sqlite3)
+target_compile_options(zzstudies PRIVATE ${ZZ_FLAGS})
 
 add_executable(zzprune zzprune.c)
 target_link_libraries(zzprune zzdicom sqlite3)
+target_compile_options(zzprune PRIVATE ${ZZ_FLAGS})
 
 add_executable(zzfix zzgroupfix.c)
 target_link_libraries(zzfix zzdicom)
+target_compile_options(zzfix PRIVATE ${ZZ_FLAGS})
 
 add_executable(zzmkrandom zzmkrandom.c)
 target_link_libraries(zzmkrandom zzdicom)
+target_compile_options(zzmkrandom PRIVATE ${ZZ_FLAGS})
 
 add_executable(zzechoscp zzechoscp.c zznet.c zznet.h zznetwork.c zznetwork.h)
 target_link_libraries(zzechoscp zzdicom)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+	target_compile_options(zzechoscp PRIVATE ${ZZ_FLAGS} -Wno-unused-function -Wno-unused-but-set-variable)
+else()
+	target_compile_options(zzechoscp PRIVATE ${ZZ_FLAGS} -Wno-unused-function)
+endif()
 
 add_subdirectory(nifti)
 add_subdirectory(tests)

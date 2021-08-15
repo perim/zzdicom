@@ -62,10 +62,7 @@ void manip(const char *source, int bx1, int by1, int bx2, int by2)
 	struct zzfile szzsrc, *src;
 	uint16_t group, element;
 	long len;
-	const char *vm, *description;
 	const struct part6 *tag;
-	const struct privatedic *privtag;
-	char vrstr[3], longstr[80];
 	long samples_per_pixel = 1, width = 0, height = 0, depth = 1, bits_per_sample = 16;
 	char value[MAX_LEN_IS];
 
@@ -122,7 +119,7 @@ void manip(const char *source, int bx1, int by1, int bx2, int by2)
 		{
 			const int bytes_per_sample = 2;
 			const long size = width * height * depth * bytes_per_sample;
-			long x, y, z, i;
+			long i;
 			long pos = zireadpos(src->zi);
 			long offset = pos & ~(sysconf(_SC_PAGE_SIZE) - 1);	// start at page aligned offset
 			void *addr;

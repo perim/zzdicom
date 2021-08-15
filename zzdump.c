@@ -101,7 +101,6 @@ void dumpcsa(struct zzfile *zz)
 	{
 		uint32_t ntags, unused32, pos;
 		unsigned charlen, sum;
-		uint8_t unused8;
 		char str[65], vr[5];
 		uint32_t csavm, syngodt, nitems, xx, j, itemsize[4];
 		char value[PADLEN];
@@ -238,7 +237,7 @@ void dump(struct zzfile *zz)
 	char tmp[MAX_LEN_VALUE], vrstr[MAX_LEN_VR];
 	int i, charlen;
 	int header = 0;		// 0 - started, 1 - writing header, 2 - written header
-	char extra[10], pstart[48], pstop[100];
+	char extra[64], pstart[48], pstop[100];
 	bool content;
 
 	zziterinit(zz);

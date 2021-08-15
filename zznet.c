@@ -26,8 +26,7 @@ enum psctxs_list
 	PSCTX_VERIFICATION,
 	PSCTX_LAST
 };
-static const char *psctxs_uids[] = { UID_VerificationSOPClass };
-static const char *txsyn_uids[] = { UID_LittleEndianImplicitTransferSyntax, UID_LittleEndianExplicitTransferSyntax, 
+static const char *txsyn_uids[] = { UID_LittleEndianImplicitTransferSyntax, UID_LittleEndianExplicitTransferSyntax,
                                     UID_DeflatedExplicitVRLittleEndianTransferSyntax, UID_JPEGLSLosslessTransferSyntax };
 
 // // Convenience functions
@@ -232,7 +231,7 @@ bool PDU_Associate_Accept(struct zzfile *zz)
 	zz->net.version = znr2(zz);
 	znr2(zz);
 	znrskip(16 + 16 + 32, zz);
-	
+
 	// Application Context Item (useless fluff)
 	val8 = znr1(zz); assert(val8 == 0x10);
 	val8 = znr1(zz); assert(val8 == 0x00);
@@ -240,11 +239,10 @@ bool PDU_Associate_Accept(struct zzfile *zz)
 	pdu = znr1(zz);
 	while (pdu == 0x20)
 	{
-		uint32_t psize, isize, i;
+		uint32_t psize, isize;
 		char cid;
 		char auid[MAX_LEN_UI];
 		char tuid[MAX_LEN_UI];
-		bool txsyns[ZZ_TX_LAST], foundAcceptableTx = false;
 
 		val8 = znr1(zz); assert(val8 == 0);	// reserved, shall be zero
 		psize = znr2(zz);			// size of packet
@@ -302,7 +300,6 @@ bool PDU_Associate_Accept(struct zzfile *zz)
 bool PDU_Abort_Parse(struct zznetwork *zn)
 {
 	struct zzfile *in = zn->in;
-        struct zzfile *out = zn->out;
 	uint8_t val8;
 	uint8_t source;
 	uint8_t reason;
@@ -341,7 +338,7 @@ bool PDU_Associate_Request(struct zznetwork *zn)
 {
 	struct zzfile *zz = zn->in;
 	struct zzfile *out = zn->out;
-	uint32_t msize, size;
+	uint32_t size;
 	char callingaet[17];
 	char calledaet[17];
 	char pdu;

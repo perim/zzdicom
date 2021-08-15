@@ -181,7 +181,7 @@ struct zzfile
 		uint16_t	element;
 		long		pos;		// start of a current tag's data segment
 		long		frame;		// current frame number, or -1, zero indexed
-		char		warning[MAX_LEN_LO];	// if !valid, this string is set to an explanation
+		char		warning[128];	// if !valid, this string is set to an explanation
 		bool		valid;		// whether the current tag is valid, true unless issue found
 		enum zzpxstate	pxstate;
 		bool		fake;		// whether the current tag is a fake delimiter
