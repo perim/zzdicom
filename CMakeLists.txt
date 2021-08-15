@@ -9,9 +9,9 @@ find_library(LIBUUID_LIBRARIES uuid)
 enable_testing()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	set(ZZ_FLAGS -g -O2 -Wall -Wformat=2 -Werror -Wno-unused-but-set-variable)
+	set(ZZ_FLAGS -g -O2 -Wall -Wformat=2 -Werror -Wno-unused-but-set-variable -Wno-unused-variable)
 else()
-	set(ZZ_FLAGS -g -O2 -Wall -Wformat=2 -Werror)
+	set(ZZ_FLAGS -g -O2 -Wall -Wformat=2 -Werror -Wno-unused-variable)
 endif()
 
 add_library(zzdicom zzio.c zzio.h zz.c zzwrite.c zzsql.c zzverify.c zz_priv.h zzwrite.h zzsql.h zztexture.c zztexture.h)
