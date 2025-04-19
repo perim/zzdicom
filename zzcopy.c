@@ -5,7 +5,8 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
-#include <CharLS/charls.h>
+#include <charls/public_types.h>
+#include <charls/charls.h>
 
 #include "part6.h"
 
@@ -134,7 +135,7 @@ void copy(const char *destination, const char *source)
 					const int size = x * y * (bits_per_sample / 8) * samples_per_pixel;
 					void *dstbuf = malloc(size);	// assume that we will not compress worse
 					struct JlsParameters params;
-					enum CharlsApiResult err;
+					enum charls_jpegls_errc err;
 					size_t result;
 					int i;
 
@@ -143,7 +144,7 @@ void copy(const char *destination, const char *source)
 					params.height = x;
 					params.width = y;
 					params.components = samples_per_pixel;
-					params.interleaveMode = (params.components == 3) ? CHARLS_IM_SAMPLE : CHARLS_IM_NONE;
+					params.interleaveMode = (params.components == 3) ? CHARLS_INTERLEAVE_MODE_SAMPLE : CHARLS_INTERLEAVE_MODE_NONE;
 					params.stride = 0;
 					dst->ladder[dst->ladderidx].txsyn = ZZ_EXPLICIT_JPEGLS;
 					zzwPixelData_begin(dst, z, bits_per_sample, UNLIMITED);
@@ -151,26 +152,7 @@ void copy(const char *destination, const char *source)
 					{
 						result = 0;
 						err = JpegLsEncode(dstbuf, size, &result, srcbuf + i * size, size, &params, NULL);
-						switch (err)
-						{
-						case CHARLS_API_RESULT_OK: break;
-						case CHARLS_API_RESULT_TOO_MUCH_COMPRESSED_DATA: fprintf(stderr, "%s - too much compressed data\n", source); break;
-						case CHARLS_API_RESULT_INVALID_JLS_PARAMETERS: fprintf(stderr, "%s - invalid encoding parameters\n", source); break;
-						case CHARLS_API_RESULT_PARAMETER_VALUE_NOT_SUPPORTED: fprintf(stderr, "%s - not supported encoding parameters\n", source); break;
-						case CHARLS_API_RESULT_UNCOMPRESSED_BUFFER_TOO_SMALL: fprintf(stderr, "%s - could not yield compression gain\n", source); break;
-						case CHARLS_API_RESULT_INVALID_COMPRESSED_DATA:
-						case CHARLS_API_RESULT_IMAGE_TYPE_NOT_SUPPORTED:
-						case CHARLS_API_RESULT_COMPRESSED_BUFFER_TOO_SMALL:
-						case CHARLS_API_RESULT_UNSUPPORTED_ENCODING:
-						case CHARLS_API_RESULT_UNKNOWN_JPEG_MARKER:
-						case CHARLS_API_RESULT_MISSING_JPEG_MARKER_START:
-						case CHARLS_API_RESULT_UNSPECIFIED_FAILURE:
-						case CHARLS_API_RESULT_UNEXPECTED_FAILURE:
-							fprintf(stderr, "%s - unexpected error from JpegLS decode\n", source);
-							break;
-						case CHARLS_API_RESULT_UNSUPPORTED_BIT_DEPTH_FOR_TRANSFORM: fprintf(stderr, "%s - unsupported bit depth\n", source); break;
-						case CHARLS_API_RESULT_UNSUPPORTED_COLOR_TRANSFORM: fprintf(stderr, "%s - unsupported color transform\n", source); break;
-						};
+						if (err != CHARLS_JPEGLS_ERRC_SUCCESS) fprintf(stderr, "%s - failed to encode\n", source);
 						zzwPixelData_frame(dst, i, dstbuf, result);
 					}
 					zzwPixelData_end(dst);

@@ -26,6 +26,10 @@ robust, and when it encounters problems it shall always fail gently.
 
 ## Installation
 
+Prepare (Ubuntu):
+
+	sudo apt-get install uuid-dev libcharls-dev freeglut3-dev zlib1g-dev
+
 To build:
 
     mkdir -p build
