@@ -5,8 +5,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <ctype.h>
-#include <charls/public_types.h>
-#include <charls/charls.h>
+#include <charls.h>
 
 #include "part6.h"
 

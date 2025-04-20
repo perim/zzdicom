@@ -7,8 +7,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <sys/mman.h>
-#include <charls/public_types.h>
-#include <charls/charls.h>
+#include <charls.h>
 
 #include "zztexture.h"
 

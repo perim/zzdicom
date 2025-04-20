@@ -8,6 +8,9 @@ find_library(LIBUUID_LIBRARIES uuid)
 
 enable_testing()
 
+find_library(CHARLS_LIB NAMES charls CharLS)
+find_path(CHARLS_INCLUDE NAMES charls.h PATHS /usr/include/charls /usr/include/CharLS)
+
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	set(ZZ_FLAGS -g -O2 -Wall -Wformat=2 -Werror -Wno-unused-but-set-variable -Wno-unused-variable)
 else()
@@ -15,8 +18,9 @@ else()
 endif()
 
 add_library(zzdicom zzio.c zzio.h zz.c zzwrite.c zzsql.c zzverify.c zz_priv.h zzwrite.h zzsql.h zztexture.c zztexture.h)
-target_link_libraries(zzdicom ${OPENGL_LIBRARIES} ${LIBUUID_LIBRARIES})
+target_link_libraries(zzdicom ${OPENGL_LIBRARIES} ${LIBUUID_LIBRARIES} ${CHARLS_LIB})
 set_target_properties(zzdicom PROPERTIES COMPILE_FLAGS "-I /usr/local/include")
+target_include_directories(zzdicom PRIVATE ${CHARLS_INCLUDE})
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	target_compile_options(zzdicom PRIVATE -Wno-nonnull-compare ${ZZ_FLAGS})
 endif()
@@ -34,7 +38,8 @@ target_link_libraries(zzdump zzdicom)
 target_compile_options(zzdump PRIVATE ${ZZ_FLAGS})
 
 add_executable(zzcopy zzcopy.c part6.c part6.h)
-target_link_libraries(zzcopy zzdicom CharLS)
+target_link_libraries(zzcopy zzdicom ${CHARLS_LIB})
+target_include_directories(zzcopy PRIVATE ${CHARLS_INCLUDE})
 target_compile_options(zzcopy PRIVATE ${ZZ_FLAGS})
 
 add_executable(zzread zzread.c)
