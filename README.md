@@ -41,8 +41,6 @@ To run the tests, add:
 
     make test
 
-Set the TEST_GL environment variable before running cmake if you want to run the OpenGL tests.
-
 ## The tools
 
 * zzanon - an in-place DICOM anonymizer. It *changes* the files you list, overwriting the tags it

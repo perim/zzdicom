@@ -73,8 +73,8 @@ static const char *randomPN(bool utf8)
 	const char *name = NULL;
 	switch (rand() % 3)
 	{
-	case 0: if (utf8) name = u8"必要"; else name = "^SOME_ISO^"; break;
-	case 1: if (utf8) name = u8"Приве́т नमस्ते שָׁלוֹם"; else name = "random^zzmk"; break;
+	case 0: if (utf8) name = "必要"; else name = "^SOME_ISO^"; break;
+	case 1: if (utf8) name = "Приве́т नमस्ते שָׁלוֹם"; else name = "random^zzmk"; break;
 	case 2: name = "^DICOMTEST^^^"; break;
 	}
 	return name;
