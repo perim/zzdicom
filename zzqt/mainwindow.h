@@ -2,9 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QOpenGLFunctions>
+#include <QOpenGLShaderProgram>
+#include <QOpenGLWidget>
 #include <QStandardItemModel>
-#include <QtOpenGL/QGLWidget>
-#include <QtOpenGL/QGLShaderProgram>
 
 #include "../zztexture.h"
 
@@ -13,7 +14,7 @@ namespace Ui
 	class MainWindow;
 }
 
-class ImageViewer : public QGLWidget
+class ImageViewer : public QOpenGLWidget, protected QOpenGLFunctions
 {
 public:
 	ImageViewer(QWidget *parent = NULL);
@@ -28,12 +29,12 @@ protected:
 
 private:
 	struct zztexture *zzt;
-	QGLShaderProgram shader;
+	QOpenGLShaderProgram shader;
 	GLfloat depth;
 	int scaleloc, biasloc;
 };
 
-class ImageViewer3D : public QGLWidget
+class ImageViewer3D : public QOpenGLWidget, protected QOpenGLFunctions
 {
 public:
 	ImageViewer3D(QWidget *parent = NULL);
@@ -47,7 +48,7 @@ protected:
 
 private:
 	struct zztexture *zzt;
-	QGLShaderProgram shader;
+	QOpenGLShaderProgram shader;
 };
 
 class MainWindow : public QMainWindow

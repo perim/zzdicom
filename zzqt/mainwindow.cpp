@@ -13,12 +13,9 @@
 /**** --- ImageViewer2D --- ****/
 /*******************************/
 
-static QGLWidget *original = NULL;
-
-ImageViewer::ImageViewer(QWidget *parent) : QGLWidget(parent, original), shader(parent)
+ImageViewer::ImageViewer(QWidget *parent) : QOpenGLWidget(parent), shader(parent)
 {
 	zzt = NULL;
-	if (!original) original = this;
 }
 
 ImageViewer::~ImageViewer()
@@ -51,7 +48,8 @@ void ImageViewer::setDepth(qreal value)
 
 void ImageViewer::initializeGL()
 {
-	shader.addShaderFromSourceFile(QGLShader::Fragment, "shader.frag");
+	initializeOpenGLFunctions();
+	shader.addShaderFromSourceFile(QOpenGLShader::Fragment, "shader.frag");
 	shader.link();
 	biasloc = shader.uniformLocation("bias");
 	scaleloc = shader.uniformLocation("scale");
@@ -86,10 +84,9 @@ void ImageViewer::paintGL()
 /**** --- ImageViewer3D --- ****/
 /*******************************/
 
-ImageViewer3D::ImageViewer3D(QWidget *parent) : QGLWidget(parent, original), shader(parent)
+ImageViewer3D::ImageViewer3D(QWidget *parent) : QOpenGLWidget(parent), shader(parent)
 {
 	zzt = NULL;
-	if (!original) original = this;
 }
 
 ImageViewer3D::~ImageViewer3D()
@@ -117,7 +114,8 @@ void ImageViewer3D::setVolume(struct zztexture *src)
 
 void ImageViewer3D::initializeGL()
 {
-	shader.addShaderFromSourceFile(QGLShader::Fragment, "raycast.frag");
+	initializeOpenGLFunctions();
+	shader.addShaderFromSourceFile(QOpenGLShader::Fragment, "raycast.frag");
 	shader.link();
 
 	glShadeModel(GL_SMOOTH);
@@ -175,16 +173,17 @@ void MainWindow::openFile(QString filename)
 {
 	uint16_t group, element;
 	long len;
-	char hexfield[20], vrfield[MAX_LEN_VR], contentfield[MAX_LEN_VALUE];
+	char hexfield[32], vrfield[MAX_LEN_VR], contentfield[MAX_LEN_VALUE];
 	int nesting;
 	QList<QStandardItem *> hierarchy;
 	const struct part6 *tag;
 	struct zzfile szz;
-	struct zzfile *zz = zzopen(filename.toAscii().constData(), "r", &szz);
+	QByteArray filenameBytes = filename.toUtf8();
+	struct zzfile *zz = zzopen(filenameBytes.constData(), "r", &szz);
 
 	if (!zz)
 	{
-		qFatal("%s could not be opened", filename.toAscii().constData());
+		qFatal("%s could not be opened", filenameBytes.constData());
 	}
 	if (zzt)
 	{
@@ -350,8 +349,8 @@ void MainWindow::setframe(int value)
 	if (zzt && value >= 0 && value < zzt->pixelsize.z)
 	{
 		ui->glviewer->setDepth((1.0 / zzt->pixelsize.z) * value);
-		ui->glviewer->updateGL();
-		ui->glviewer3D->updateGL();
+		ui->glviewer->update();
+		ui->glviewer3D->update();
 	}
 }
 
