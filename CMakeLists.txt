@@ -7,6 +7,7 @@ find_package(GLUT)
 find_library(LIBUUID_LIBRARIES uuid)
 
 enable_testing()
+set(CMAKE_CTEST_ARGUMENTS "--output-on-failure")
 
 find_library(CHARLS_LIB NAMES charls CharLS)
 find_path(CHARLS_INCLUDE NAMES charls.h PATHS /usr/include/charls /usr/include/CharLS)
