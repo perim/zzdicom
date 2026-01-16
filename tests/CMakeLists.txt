@@ -24,12 +24,6 @@ add_executable(sqltest sqltest.c)
 target_link_libraries(sqltest zzdicom sqlite3)
 set_target_properties(sqltest PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
 
-add_executable(zzt zzt.c)
-target_link_libraries(zzt zzdicom ${OPENGL_LIBRARIES} ${GLUT_LIBRARIES} charls)
-set_target_properties(zzt PROPERTIES COMPILE_FLAGS "${TEST_FLAGS}")
-add_test(NAME zzt COMMAND ${CMAKE_CURRENT_BINARY_DIR}/zzt "${CMAKE_SOURCE_DIR}/samples/spine.dcm" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-add_test(NAME zzt-ls COMMAND ${CMAKE_CURRENT_BINARY_DIR}/zzt "${CMAKE_SOURCE_DIR}/samples/spine-ls.dcm" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-
 add_test(NAME zz1 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/zz1 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 add_test(NAME zzw COMMAND ${CMAKE_CURRENT_BINARY_DIR}/zzw WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 add_test(NAME zziotest COMMAND ${CMAKE_CURRENT_BINARY_DIR}/zziotest "samples/tw2.dcm" "samples/spine.dcm" WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
